@@ -168,7 +168,7 @@ npm run test:e2e
 
 If Chrome is already installed, `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e` uses it instead of a downloaded browser. See [test report](docs/TEST_REPORT.md) and [measured benchmark data](docs/benchmark-results.json). Larger cases can exhaust their budget; FEASIBLE and UNKNOWN are reported honestly.
 
-`cmake --install build --prefix /your/install/path` installs the CLI, runtime libraries, headers, schemas and notices. `cpack --config build/CPackConfig.cmake -G TGZ` builds a native archive on Unix. Keep dependency license notices with redistributed binaries. [CI](.github/workflows/ci.yml) builds/tests Linux, Windows and macOS; the focused Windows loader repair passed all three platforms; see the test report for release-specific evidence.
+`cmake --install build --prefix /your/install/path` installs the CLI, runtime libraries, headers, schemas and notices. `cpack --config build/CPackConfig.cmake -G TGZ` builds a native archive on Unix. Keep dependency license notices with redistributed binaries. [CI](.github/workflows/ci.yml) builds/tests Linux, Windows and macOS; the 0.2.0 release passed all three platforms, including Linux API/browser tests; see the test report for linked evidence.
 
 ## Four implementation phases
 
