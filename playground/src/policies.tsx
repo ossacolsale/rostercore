@@ -1,3 +1,4 @@
+import { useI18n } from "./i18n";
 import {
   type Scenario,
   type Policy,
@@ -20,30 +21,34 @@ import {
 } from "./editors";
 import { type Update } from "./setup";
 export function Policies({ s, update }: { s: Scenario; update: Update }) {
+  const { t } = useI18n();
   const set = (i: number, fn: (p: Policy) => void) =>
     update((d) => fn(d.policies[i]));
   return (
     <>
-      <EntityHeader title="Planning policies">
+      <EntityHeader title={t("Planning policies")}>
         <button
           onClick={() =>
             update((d) => {
-              d.policies.push(newPolicy(d));
+              d.policies.push(newPolicy(d, t));
             })
           }
         >
-          ＋ Add policy
+          {t("＋ Add policy")}{" "}
         </button>
       </EntityHeader>
       <p className="intro">
-        Each policy combines an objective with hard constraints. Active policies
-        solve together. Lower priority numbers run first; ties follow policy ID.
+        {t(
+          "Each policy combines an objective with hard constraints. Active policies solve together. Lower priority numbers run first; ties follow policy ID.",
+        )}{" "}
       </p>
       {s.policies.map((p, i) => (
         <section className="panel policy" key={i}>
           <div className="policy-title">
             <h3>{p.label || p.id}</h3>
-            <span className="badge">revision {p.revision}</span>
+            <span className="badge">
+              {t("revision {revision}", { revision: p.revision })}
+            </span>
             <label className="toggle">
               <input
                 type="checkbox"
@@ -54,12 +59,12 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                   })
                 }
               />
-              Active
+              {t("Active")}{" "}
             </label>
           </div>
           <div className="row">
             <Text
-              label="Policy ID"
+              label={t("Policy ID")}
               value={p.id}
               onChange={(v) =>
                 set(i, (p) => {
@@ -68,7 +73,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <Text
-              label="Policy label"
+              label={t("Policy label")}
               value={p.label}
               onChange={(v) =>
                 set(i, (p) => {
@@ -77,7 +82,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <Text
-              label="Revision"
+              label={t("Revision")}
               type="number"
               value={p.revision}
               onChange={(v) =>
@@ -87,7 +92,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <Text
-              label="Priority"
+              label={t("Priority")}
               type="number"
               value={p.objective.priority}
               onChange={(v) =>
@@ -98,7 +103,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
             />
           </div>
           <details>
-            <summary>Policy scope & draft status</summary>
+            <summary>{t("Policy scope & draft status")}</summary>
             <ScopeEditor
               value={p.scope || {}}
               onChange={(v) =>
@@ -117,20 +122,22 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                   })
                 }
               />{" "}
-              Unresolved draft
+              {t("Unresolved draft")}{" "}
             </label>
             {p.dependencies.length > 0 && (
               <p className="hint">
-                Resolve {p.dependencies.length} symbolic dependencies in AI & HR
-                imports before activation.
+                {t(
+                  "Resolve {count} symbolic dependencies in AI & HR imports before activation.",
+                  { count: p.dependencies.length },
+                )}{" "}
               </p>
             )}
           </details>
           <div className="objective">
-            <h4>Cumulative fairness · count</h4>
+            <h4>{t("Cumulative fairness · count")}</h4>
             <div className="row">
               <Text
-                label="Objective ID"
+                label={t("Objective ID")}
                 value={p.objective.id}
                 onChange={(v) =>
                   set(i, (p) => {
@@ -139,7 +146,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                 }
               />
               <Text
-                label="Objective label"
+                label={t("Objective label")}
                 value={p.objective.label || ""}
                 onChange={(v) =>
                   set(i, (p) => {
@@ -148,17 +155,17 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                 }
               />
               <Select
-                label="Participation"
+                label={t("Participation")}
                 value={p.objective.participation}
                 options={[
-                  { id: "EQUAL", label: "Equal · all selected people" },
+                  { id: "EQUAL", label: t("Equal · all selected people") },
                   {
                     id: "AVAILABILITY_WEIGHTED",
-                    label: "Availability weighted · eligible that day",
+                    label: t("Availability weighted · eligible that day"),
                   },
                   {
                     id: "CUSTOM_WEIGHTED",
-                    label: "Custom weights · all selected people",
+                    label: t("Custom weights · all selected people"),
                   },
                 ]}
                 onChange={(v) =>
@@ -184,7 +191,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <Multi
-              label="Shifts to balance as one category"
+              label={t("Shifts to balance as one category")}
               options={s.shifts}
               values={p.objective.shiftIds}
               onChange={(v) =>
@@ -198,7 +205,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                 {s.employees.map((e) => (
                   <Text
                     key={e.id}
-                    label={`Weight · ${e.label}`}
+                    label={t("Weight · {employee}", { employee: e.label })}
                     type="number"
                     value={p.objective.weights?.[e.id] || 1}
                     onChange={(v) =>
@@ -213,14 +220,14 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                 ))}
               </div>
             )}
-            <h4>Lexicographic metric order</h4>
+            <h4>{t("Lexicographic metric order")}</h4>
             {p.objective.metrics.map((m, j) => (
               <div className="metric-row" key={m}>
                 <span className="step">{j + 1}</span>
-                {metricNames[m] || m}
+                {t(metricNames[m] || m)}
                 <button
                   className="subtle"
-                  aria-label="Move metric up"
+                  aria-label={t("Move metric up")}
                   disabled={j === 0}
                   onClick={() =>
                     set(i, (p) => {
@@ -235,7 +242,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                 </button>
                 <button
                   className="subtle"
-                  aria-label="Remove metric"
+                  aria-label={t("Remove metric")}
                   onClick={() =>
                     set(i, (p) => {
                       p.objective.metrics.splice(j, 1);
@@ -258,7 +265,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                       })
                     }
                   >
-                    ＋ {metricNames[m]}
+                    ＋ {t(metricNames[m])}
                   </button>
                 ))}
             </div>
@@ -271,7 +278,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
               }
             />
           </div>
-          <h4>Policy hard constraints</h4>
+          <h4>{t("Policy hard constraints")}</h4>
           {p.constraints.map((c, j) => (
             <ConstraintEditor
               key={j}
@@ -290,17 +297,17 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
             />
           ))}
           <AddRow
-            label="Add policy rule"
+            label={t("Add policy rule")}
             onAdd={() =>
               set(i, (p) => {
-                p.constraints.push(newConstraint(s));
+                p.constraints.push(newConstraint(s, t));
               })
             }
           />
           <details>
-            <summary>Reusable constraints</summary>
+            <summary>{t("Reusable constraints")}</summary>
             <Multi
-              label="Shared rules"
+              label={t("Shared rules")}
               options={s.constraints.map((c) => ({
                 id: c.id,
                 label: c.label || c.id,
@@ -313,7 +320,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <Multi
-              label="Constraint sets"
+              label={t("Constraint sets")}
               options={s.constraintSets}
               values={p.constraintSetIds}
               onChange={(v) =>
@@ -335,7 +342,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                 })
               }
             >
-              Export policy
+              {t("Export policy")}{" "}
             </button>
             <button
               className="danger"
@@ -345,19 +352,20 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                 })
               }
             >
-              Remove policy
+              {t("Remove policy")}{" "}
             </button>
           </div>
         </section>
       ))}
       <section className="panel">
-        <h3>Shared constraints</h3>
+        <h3>{t("Shared constraints")}</h3>
         <p className="hint">
-          Shared rules are reusable by policy reference. Select base rules to
-          enforce them independently of any policy.
+          {t(
+            "Shared rules are reusable by policy reference. Select base rules to enforce them independently of any policy.",
+          )}{" "}
         </p>
         <Multi
-          label="Always-active base rules"
+          label={t("Always-active base rules")}
           options={s.constraints.map((c) => ({
             id: c.id,
             label: c.label || c.id,
@@ -387,19 +395,19 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
           />
         ))}
         <AddRow
-          label="Add shared rule"
+          label={t("Add shared rule")}
           onAdd={() =>
             update((d) => {
-              d.constraints.push(newConstraint(s));
+              d.constraints.push(newConstraint(s, t));
             })
           }
         />
-        <h4>Constraint sets</h4>
+        <h4>{t("Constraint sets")}</h4>
         {s.constraintSets.map((set, i) => (
           <article className="item-card" key={i}>
             <div className="row">
               <Text
-                label="Set ID"
+                label={t("Set ID")}
                 value={set.id}
                 onChange={(v) =>
                   update((d) => {
@@ -408,7 +416,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                 }
               />
               <Text
-                label="Set label"
+                label={t("Set label")}
                 value={set.label}
                 onChange={(v) =>
                   update((d) => {
@@ -424,11 +432,11 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                   })
                 }
               >
-                Remove set
+                {t("Remove set")}{" "}
               </button>
             </div>
             <Multi
-              label="Included rules"
+              label={t("Included rules")}
               options={s.constraints.map((c) => ({
                 id: c.id,
                 label: c.label || c.id,
@@ -443,12 +451,12 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
           </article>
         ))}
         <AddRow
-          label="Add constraint set"
+          label={t("Add constraint set")}
           onAdd={() =>
             update((d) => {
               d.constraintSets.push({
                 id: id("set"),
-                label: "Reusable rules",
+                label: t("Reusable rules"),
                 constraintIds: [],
               });
             })

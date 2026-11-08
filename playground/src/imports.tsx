@@ -1,3 +1,4 @@
+import { useI18n } from "./i18n";
 import { useState } from "react";
 import { type Scenario, type Result, download } from "./model";
 import { type Run } from "./results";
@@ -11,6 +12,7 @@ export function Imports({
   run: Run;
   busy: boolean;
 }) {
+  const { t, localizeError } = useI18n();
   const [kind, setKind] = useState("import-policy"),
     [text, setText] = useState(""),
     [document, setDocument] = useState<Record<string, unknown> | null>(null),
@@ -61,17 +63,18 @@ export function Imports({
   };
   return (
     <>
-      <EntityHeader title="AI & HR imports" />
+      <EntityHeader title={t("AI & HR imports")} />
       <p className="intro">
-        Import declarative documents, inspect the changes, then apply them
-        explicitly. Validation and revision checks run in the C++ core.
+        {t(
+          "Import declarative documents, inspect the changes, then apply them explicitly. Validation and revision checks run in the C++ core.",
+        )}{" "}
       </p>
       <section className="panel">
-        <h3>AI authoring resources</h3>
+        <h3>{t("AI authoring resources")}</h3>
         <p>
-          Give an AI assistant the authoring guide and a context export. The
-          context omits employee display names, leave records, history, and
-          unused attributes. Review any custom labels before sharing.
+          {t(
+            "Give an AI assistant the authoring guide and a context export. The context omits employee display names, leave records, history, and unused attributes. Review any custom labels before sharing.",
+          )}{" "}
         </p>
         <div className="row">
           <a
@@ -79,7 +82,7 @@ export function Imports({
             href="/api/guide"
             download="AI_POLICY_AUTHORING_GUIDE.md"
           >
-            Download AI guide
+            {t("Download AI guide")}{" "}
           </a>
           <button
             disabled={busy}
@@ -88,35 +91,40 @@ export function Imports({
               if (r?.context) download("rostercore-ai-context.json", r.context);
             }}
           >
-            Export AI context
+            {t("Export AI context")}{" "}
           </button>
           <button
             onClick={() =>
               download(
                 "rostercore-ai-prompt.txt",
-                "Using AI_POLICY_AUTHORING_GUIDE.md and the attached context, create one rostercore.planning-policy document. Use only known IDs. Include a CUMULATIVE_FAIRNESS COUNT objective and all required hard constraints. Explain ambiguities before generating a file. My request: [describe participants, shifts, required staffing, dates and fairness participation].",
+                t(
+                  "Using AI_POLICY_AUTHORING_GUIDE.md and the attached context, create one rostercore.planning-policy document. Use only known IDs. Include a CUMULATIVE_FAIRNESS COUNT objective and all required hard constraints. Explain ambiguities before generating a file. My request: [describe participants, shifts, required staffing, dates and fairness participation].",
+                ),
               )
             }
           >
-            Download prompt
+            {t("Download prompt")}{" "}
           </button>
         </div>
       </section>
       <section className="panel">
-        <h3>Import a document</h3>
+        <h3>{t("Import a document")}</h3>
         <div className="row">
           <Select
-            label="Document kind"
+            label={t("Document kind")}
             value={kind}
             options={[
               {
                 id: "import-policy",
-                label: "Planning policy · CREATE / REPLACE",
+                label: t("Planning policy · CREATE / REPLACE"),
               },
-              { id: "sync-hr", label: "HR absence events · UPSERT / DELETE" },
+              {
+                id: "sync-hr",
+                label: t("HR absence events · UPSERT / DELETE"),
+              },
               {
                 id: "rebuild-history",
-                label: "Rebuild fairness · dated historical contexts",
+                label: t("Rebuild fairness · dated historical contexts"),
               },
             ]}
             onChange={(v) => {
@@ -125,7 +133,7 @@ export function Imports({
             }}
           />
           <label className="button">
-            Choose JSON file
+            {t("Choose JSON file")}{" "}
             <input
               hidden
               type="file"
@@ -139,25 +147,33 @@ export function Imports({
           </label>
         </div>
         <label className="field">
-          <span>Policy or HR document JSON</span>
+          <span>{t("Policy or HR document JSON")}</span>
           <textarea
             className="json-editor"
             value={text}
-            placeholder="Paste a planning-policy or HR events document…"
+            placeholder={t("Paste a planning-policy or HR events document…")}
             onChange={(e) => parse(e.target.value)}
           />
         </label>
-        {error && text && <p className="error">{error}</p>}
+        {error && text && (
+          <div className="error">
+            <p>{localizeError(error, "JSON_PARSE")}</p>
+            <details>
+              <summary>{t("Original technical details")}</summary>
+              <pre lang="en">{error}</pre>
+            </details>
+          </div>
+        )}
         {dependencies.length > 0 && (
           <div className="dependency-map">
-            <h4>Resolve symbolic dependencies</h4>
+            <h4>{t("Resolve symbolic dependencies")}</h4>
             {dependencies.map((dep) => (
               <Select
                 key={dep.symbol}
                 label={`${dep.symbol} (${dep.kind})`}
                 value={mappings[dep.symbol] || ""}
                 options={[
-                  { id: "", label: "Keep unresolved draft" },
+                  { id: "", label: t("Keep unresolved draft") },
                   ...(entities[dep.kind] || []),
                 ]}
                 onChange={(v) => {
@@ -170,9 +186,9 @@ export function Imports({
               />
             ))}
             <p className="hint">
-              Create missing entities using the scenario editors, then return
-              here to map them. To activate a resolved draft, set draft=false
-              and active=true in the policy document.
+              {t(
+                "Create missing entities using the scenario editors, then return here to map them. To activate a resolved draft, set draft=false and active=true in the policy document.",
+              )}{" "}
             </p>
           </div>
         )}
@@ -182,7 +198,7 @@ export function Imports({
             disabled={!document || busy}
             onClick={() => act(false)}
           >
-            Preview & validate import
+            {t("Preview & validate import")}{" "}
           </button>
           <button
             disabled={
@@ -190,15 +206,15 @@ export function Imports({
             }
             onClick={() => act(true)}
           >
-            Confirm and apply import
+            {t("Confirm and apply import")}{" "}
           </button>
         </div>
         {preview && (
           <div className="import-preview">
             <h4>
               {preview.status === "PREVIEW"
-                ? "Changes awaiting confirmation"
-                : preview.status}
+                ? t("Changes awaiting confirmation")
+                : t(preview.status)}
             </h4>
             <pre>
               {JSON.stringify(preview.preview || preview.diagnostics, null, 2)}
@@ -207,19 +223,24 @@ export function Imports({
         )}
       </section>
       <section className="panel">
-        <h3>HR state</h3>
+        <h3>{t("HR state")}</h3>
         <p className="hint">
-          Approved full-day events affect availability. Replays are idempotent;
-          tombstones prevent stale updates from restoring deleted leave.
-          Conflicts with protected work are rejected.
+          {t(
+            "Approved full-day events affect availability. Replays are idempotent; tombstones prevent stale updates from restoring deleted leave. Conflicts with protected work are rejected.",
+          )}{" "}
         </p>
         <p>
-          {s.hrState.events.length} stored events ·{" "}
-          {s.publishedAssignments.length} published assignments ·{" "}
-          {s.history.assignments.length} consolidated assignments
+          {t(
+            "{events} stored events · {published} published assignments · {consolidated} consolidated assignments",
+            {
+              events: s.hrState.events.length,
+              published: s.publishedAssignments.length,
+              consolidated: s.history.assignments.length,
+            },
+          )}{" "}
         </p>
         <details>
-          <summary>Inspect normalized HR state</summary>
+          <summary>{t("Inspect normalized HR state")}</summary>
           <pre>{JSON.stringify(s.hrState, null, 2)}</pre>
         </details>
       </section>

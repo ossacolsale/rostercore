@@ -1,3 +1,4 @@
+import { useI18n } from "./i18n";
 import { useState, type ReactNode } from "react";
 import {
   type Scenario,
@@ -15,6 +16,7 @@ export function Field({
   label: string;
   children: ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <label className="field">
       <span>{label}</span>
@@ -33,6 +35,7 @@ export function Text({
   onChange: (v: string) => void;
   type?: string;
 }) {
+  const { t } = useI18n();
   return (
     <Field label={label}>
       <input
@@ -54,6 +57,7 @@ export function Select({
   options: { id: string; label: string }[];
   onChange: (v: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <Field label={label}>
       <select value={value} onChange={(e) => onChange(e.target.value)}>
@@ -77,6 +81,7 @@ export function Multi({
   options: { id: string; label: string }[];
   onChange: (v: string[]) => void;
 }) {
+  const { t } = useI18n();
   return (
     <fieldset className="multi">
       <legend>{label}</legend>
@@ -99,7 +104,7 @@ export function Multi({
           </label>
         ))
       ) : (
-        <small>No items yet</small>
+        <small>{t("No items yet")}</small>
       )}
     </fieldset>
   );
@@ -111,12 +116,13 @@ export function ScopeEditor({
   value: Scope;
   onChange: (v: Scope) => void;
 }) {
+  const { t } = useI18n();
   return (
     <details className="scope">
-      <summary>When this rule applies</summary>
+      <summary>{t("When this rule applies")}</summary>
       <div className="row">
         <Text
-          label="From (optional)"
+          label={t("From (optional)")}
           type="date"
           value={value.start || ""}
           onChange={(v) => {
@@ -127,7 +133,7 @@ export function ScopeEditor({
           }}
         />
         <Text
-          label="Until (optional)"
+          label={t("Until (optional)")}
           type="date"
           value={value.end || ""}
           onChange={(v) => {
@@ -154,12 +160,12 @@ export function ScopeEditor({
                 });
               }}
             />
-            {label}
+            {t(label)}
           </label>
         ))}
       </div>
       <DateList
-        label="Dates excluded from this rule"
+        label={t("Dates excluded from this rule")}
         value={value.excludedDates || []}
         onChange={(v) => onChange({ ...value, excludedDates: v })}
       />
@@ -177,6 +183,7 @@ export function SelectorEditor({
   onChange: (v: Selector) => void;
   excludeGroup?: string;
 }) {
+  const { t } = useI18n();
   const [key, setKey] = useState(""),
     [val, setVal] = useState("");
   const set = (k: "employeeIds" | "typeIds" | "groupIds", v: string[]) => {
@@ -188,35 +195,36 @@ export function SelectorEditor({
   return (
     <details className="selector">
       <summary>
-        Participants{" "}
+        {t("Participants")}{" "}
         <span className="muted">
           {Object.keys(value).length
             ? Object.entries(value)
                 .filter(([k]) => k !== "attributes")
                 .map(([, v]) => (v as string[]).join(", "))
-                .join(" · ") || "By attributes"
-            : "All employees"}
+                .join(" · ") || t("By attributes")
+            : t("All employees")}
         </span>
       </summary>
       <p className="hint">
-        Choices within a category are combined by union; categories intersect.
-        Leave all categories empty to select everyone.
+        {t(
+          "Choices within a category are combined by union; categories intersect. Leave all categories empty to select everyone.",
+        )}{" "}
       </p>
       <div className="selector-grid">
         <Multi
-          label="Employee types"
+          label={t("Employee types")}
           options={s.employeeTypes}
           values={value.typeIds || []}
           onChange={(v) => set("typeIds", v)}
         />
         <Multi
-          label="Groups"
+          label={t("Groups")}
           options={s.groups.filter((g) => g.id !== excludeGroup)}
           values={value.groupIds || []}
           onChange={(v) => set("groupIds", v)}
         />
         <Multi
-          label="Employees"
+          label={t("Employees")}
           options={s.employees}
           values={value.employeeIds || []}
           onChange={(v) => set("employeeIds", v)}
@@ -253,6 +261,7 @@ export function AttributeEditor({
   textValue?: string;
   setText?: (v: string) => void;
 }) {
+  const { t } = useI18n();
   const [ownKey, setOwnKey] = useState(""),
     [ownVal, setOwnVal] = useState("");
   const key = keyValue ?? ownKey,
@@ -273,7 +282,7 @@ export function AttributeEditor({
         <span className="chip" key={k}>
           {k}: {String(v)}{" "}
           <button
-            aria-label={`Remove attribute ${k}`}
+            aria-label={t("Remove attribute {key}", { key: k })}
             onClick={() => {
               const next = { ...value };
               delete next[k];
@@ -286,14 +295,14 @@ export function AttributeEditor({
       ))}
       <div className="row">
         <input
-          aria-label="Attribute key"
-          placeholder="Attribute key"
+          aria-label={t("Attribute key")}
+          placeholder={t("Attribute key")}
           value={key}
           onChange={(e) => setK(e.target.value)}
         />
         <input
-          aria-label="Attribute value"
-          placeholder="Value"
+          aria-label={t("Attribute value")}
+          placeholder={t("Value")}
           value={val}
           onChange={(e) => setV(e.target.value)}
         />
@@ -305,7 +314,7 @@ export function AttributeEditor({
             setV("");
           }}
         >
-          Add attribute
+          {t("Add attribute")}{" "}
         </button>
       </div>
     </div>
@@ -322,6 +331,7 @@ export function DateList({
   onChange: (v: string[]) => void;
   type?: string;
 }) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState("");
   return (
     <div className="date-list">
@@ -331,7 +341,7 @@ export function DateList({
           <span className="chip" key={i}>
             {d}
             <button
-              aria-label={`Remove ${d}`}
+              aria-label={t("Remove {value}", { value: d })}
               onClick={() => onChange(value.filter((_, j) => j !== i))}
             >
               ×
@@ -353,7 +363,7 @@ export function DateList({
             setDraft("");
           }}
         >
-          Add
+          {t("Add")}{" "}
         </button>
       </div>
     </div>
@@ -370,12 +380,13 @@ export function ExpressionEditor({
   onChange: (v: Expression) => void;
   depth?: number;
 }) {
+  const { t } = useI18n();
   const group = value.op === "AND" || value.op === "OR";
   return (
     <div className={`expression ${group ? "branch" : "atom"}`}>
       <div className="expression-head">
         <select
-          aria-label="Expression operator"
+          aria-label={t("Expression operator")}
           value={value.op}
           onChange={(e) => {
             const op = e.target.value as Expression["op"];
@@ -393,13 +404,15 @@ export function ExpressionEditor({
               });
           }}
         >
-          <option value="COUNT">Staffing count</option>
-          <option value="REMAINING">The remaining employees</option>
-          <option value="AND">AND · every condition</option>
-          <option value="OR">OR · at least one branch</option>
+          <option value="COUNT">{t("Staffing count")}</option>
+          <option value="REMAINING">{t("The remaining employees")}</option>
+          <option value="AND">{t("AND · every condition")}</option>
+          <option value="OR">{t("OR · at least one branch")}</option>
         </select>
         {group && (
-          <span className="badge">{value.children.length} conditions</span>
+          <span className="badge">
+            {t("{count} conditions", { count: value.children.length })}
+          </span>
         )}
       </div>
       {group ? (
@@ -420,7 +433,7 @@ export function ExpressionEditor({
                 />
                 <button
                   className="remove subtle"
-                  aria-label="Remove condition"
+                  aria-label={t("Remove condition")}
                   onClick={() =>
                     onChange({
                       ...value,
@@ -442,7 +455,7 @@ export function ExpressionEditor({
                 })
               }
             >
-              + Condition
+              {t("+ Condition")}{" "}
             </button>
             <button
               onClick={() =>
@@ -455,7 +468,7 @@ export function ExpressionEditor({
                 })
               }
             >
-              + AND group
+              {t("+ AND group")}{" "}
             </button>
             <button
               onClick={() =>
@@ -468,7 +481,7 @@ export function ExpressionEditor({
                 })
               }
             >
-              + OR group
+              {t("+ OR group")}{" "}
             </button>
           </div>
         </>
@@ -478,12 +491,12 @@ export function ExpressionEditor({
             {value.op === "COUNT" && (
               <>
                 <Select
-                  label="Cardinality"
+                  label={t("Cardinality")}
                   value={value.comparison}
                   options={[
-                    { id: "EQ", label: "Exactly" },
-                    { id: "GE", label: "At least" },
-                    { id: "LE", label: "At most" },
+                    { id: "EQ", label: t("Exactly") },
+                    { id: "GE", label: t("At least") },
+                    { id: "LE", label: t("At most") },
                   ]}
                   onChange={(comparison) =>
                     onChange({
@@ -493,7 +506,7 @@ export function ExpressionEditor({
                   }
                 />
                 <Text
-                  label="People"
+                  label={t("People")}
                   type="number"
                   value={value.count}
                   onChange={(v) => onChange({ ...value, count: Number(v) })}
@@ -501,7 +514,7 @@ export function ExpressionEditor({
               </>
             )}
             <Select
-              label="Assigned shift"
+              label={t("Assigned shift")}
               value={value.shiftId}
               options={s.shifts}
               onChange={(shiftId) => onChange({ ...value, shiftId })}
@@ -514,9 +527,9 @@ export function ExpressionEditor({
           />
           {value.op === "REMAINING" && (
             <p className="hint">
-              Place in a flat AND branch with COUNT siblings using the identical
-              selector. This limits the remaining shift choices; “at least”
-              keeps its meaning.
+              {t(
+                "Place in a flat AND branch with COUNT siblings using the identical selector. This limits the remaining shift choices; “at least” keeps its meaning.",
+              )}{" "}
             </p>
           )}
         </>
@@ -535,21 +548,22 @@ export function ConstraintEditor({
   onChange: (v: Constraint) => void;
   onRemove: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <article className="constraint-card">
       <div className="row">
         <Text
-          label="Rule ID"
+          label={t("Rule ID")}
           value={value.id}
           onChange={(v) => onChange({ ...value, id: v })}
         />
         <Text
-          label="Rule label"
+          label={t("Rule label")}
           value={value.label || ""}
           onChange={(v) => onChange({ ...value, label: v })}
         />
         <button className="danger" onClick={onRemove}>
-          Remove rule
+          {t("Remove rule")}{" "}
         </button>
       </div>
       <ExpressionEditor
@@ -571,9 +585,10 @@ export function AddRow({
   onAdd: () => void;
   label?: string;
 }) {
+  const { t } = useI18n();
   return (
-    <button className="add-row" aria-label={label} onClick={onAdd}>
-      ＋ {label}
+    <button className="add-row" aria-label={t(label)} onClick={onAdd}>
+      ＋ {t(label)}
     </button>
   );
 }
@@ -584,6 +599,7 @@ export function EntityHeader({
   title: string;
   children?: ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <div className="section-head">
       <h2>{title}</h2>

@@ -1,3 +1,4 @@
+import { useI18n } from "./i18n";
 import { useState } from "react";
 import {
   type Scenario,
@@ -38,6 +39,7 @@ export function Results({
   run: Run;
   publish: () => void;
 }) {
+  const { t, locale } = useI18n();
   const [through, setThrough] = useState(s.calendar.end),
     [objective, setObjective] = useState(0);
   const days = dates(s.calendar.start, s.calendar.end),
@@ -66,33 +68,39 @@ export function Results({
     : undefined;
   return (
     <>
-      <EntityHeader title="Schedule & fairness">
-        <span className={`status ${r.status.toLowerCase()}`}>{r.status}</span>
+      <EntityHeader title={t("Schedule & fairness")}>
+        <span className={`status ${r.status.toLowerCase()}`}>
+          {t(r.status)}
+        </span>
       </EntityHeader>
       {stale && (
         <div className="notice">
-          Configuration changed since this solve. Results below use the saved
-          solve context. Generate again before publishing or consolidating.
+          {t(
+            "Configuration changed since this solve. Results below use the saved solve context. Generate again before publishing or consolidating.",
+          )}{" "}
         </div>
       )}
       <div className="stats">
         <div>
-          <span>Assignments</span>
+          <span>{t("Assignments")}</span>
           <strong>{r.assignments?.length || 0}</strong>
         </div>
         <div>
-          <span>Solve time</span>
+          <span>{t("Solve time")}</span>
           <strong>
-            {r.metadata?.elapsedSeconds.toFixed(3) || "—"}
+            {r.metadata?.elapsedSeconds.toLocaleString(locale, {
+              minimumFractionDigits: 3,
+              maximumFractionDigits: 3,
+            }) || "—"}
             <small> s</small>
           </strong>
         </div>
         <div>
-          <span>Fairness objectives</span>
+          <span>{t("Fairness objectives")}</span>
           <strong>{r.fairness?.length || 0}</strong>
         </div>
         <div>
-          <span>Changed from previous run</span>
+          <span>{t("Changed from previous run")}</span>
           <strong>{changed ?? "—"}</strong>
         </div>
       </div>
@@ -100,9 +108,9 @@ export function Results({
         <>
           <section className="panel">
             <div className="section-head">
-              <h3>Assignment calendar</h3>
+              <h3>{t("Assignment calendar")}</h3>
               <button onClick={() => download("rostercore-result.json", r)}>
-                Export result JSON
+                {t("Export result JSON")}{" "}
               </button>
             </div>
             <div className="legend">
@@ -112,22 +120,26 @@ export function Results({
                   {sh.label}
                 </span>
               ))}
-              <span>— Absent / excluded</span>
+              <span>{t("— Absent / excluded")}</span>
             </div>
             <div className="table-scroll">
               <table className="roster">
                 <thead>
                   <tr>
-                    <th>Employee</th>
+                    <th>{t("Employee")}</th>
                     {days.map((d) => (
                       <th key={d}>
                         <small>
                           {new Date(d + "T12:00:00Z").toLocaleDateString(
-                            "en-GB",
+                            locale,
                             { weekday: "short", timeZone: "UTC" },
                           )}
                         </small>
-                        {d.slice(5)}
+                        {new Date(d + "T12:00:00Z").toLocaleDateString(locale, {
+                          day: "2-digit",
+                          month: "2-digit",
+                          timeZone: "UTC",
+                        })}
                       </th>
                     ))}
                   </tr>
@@ -158,9 +170,9 @@ export function Results({
                                   sh.intervals
                                     .map(
                                       (i) =>
-                                        `${i.start}–${i.end}${i.endDayOffset ? " +1 day" : ""}`,
+                                        `${i.start}–${i.end}${i.endDayOffset ? t(" +1 day") : ""}`,
                                     )
-                                    .join(", ") || "Scheduled rest"
+                                    .join(", ") || t("Scheduled rest")
                                 }
                               >
                                 {sh.label}
@@ -168,12 +180,12 @@ export function Results({
                             ) : (
                               <span
                                 className="empty-cell"
-                                title={states.get(key) || "No assignment"}
+                                title={t(states.get(key) || "No assignment")}
                               >
                                 {states.get(key) === "ABSENT"
-                                  ? "Absent"
+                                  ? t("Absent")
                                   : states.get(key) === "EXCLUDED"
-                                    ? "Excluded"
+                                    ? t("Excluded")
                                     : "—"}
                               </span>
                             )}
@@ -186,7 +198,7 @@ export function Results({
                 <tfoot>
                   {s.shifts.map((sh) => (
                     <tr key={sh.id}>
-                      <th>{sh.label} coverage</th>
+                      <th>{t("{shift} coverage", { shift: sh.label })}</th>
                       {days.map((d) => (
                         <td key={d}>
                           {r.assignments?.filter(
@@ -203,9 +215,9 @@ export function Results({
           {!!r.fairness?.length && (
             <section className="panel">
               <div className="section-head">
-                <h3>Continuous fairness</h3>
+                <h3>{t("Continuous fairness")}</h3>
                 <select
-                  aria-label="Displayed fairness objective"
+                  aria-label={t("Displayed fairness objective")}
                   value={objective}
                   onChange={(e) => setObjective(Number(e.target.value))}
                 >
@@ -217,18 +229,21 @@ export function Results({
                 </select>
               </div>
               <p className="hint">
-                Debt = cumulative ideal quota − cumulative actual assignments. A
-                positive debt means the employee has received fewer duties than
-                their ideal share.
+                {t(
+                  "Debt = cumulative ideal quota − cumulative actual assignments. A positive debt means the employee has received fewer duties than their ideal share.",
+                )}{" "}
               </p>
               {report && (
                 <>
                   <div className="stats compact">
                     {Object.entries(report.metrics).map(([metric, v]) => (
                       <div key={metric}>
-                        <span>{metricNames[metric] || metric}</span>
+                        <span>{t(metricNames[metric] || metric)}</span>
                         <strong title={exact(v)}>
-                          {rational(v).toFixed(3)}
+                          {rational(v).toLocaleString(locale, {
+                            minimumFractionDigits: 3,
+                            maximumFractionDigits: 3,
+                          })}
                         </strong>
                       </div>
                     ))}
@@ -237,7 +252,7 @@ export function Results({
                     <svg
                       viewBox="0 0 900 250"
                       role="img"
-                      aria-label="Fairness debt trajectory"
+                      aria-label={t("Fairness debt trajectory")}
                     >
                       <line
                         x1="45"
@@ -295,13 +310,13 @@ export function Results({
                     <table>
                       <thead>
                         <tr>
-                          <th>Employee</th>
-                          <th>Historical actual</th>
-                          <th>Historical debt</th>
-                          <th>Cumulative ideal</th>
-                          <th>Cumulative actual</th>
-                          <th>Residual debt</th>
-                          <th>Previous debt</th>
+                          <th>{t("Employee")}</th>
+                          <th>{t("Historical actual")}</th>
+                          <th>{t("Historical debt")}</th>
+                          <th>{t("Cumulative ideal")}</th>
+                          <th>{t("Cumulative actual")}</th>
+                          <th>{t("Residual debt")}</th>
+                          <th>{t("Previous debt")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -338,16 +353,16 @@ export function Results({
                     </table>
                   </div>
                   <details>
-                    <summary>Daily quota and debt details</summary>
+                    <summary>{t("Daily quota and debt details")}</summary>
                     <div className="table-scroll">
                       <table>
                         <thead>
                           <tr>
-                            <th>Date</th>
-                            <th>Employee</th>
-                            <th>Ideal</th>
-                            <th>Actual</th>
-                            <th>Debt</th>
+                            <th>{t("Date")}</th>
+                            <th>{t("Employee")}</th>
+                            <th>{t("Ideal")}</th>
+                            <th>{t("Actual")}</th>
+                            <th>{t("Debt")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -371,25 +386,24 @@ export function Results({
             </section>
           )}
           <section className="panel">
-            <h3>Verify, publish & roll forward</h3>
+            <h3>{t("Verify, publish & roll forward")}</h3>
             <p className="hint">
-              Publishing protects these assignments from silent changes.
-              Consolidating appends the selected prefix to history and advances
-              the planning start date. Export your scenario to keep a portable
-              backup.
+              {t(
+                "Publishing protects these assignments from silent changes. Consolidating appends the selected prefix to history and advances the planning start date. Export your scenario to keep a portable backup.",
+              )}{" "}
             </p>
             <div className="row">
               <button
                 disabled={stale}
                 onClick={() => run("verify", { result: r })}
               >
-                Verify independently
+                {t("Verify independently")}{" "}
               </button>
               <button disabled={stale} onClick={publish}>
-                Publish assignments locally
+                {t("Publish assignments locally")}{" "}
               </button>
               <Text
-                label="Consolidate through"
+                label={t("Consolidate through")}
                 type="date"
                 value={through}
                 onChange={setThrough}
@@ -398,31 +412,31 @@ export function Results({
                 disabled={stale}
                 onClick={() => run("consolidate", { result: r, through })}
               >
-                Consolidate prefix
+                {t("Consolidate prefix")}{" "}
               </button>
             </div>
           </section>
         </>
       )}
       <section className="panel">
-        <h3>Search evidence</h3>
+        <h3>{t("Search evidence")}</h3>
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Policy</th>
-                <th>Metric</th>
-                <th>Status</th>
-                <th>Value</th>
-                <th>Best bound / scale</th>
+                <th>{t("Policy")}</th>
+                <th>{t("Metric")}</th>
+                <th>{t("Status")}</th>
+                <th>{t("Value")}</th>
+                <th>{t("Best bound / scale")}</th>
               </tr>
             </thead>
             <tbody>
               {r.phases?.map((p, i) => (
                 <tr key={i}>
                   <td>{p.policyId || "—"}</td>
-                  <td>{metricNames[p.metric] || p.metric}</td>
-                  <td>{p.status}</td>
+                  <td>{t(metricNames[p.metric] || p.metric)}</td>
+                  <td>{t(p.status)}</td>
                   <td>{exact(p.value)}</td>
                   <td>
                     {p.bestBoundScaled ?? "—"} / {p.scale ?? "—"}
@@ -433,7 +447,7 @@ export function Results({
           </table>
         </div>
         <details>
-          <summary>Reproducibility metadata</summary>
+          <summary>{t("Reproducibility metadata")}</summary>
           <pre>{JSON.stringify(r.metadata, null, 2)}</pre>
         </details>
       </section>

@@ -1,3 +1,4 @@
+import { useI18n } from "./i18n";
 import { type Scenario, id } from "./model";
 import {
   Text,
@@ -12,22 +13,26 @@ import {
 } from "./editors";
 export type Update = (fn: (s: Scenario) => void) => void;
 export function People({ s, update }: { s: Scenario; update: Update }) {
+  const { t } = useI18n();
   return (
     <>
-      <EntityHeader title="People & groups">
-        <span className="badge">{s.employees.length} employees</span>
+      <EntityHeader title={t("People & groups")}>
+        <span className="badge">
+          {t("{count} employees", { count: s.employees.length })}
+        </span>
       </EntityHeader>
       <p className="intro">
-        Use stable IDs for references and labels for display. Group membership
-        can follow types, explicit people, or attributes.
+        {t(
+          "Use stable IDs for references and labels for display. Group membership can follow types, explicit people, or attributes.",
+        )}{" "}
       </p>
       <section className="panel">
-        <h3>Employee types</h3>
-        {s.employeeTypes.map((t, i) => (
+        <h3>{t("Employee types")}</h3>
+        {s.employeeTypes.map((employeeType, i) => (
           <div className="row" key={i}>
             <Text
-              label="Type ID"
-              value={t.id}
+              label={t("Type ID")}
+              value={employeeType.id}
               onChange={(v) =>
                 update((d) => {
                   d.employeeTypes[i].id = v;
@@ -35,8 +40,8 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <Text
-              label="Type label"
-              value={t.label}
+              label={t("Type label")}
+              value={employeeType.label}
               onChange={(v) =>
                 update((d) => {
                   d.employeeTypes[i].label = v;
@@ -45,7 +50,7 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
             />
             <button
               className="subtle"
-              aria-label="Remove type"
+              aria-label={t("Remove type")}
               onClick={() =>
                 update((d) => {
                   d.employeeTypes.splice(i, 1);
@@ -57,21 +62,21 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
           </div>
         ))}
         <AddRow
-          label="Add employee type"
+          label={t("Add employee type")}
           onAdd={() =>
             update((d) => {
-              d.employeeTypes.push({ id: id("type"), label: "New type" });
+              d.employeeTypes.push({ id: id("type"), label: t("New type") });
             })
           }
         />
       </section>
       <section className="panel">
-        <h3>Employees</h3>
+        <h3>{t("Employees")}</h3>
         {s.employees.map((e, i) => (
           <article className="item-card" key={i}>
             <div className="row">
               <Text
-                label="Employee ID"
+                label={t("Employee ID")}
                 value={e.id}
                 onChange={(v) =>
                   update((d) => {
@@ -80,7 +85,7 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
                 }
               />
               <Text
-                label="Name / label"
+                label={t("Name / label")}
                 value={e.label}
                 onChange={(v) =>
                   update((d) => {
@@ -89,7 +94,7 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
                 }
               />
               <Select
-                label="Main type"
+                label={t("Main type")}
                 value={e.typeId}
                 options={s.employeeTypes}
                 onChange={(v) =>
@@ -106,11 +111,11 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
                   })
                 }
               >
-                Remove employee
+                {t("Remove employee")}{" "}
               </button>
             </div>
             <details>
-              <summary>Attributes</summary>
+              <summary>{t("Attributes")}</summary>
               <AttributeEditor
                 value={e.attributes}
                 onChange={(v) =>
@@ -123,12 +128,12 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
           </article>
         ))}
         <AddRow
-          label="Add employee"
+          label={t("Add employee")}
           onAdd={() =>
             update((d) => {
               d.employees.push({
                 id: id("employee"),
-                label: "New employee",
+                label: t("New employee"),
                 typeId: d.employeeTypes[0]?.id || "",
                 attributes: {},
               });
@@ -137,12 +142,12 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
         />
       </section>
       <section className="panel">
-        <h3>Groups</h3>
+        <h3>{t("Groups")}</h3>
         {s.groups.map((g, i) => (
           <article className="item-card" key={i}>
             <div className="row">
               <Text
-                label="Group ID"
+                label={t("Group ID")}
                 value={g.id}
                 onChange={(v) =>
                   update((d) => {
@@ -151,7 +156,7 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
                 }
               />
               <Text
-                label="Group label"
+                label={t("Group label")}
                 value={g.label}
                 onChange={(v) =>
                   update((d) => {
@@ -167,7 +172,7 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
                   })
                 }
               >
-                Remove group
+                {t("Remove group")}{" "}
               </button>
             </div>
             <SelectorEditor
@@ -183,12 +188,12 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
           </article>
         ))}
         <AddRow
-          label="Add group"
+          label={t("Add group")}
           onAdd={() =>
             update((d) => {
               d.groups.push({
                 id: id("group"),
-                label: "New group",
+                label: t("New group"),
                 selector: {},
               });
             })
@@ -199,18 +204,20 @@ export function People({ s, update }: { s: Scenario; update: Update }) {
   );
 }
 export function Shifts({ s, update }: { s: Scenario; update: Update }) {
+  const { t } = useI18n();
   return (
     <>
-      <EntityHeader title="Shift types" />
+      <EntityHeader title={t("Shift types")} />
       <p className="intro">
-        Intervals use local wall-clock time. Add as many disjoint intervals as
-        needed. Overnight work uses an explicit next-day end.
+        {t(
+          "Intervals use local wall-clock time. Add as many disjoint intervals as needed. Overnight work uses an explicit next-day end.",
+        )}{" "}
       </p>
       {s.shifts.map((sh, i) => (
         <section className="panel" key={i}>
           <div className="row">
             <Text
-              label="Shift ID"
+              label={t("Shift ID")}
               value={sh.id}
               onChange={(v) =>
                 update((d) => {
@@ -219,7 +226,7 @@ export function Shifts({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <Text
-              label="Shift label"
+              label={t("Shift label")}
               value={sh.label}
               onChange={(v) =>
                 update((d) => {
@@ -228,11 +235,11 @@ export function Shifts({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <Select
-              label="Structural type"
+              label={t("Structural type")}
               value={sh.kind}
               options={[
-                { id: "WORKING", label: "Working" },
-                { id: "OFF", label: "Scheduled rest" },
+                { id: "WORKING", label: t("Working") },
+                { id: "OFF", label: t("Scheduled rest") },
               ]}
               onChange={(v) =>
                 update((d) => {
@@ -252,14 +259,16 @@ export function Shifts({ s, update }: { s: Scenario; update: Update }) {
                 })
               }
             >
-              Remove shift
+              {t("Remove shift")}{" "}
             </button>
           </div>
           {sh.intervals.map((interval, j) => (
             <div className="row interval" key={j}>
-              <span className="muted">Interval {j + 1}</span>
+              <span className="muted">
+                {t("Interval {number}", { number: j + 1 })}
+              </span>
               <Text
-                label="Start"
+                label={t("Start")}
                 type="time"
                 value={interval.start}
                 onChange={(v) =>
@@ -269,7 +278,7 @@ export function Shifts({ s, update }: { s: Scenario; update: Update }) {
                 }
               />
               <Text
-                label="End"
+                label={t("End")}
                 type="time"
                 value={interval.end}
                 onChange={(v) =>
@@ -279,11 +288,11 @@ export function Shifts({ s, update }: { s: Scenario; update: Update }) {
                 }
               />
               <Select
-                label="End date"
+                label={t("End date")}
                 value={String(interval.endDayOffset)}
                 options={[
-                  { id: "0", label: "Same day" },
-                  { id: "1", label: "Next day" },
+                  { id: "0", label: t("Same day") },
+                  { id: "1", label: t("Next day") },
                 ]}
                 onChange={(v) =>
                   update((d) => {
@@ -293,7 +302,7 @@ export function Shifts({ s, update }: { s: Scenario; update: Update }) {
               />
               <button
                 className="subtle"
-                aria-label="Remove interval"
+                aria-label={t("Remove interval")}
                 onClick={() =>
                   update((d) => {
                     d.shifts[i].intervals.splice(j, 1);
@@ -306,7 +315,7 @@ export function Shifts({ s, update }: { s: Scenario; update: Update }) {
           ))}
           {sh.kind === "WORKING" && (
             <AddRow
-              label="Add time interval"
+              label={t("Add time interval")}
               onAdd={() =>
                 update((d) => {
                   d.shifts[i].intervals.push({
@@ -321,12 +330,12 @@ export function Shifts({ s, update }: { s: Scenario; update: Update }) {
         </section>
       ))}
       <AddRow
-        label="Add shift type"
+        label={t("Add shift type")}
         onAdd={() =>
           update((d) => {
             d.shifts.push({
               id: id("shift"),
-              label: "New shift",
+              label: t("New shift"),
               kind: "WORKING",
               intervals: [{ start: "09:00", end: "17:00", endDayOffset: 0 }],
             });
@@ -337,18 +346,20 @@ export function Shifts({ s, update }: { s: Scenario; update: Update }) {
   );
 }
 export function Calendar({ s, update }: { s: Scenario; update: Update }) {
+  const { t } = useI18n();
   return (
     <>
-      <EntityHeader title="Calendar & availability" />
+      <EntityHeader title={t("Calendar & availability")} />
       <p className="intro">
-        An excluded day has no assignments. An absent person has no assignment.
-        Scheduled rest remains an explicit permitted shift.
+        {t(
+          "An excluded day has no assignments. An absent person has no assignment. Scheduled rest remains an explicit permitted shift.",
+        )}{" "}
       </p>
       <section className="panel">
-        <h3>Planning window</h3>
+        <h3>{t("Planning window")}</h3>
         <div className="row">
           <Text
-            label="First date"
+            label={t("First date")}
             type="date"
             value={s.calendar.start}
             onChange={(v) =>
@@ -358,7 +369,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
             }
           />
           <Text
-            label="Last date"
+            label={t("Last date")}
             type="date"
             value={s.calendar.end}
             onChange={(v) =>
@@ -368,7 +379,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
             }
           />
           <Text
-            label="Timezone"
+            label={t("Timezone")}
             value={s.calendar.timezone}
             onChange={(v) =>
               update((d) => {
@@ -379,7 +390,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
         </div>
         <div className="two-columns">
           <DateList
-            label="Globally excluded dates"
+            label={t("Globally excluded dates")}
             value={s.calendar.excludedDates}
             onChange={(v) =>
               update((d) => {
@@ -388,7 +399,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
             }
           />
           <DateList
-            label="Excluded ISO weeks (YYYY-Www)"
+            label={t("Excluded ISO weeks (YYYY-Www)")}
             type="week"
             value={s.calendar.excludedIsoWeeks}
             onChange={(v) =>
@@ -398,11 +409,11 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
             }
           />
         </div>
-        <h4>Excluded date ranges</h4>
+        <h4>{t("Excluded date ranges")}</h4>
         {s.calendar.excludedRanges.map((r, i) => (
           <div className="row" key={i}>
             <Text
-              label="Range start"
+              label={t("Range start")}
               type="date"
               value={r.start}
               onChange={(v) =>
@@ -412,7 +423,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <Text
-              label="Range end"
+              label={t("Range end")}
               type="date"
               value={r.end}
               onChange={(v) =>
@@ -423,7 +434,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
             />
             <button
               className="subtle"
-              aria-label="Remove excluded range"
+              aria-label={t("Remove excluded range")}
               onClick={() =>
                 update((d) => {
                   d.calendar.excludedRanges.splice(i, 1);
@@ -435,7 +446,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
           </div>
         ))}
         <AddRow
-          label="Add excluded range"
+          label={t("Add excluded range")}
           onAdd={() =>
             update((d) => {
               d.calendar.excludedRanges.push({
@@ -447,12 +458,12 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
         />
       </section>
       <section className="panel">
-        <h3>Individual unavailability</h3>
+        <h3>{t("Individual unavailability")}</h3>
         {s.availability.map((a, i) => (
           <article className="item-card" key={i}>
             <div className="row">
               <Text
-                label="Absence ID"
+                label={t("Absence ID")}
                 value={a.id}
                 onChange={(v) =>
                   update((d) => {
@@ -468,7 +479,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
                   })
                 }
               >
-                Remove absence
+                {t("Remove absence")}{" "}
               </button>
             </div>
             <SelectorEditor
@@ -491,7 +502,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
           </article>
         ))}
         <AddRow
-          label="Add absence"
+          label={t("Add absence")}
           onAdd={() =>
             update((d) => {
               d.availability.push({
@@ -507,16 +518,17 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
         />
       </section>
       <section className="panel">
-        <h3>Allowed shift restrictions</h3>
+        <h3>{t("Allowed shift restrictions")}</h3>
         <p className="hint">
-          Every applicable restriction intersects with the others. An empty
-          intersection is infeasible; rest is never inserted automatically.
+          {t(
+            "Every applicable restriction intersects with the others. An empty intersection is infeasible; rest is never inserted automatically.",
+          )}{" "}
         </p>
         {s.allowedShifts.map((a, i) => (
           <article className="item-card" key={i}>
             <div className="row">
               <Text
-                label="Restriction ID"
+                label={t("Restriction ID")}
                 value={a.id}
                 onChange={(v) =>
                   update((d) => {
@@ -532,7 +544,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
                   })
                 }
               >
-                Remove restriction
+                {t("Remove restriction")}{" "}
               </button>
             </div>
             <SelectorEditor
@@ -545,7 +557,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <Multi
-              label="Permitted shifts"
+              label={t("Permitted shifts")}
               values={a.shiftIds}
               options={s.shifts}
               onChange={(v) =>
@@ -565,7 +577,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
           </article>
         ))}
         <AddRow
-          label="Add allowed-shift rule"
+          label={t("Add allowed-shift rule")}
           onAdd={() =>
             update((d) => {
               d.allowedShifts.push({

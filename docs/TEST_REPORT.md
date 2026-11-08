@@ -8,7 +8,7 @@ Local environment: Ubuntu 26.04.1 x86-64, GCC 15.2.0, CMake 4.2.3, Python 3.14.4
 - `ctest --preset dev`: passed both test targets. The CLI acceptance suite contains **37 tests**, plus a native core-invariant executable. Final integration run: 30.30 seconds total.
 - `npm run build`: passed TypeScript strict checking and Vite production build.
 - `npm run test:server`: passed the loopback API integration test with the actual native executable.
-- `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e`: **6 passed**, 8.3 seconds, including a complete empty-to-solved visual workflow.
+- `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e`: **11 passed**, 17.1 seconds in the localization update, including a complete empty-to-solved visual workflow.
 - `cmake --install build --prefix /tmp/rostercore-install`: passed. The installed CLI validated the reference scenario; runtime linkage had no unresolved libraries and no dependency paths into the repository.
 - Generated schemas were regenerated and compared byte-for-byte with their source: passed. `git diff --check`: passed. The native TGZ archive was generated at `build/packages/rostercore-0.1.0-Linux.tar.gz`, extracted and smoke-tested: OPTIMAL, with counts 2/3/3/3/3. Cross-platform jobs are configured in `.github/workflows/ci.yml`; local results do not establish remote Windows/macOS success.
 
@@ -18,7 +18,7 @@ The first 22 named acceptance tests map to the mandatory cases in the initial sp
 
 Additional tests cover weighted quota conservation, tampered assignments/fairness, eight seeded randomized balancing scenarios, calendar/group/interval validation, requested HR leave, ambiguous REMAINING, minimal AI context, exhaustive enumeration of all 3-person/3-day duty sequences against the solver's exact lexicographic objective vector, explicit historical-context rebuilding, shared-rule activation, overnight and historical-boundary overlap, shipped policy examples, undeclared draft references, consolidated HR protection and duplicate JSON keys. The native executable checks SHA-256 standard vectors, rational reduction/addition/subtraction, leap dates/ISO weeks and overflow rejection. Assertions remain active in Release builds.
 
-The browser suite exercises real schedule generation and independent verification; visual people/shift/recursive rule edits; policy preview and confirmation; HR import followed by visible absence; rejection of foreign origins/arbitrary commands; and creating, configuring and solving an empty scenario entirely through visual controls. Screenshots from development were inspected; visual acceptance remains with the user.
+The browser suite exercises real schedule generation and independent verification; visual people/shift/recursive rule edits; policy preview and confirmation; HR import followed by visible absence; rejection of foreign origins/arbitrary commands; and creating, configuring and solving an empty scenario entirely through visual controls. Localization coverage includes immediate English/Italian switching across all sections, browser persistence, unchanged scenario data and solved assignments, Italian metrics/statuses/weekdays, localized schema/reference/JSON errors with original details, mobile layout, and catalogue/interpolation completeness. The Italian mobile screenshot was inspected; visual acceptance remains with the user.
 
 ## Benchmarks
 

@@ -124,7 +124,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:4317**. The reference example is loaded automatically: five employees, fourteen closing duties, exact continuous fairness. Generate a schedule, inspect coverage and debts, edit policies visually, or create an empty scenario. Inputs are kept in browser storage; export JSON for a portable backup.
+Open **http://127.0.0.1:4317**. The reference example is loaded automatically: five employees, fourteen closing duties, exact continuous fairness. Generate a schedule, inspect coverage and debts, edit policies visually, or create an empty scenario. Inputs are kept in browser storage; export JSON for a portable backup. The **Language / Lingua** selector in the top bar switches between English and Italian and remembers the choice in this browser. Navigation, editors, results, dates, numbers and known diagnostics are localized; original diagnostic codes/details remain available. Switching language preserves scenario data, custom labels and JSON exports.
 
 For a production UI build on the same local adapter, run `npm run build && npm start`. This still binds only to loopback. `ROSTERCORE_CLI` can select a different native executable; `PORT` changes the local port. No AI, cloud or HR account is required.
 

@@ -1131,3 +1131,37 @@ footer span:last-child {
     margin-left: 0;
   }
 }
+
+.language-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.language-selector select {
+  width: 102px;
+  background: #fff;
+}
+.top-actions {
+  align-items: center;
+}
+@media (max-width: 600px) {
+  .topbar {
+    height: auto;
+    min-height: 100px;
+    padding: 12px 18px;
+  }
+  .top-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .top-actions .language-selector {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .top-actions > button {
+    flex: 1;
+    white-space: normal;
+  }
+}

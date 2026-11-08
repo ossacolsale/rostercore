@@ -1,3 +1,4 @@
+import type { Translate } from "./i18n";
 export type Selector = {
   employeeIds?: string[];
   typeIds?: string[];
@@ -179,22 +180,28 @@ export const newAtom = (s: Scenario): Expression => ({
   comparison: "EQ",
   count: 1,
 });
-export const newConstraint = (s: Scenario): Constraint => ({
+export const newConstraint = (
+  s: Scenario,
+  t: Translate = (text) => text,
+): Constraint => ({
   id: id("rule"),
-  label: "Staffing requirement",
+  label: t("Staffing requirement"),
   scope: {},
   expression: newAtom(s),
 });
-export const newPolicy = (s: Scenario): Policy => ({
+export const newPolicy = (
+  s: Scenario,
+  t: Translate = (text) => text,
+): Policy => ({
   id: id("policy"),
-  label: "Balanced duty rotation",
+  label: t("Balanced duty rotation"),
   revision: 1,
   active: true,
   draft: false,
   dependencies: [],
   objective: {
     id: id("objective"),
-    label: "Duty fairness",
+    label: t("Duty fairness"),
     type: "CUMULATIVE_FAIRNESS",
     mode: "CONTINUOUS_BALANCED",
     measure: "COUNT",

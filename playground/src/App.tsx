@@ -1,3 +1,4 @@
+import { LanguageSelector, useI18n } from "./i18n";
 import { useEffect, useState } from "react";
 import {
   type Scenario,
@@ -25,6 +26,7 @@ const tabs = [
 type Solved = { scenario: Scenario; result: Result };
 const STORAGE = "rostercore.scenario.v1";
 export default function App() {
+  const { t, diagnostic, localizeError } = useI18n();
   const [s, setS] = useState<Scenario>(),
     [tab, setTab] = useState("overview"),
     [busy, setBusy] = useState(false),
@@ -155,7 +157,10 @@ export default function App() {
       <main className="loading">
         <div className="logo-mark">R</div>
         <h1>RosterCore</h1>
-        <p>{fatal || "Loading your local workspace…"}</p>
+        <LanguageSelector />
+        <p>
+          {fatal ? localizeError(fatal) : t("Loading your local workspace…")}
+        </p>
       </main>
     );
   const stale =
@@ -163,7 +168,7 @@ export default function App() {
   const blank = () => {
     const next = structuredClone(s);
     next.id = id("scenario");
-    next.label = "Untitled workforce scenario";
+    next.label = t("Untitled workforce scenario");
     next.revision = 1;
     next.employeeTypes = [];
     next.employees = [];
@@ -185,12 +190,12 @@ export default function App() {
   };
   const simple = () =>
     update((d) => {
-      const p = newPolicy(d);
+      const p = newPolicy(d, t);
       const target = d.shifts.find((sh) => sh.kind === "WORKING");
       if (!target) return;
       p.objective.shiftIds = [target.id];
-      const c = newConstraint(d);
-      c.label = "One daily duty";
+      const c = newConstraint(d, t);
+      c.label = t("One daily duty");
       c.expression = {
         op: "COUNT",
         selector: {},
@@ -214,13 +219,13 @@ export default function App() {
         >
           <span className="logo-mark">R</span>
           <span>
-            RosterCore<small>PLANNING PLAYGROUND</small>
+            RosterCore<small>{t("PLANNING PLAYGROUND")}</small>
           </span>
         </a>
         <div className="workspace-label">
-          LOCAL WORKSPACE <span className="live-dot" />
+          {t("LOCAL WORKSPACE")} <span className="live-dot" />
         </div>
-        <nav aria-label="Main navigation">
+        <nav aria-label={t("Main navigation")}>
           {tabs.map(([key, num, label]) => (
             <button
               key={key}
@@ -228,7 +233,7 @@ export default function App() {
               onClick={() => choose(key)}
             >
               <span>{num}</span>
-              {label}
+              {t(label)}
               {key === "results" && solved?.result.assignments && <i />}
             </button>
           ))}
@@ -236,21 +241,23 @@ export default function App() {
         <div className="sidebar-bottom">
           <span className="version">v0.1.0 · CP-SAT</span>
           <p>
-            Continuous fairness.
-            <br />
-            One shared model.
+            {t("Continuous fairness.")} <br />
+            {t("One shared model.")}{" "}
           </p>
-          <span className="privacy-dot">●</span> Runs on your computer
+          <span className="privacy-dot">●</span>{" "}
+          {t("Runs on your computer")}{" "}
         </div>
       </aside>
       <div className="workspace">
         <header className="topbar">
           <div className="breadcrumb">
-            Workspace <span>/</span> {tabs.find((t) => t[0] === tab)?.[2]}
+            {t("Workspace")} <span>/</span>{" "}
+            {t(tabs.find((tabInfo) => tabInfo[0] === tab)?.[2] || "Overview")}
           </div>
           <div className="top-actions">
+            <LanguageSelector />
             <button disabled={busy} onClick={() => run("validate")}>
-              Validate scenario
+              {t("Validate scenario")}{" "}
             </button>
             <button
               className="primary"
@@ -258,19 +265,22 @@ export default function App() {
               onClick={() => run("solve")}
             >
               {busy
-                ? `${action === "solve" ? "Solving" : "Working"}…`
-                : "Generate schedule"}{" "}
+                ? action === "solve"
+                  ? `${t("Solving")}…`
+                  : t("Working…")
+                : t("Generate schedule")}{" "}
               <span>↗</span>
             </button>
           </div>
         </header>
         <main>
           <div className="page-eyebrow">
-            WORKFORCE OPTIMIZATION <span>●</span> LOCAL & PRIVATE
+            {t("WORKFORCE OPTIMIZATION")} <span>●</span>{" "}
+            {t("LOCAL & PRIVATE")}{" "}
           </div>
           {fatal && (
             <div role="alert" className="notice error">
-              {fatal}
+              {localizeError(fatal)}
             </div>
           )}
           {message && (
@@ -278,15 +288,19 @@ export default function App() {
               className={`feedback ${message.diagnostics.length ? "has-errors" : ""}`}
               role="status"
             >
-              <strong>{message.status}</strong>
+              <strong>{t(message.status)}</strong>
               {message.diagnostics.length === 0 && (
                 <span>
                   {message.status === "VALID"
-                    ? "Scenario passed structural and semantic validation."
+                    ? t("Scenario passed structural and semantic validation.")
                     : message.status === "VERIFIED"
-                      ? "Assignments, hard constraints and fairness accounting verified."
+                      ? t(
+                          "Assignments, hard constraints and fairness accounting verified.",
+                        )
                       : message.status === "PREVIEW"
-                        ? "Import is valid. Review the preview before applying."
+                        ? t(
+                            "Import is valid. Review the preview before applying.",
+                          )
                         : ""}
                 </span>
               )}
@@ -294,12 +308,18 @@ export default function App() {
                 <div className="diagnostic" key={i}>
                   <b>{d.code}</b>
                   <code>{d.path}</code>
-                  <p>{d.message}</p>
+                  <p>{diagnostic(d)}</p>
+                  {diagnostic(d) !== d.message && (
+                    <details>
+                      <summary>{t("Original message")}</summary>
+                      <pre lang="en">{d.message}</pre>
+                    </details>
+                  )}
                 </div>
               ))}
               <button
                 className="subtle"
-                aria-label="Dismiss diagnostic"
+                aria-label={t("Dismiss diagnostic")}
                 onClick={() => setMessage(undefined)}
               >
                 ×
@@ -311,15 +331,17 @@ export default function App() {
               <>
                 <div className="hero">
                   <div>
-                    <span className="pill">DECLARATIVE PLANNING ENGINE</span>
+                    <span className="pill">
+                      {t("DECLARATIVE PLANNING ENGINE")}
+                    </span>
                     <h1>
-                      A fairer schedule,
-                      <br />
-                      <em>across every horizon.</em>
+                      {t("A fairer schedule,")} <br />
+                      <em>{t("across every horizon.")}</em>
                     </h1>
                     <p>
-                      Define your people and rules. Generate a real schedule.
-                      Carry every fairness balance forward.
+                      {t(
+                        "Define your people and rules. Generate a real schedule. Carry every fairness balance forward.",
+                      )}{" "}
                     </p>
                     <div className="row">
                       <button
@@ -327,10 +349,10 @@ export default function App() {
                         disabled={busy}
                         onClick={() => run("solve")}
                       >
-                        Generate schedule ↗
+                        {t("Generate schedule ↗")}{" "}
                       </button>
                       <button onClick={() => choose("policies")}>
-                        Configure policies
+                        {t("Configure policies")}{" "}
                       </button>
                     </div>
                   </div>
@@ -342,47 +364,51 @@ export default function App() {
                     <span className="orbit-dot a" />
                     <span className="orbit-dot b" />
                     <span className="orbit-dot c" />
-                    <small>IDEAL − ACTUAL = DEBT</small>
+                    <small>{t("IDEAL − ACTUAL = DEBT")}</small>
                   </div>
                 </div>
                 <div className="stats">
                   <div>
-                    <span>People</span>
+                    <span>{t("People")}</span>
                     <strong>
                       {s.employees.length.toString().padStart(2, "0")}
                     </strong>
-                    <small>across {s.employeeTypes.length} types</small>
+                    <small>
+                      {t("across {count} types", {
+                        count: s.employeeTypes.length,
+                      })}
+                    </small>
                   </div>
                   <div>
-                    <span>Shift types</span>
+                    <span>{t("Shift types")}</span>
                     <strong>
                       {s.shifts.length.toString().padStart(2, "0")}
                     </strong>
-                    <small>working & scheduled rest</small>
+                    <small>{t("working & scheduled rest")}</small>
                   </div>
                   <div>
-                    <span>Active policies</span>
+                    <span>{t("Active policies")}</span>
                     <strong>
                       {s.policies
                         .filter((p) => p.active)
                         .length.toString()
                         .padStart(2, "0")}
                     </strong>
-                    <small>solved jointly</small>
+                    <small>{t("solved jointly")}</small>
                   </div>
                   <div>
-                    <span>Consolidated assignments</span>
+                    <span>{t("Consolidated assignments")}</span>
                     <strong>{s.history.assignments.length}</strong>
-                    <small>no monthly reset</small>
+                    <small>{t("no monthly reset")}</small>
                   </div>
                 </div>
                 <section className="panel">
-                  <EntityHeader title="Your planning scenario">
-                    <span className="badge">JSON contract v1</span>
+                  <EntityHeader title={t("Your planning scenario")}>
+                    <span className="badge">{t("JSON contract v1")}</span>
                   </EntityHeader>
                   <div className="row">
                     <Text
-                      label="Scenario ID"
+                      label={t("Scenario ID")}
                       value={s.id}
                       onChange={(v) =>
                         update((d) => {
@@ -391,7 +417,7 @@ export default function App() {
                       }
                     />
                     <Text
-                      label="Scenario label"
+                      label={t("Scenario label")}
                       value={s.label}
                       onChange={(v) =>
                         update((d) => {
@@ -402,7 +428,7 @@ export default function App() {
                   </div>
                   <div className="row">
                     <Text
-                      label="Planning start"
+                      label={t("Planning start")}
                       type="date"
                       value={s.calendar.start}
                       onChange={(v) =>
@@ -412,7 +438,7 @@ export default function App() {
                       }
                     />
                     <Text
-                      label="Planning end"
+                      label={t("Planning end")}
                       type="date"
                       value={s.calendar.end}
                       onChange={(v) =>
@@ -422,7 +448,7 @@ export default function App() {
                       }
                     />
                     <Text
-                      label="Timezone"
+                      label={t("Timezone")}
                       value={s.calendar.timezone}
                       onChange={(v) =>
                         update((d) => {
@@ -434,29 +460,31 @@ export default function App() {
                 </section>
                 <div className="two-columns">
                   <section className="panel">
-                    <h3>Get started</h3>
+                    <h3>{t("Get started")}</h3>
                     <p className="hint">
-                      The pharmacy reference is a complete generic example: five
-                      people, one closing duty per day, and continuous fairness
-                      across a month boundary.
+                      {t(
+                        "The pharmacy reference is a complete generic example: five people, one closing duty per day, and continuous fairness across a month boundary.",
+                      )}{" "}
                     </p>
                     <div className="stack">
                       <button onClick={loadExample}>
-                        Load pharmacy reference
+                        {t("Load pharmacy reference")}{" "}
                       </button>
-                      <button onClick={blank}>Create an empty scenario</button>
+                      <button onClick={blank}>
+                        {t("Create an empty scenario")}
+                      </button>
                       <button
                         disabled={!s.shifts.some((sh) => sh.kind === "WORKING")}
                         onClick={simple}
                       >
-                        Add simple balanced-duty template
+                        {t("Add simple balanced-duty template")}{" "}
                       </button>
                     </div>
                   </section>
                   <section className="panel">
-                    <h3>Search controls</h3>
+                    <h3>{t("Search controls")}</h3>
                     <Text
-                      label="Global solve time budget (seconds)"
+                      label={t("Global solve time budget (seconds)")}
                       type="number"
                       value={s.search.maxTimeSeconds}
                       onChange={(v) =>
@@ -467,7 +495,7 @@ export default function App() {
                     />
                     <div className="row">
                       <Text
-                        label="Random seed"
+                        label={t("Random seed")}
                         type="number"
                         value={s.search.seed}
                         onChange={(v) =>
@@ -477,7 +505,7 @@ export default function App() {
                         }
                       />
                       <Text
-                        label="Workers"
+                        label={t("Workers")}
                         type="number"
                         value={s.search.workers}
                         onChange={(v) =>
@@ -499,18 +527,18 @@ export default function App() {
                           })
                         }
                       />{" "}
-                      Deterministic mode (one worker)
+                      {t("Deterministic mode (one worker)")}{" "}
                     </label>
                   </section>
                 </div>
                 <section className="panel">
-                  <h3>Portable configuration</h3>
+                  <h3>{t("Portable configuration")}</h3>
                   <div className="row">
                     <button onClick={() => download(`${s.id}.json`, s)}>
-                      Export scenario JSON
+                      {t("Export scenario JSON")}{" "}
                     </button>
                     <label className="button">
-                      Import scenario JSON
+                      {t("Import scenario JSON")}{" "}
                       <input
                         hidden
                         type="file"
@@ -523,8 +551,9 @@ export default function App() {
                       />
                     </label>
                     <span className="hint">
-                      Changes are saved in this browser. Export to move or back
-                      up your workspace.
+                      {t(
+                        "Changes are saved in this browser. Export to move or back up your workspace.",
+                      )}{" "}
                     </span>
                   </div>
                 </section>
@@ -563,26 +592,28 @@ export default function App() {
               ) : (
                 <section className="empty-state">
                   <div className="empty-glyph">▦</div>
-                  <h2>Your next schedule starts here</h2>
+                  <h2>{t("Your next schedule starts here")}</h2>
                   <p>
-                    Generate a schedule to inspect assignments, coverage, and
-                    cumulative fairness.
+                    {t(
+                      "Generate a schedule to inspect assignments, coverage, and cumulative fairness.",
+                    )}{" "}
                   </p>
                   <button className="primary" onClick={() => run("solve")}>
-                    Generate schedule
+                    {t("Generate schedule")}{" "}
                   </button>
                 </section>
               ))}
             {tab === "advanced" && (
               <>
-                <EntityHeader title="Advanced JSON" />
+                <EntityHeader title={t("Advanced JSON")} />
                 <p className="intro">
-                  This is the same document used by the visual editors and CLI.
-                  Apply only after core validation.
+                  {t(
+                    "This is the same document used by the visual editors and CLI. Apply only after core validation.",
+                  )}{" "}
                 </p>
                 <section className="panel">
                   <label className="field">
-                    <span>Scenario JSON</span>
+                    <span>{t("Scenario JSON")}</span>
                     <textarea
                       className="json-editor full"
                       value={raw}
@@ -595,13 +626,13 @@ export default function App() {
                       disabled={busy}
                       onClick={() => importScenario(raw)}
                     >
-                      Validate & apply JSON
+                      {t("Validate & apply JSON")}{" "}
                     </button>
                     <button onClick={() => setRaw(JSON.stringify(s, null, 2))}>
-                      Reset editor from current scenario
+                      {t("Reset editor from current scenario")}{" "}
                     </button>
                     <button onClick={() => download(`${s.id}.json`, s)}>
-                      Export current scenario
+                      {t("Export current scenario")}{" "}
                     </button>
                   </div>
                 </section>
@@ -609,8 +640,8 @@ export default function App() {
             )}
           </div>
           <footer>
-            RosterCore <span>Open-source scheduling · Apache-2.0</span>
-            <span>Local civil time · Exact rational fairness</span>
+            RosterCore <span>{t("Open-source scheduling · Apache-2.0")}</span>
+            <span>{t("Local civil time · Exact rational fairness")}</span>
           </footer>
         </main>
       </div>
