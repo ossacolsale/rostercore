@@ -1,5 +1,42 @@
-# A quoted -D list preserves paths with spaces. Empty lists support static builds.
-foreach(runtime_dll IN LISTS RUNTIME_DLLS)
-  get_filename_component(filename "${runtime_dll}" NAME)
-  file(COPY_FILE "${runtime_dll}" "${DESTINATION}/${filename}" ONLY_IF_DIFFERENT)
+# Some OR-Tools dependencies are imported as UNKNOWN targets, and therefore do
+# not appear in TARGET_RUNTIME_DLLS. Include the installed runtime catalogue,
+# then inspect the actual PE imports instead of trusting the target graph alone.
+set(candidates ${RUNTIME_DLLS})
+foreach(root IN LISTS RUNTIME_ROOTS)
+  if(IS_DIRECTORY "${root}")
+    file(GLOB_RECURSE installed_dlls "${root}/*.dll" "${root}/*.DLL")
+    list(APPEND candidates ${installed_dlls})
+  endif()
 endforeach()
+list(REMOVE_DUPLICATES candidates)
+file(MAKE_DIRECTORY "${DESTINATION}")
+file(LOCK "${DESTINATION}/.runtime-staging.lock" GUARD PROCESS TIMEOUT 60)
+foreach(runtime_dll IN LISTS candidates)
+  get_filename_component(filename "${runtime_dll}" NAME)
+  if(NOT "${runtime_dll}" STREQUAL "${DESTINATION}/${filename}")
+    file(COPY_FILE "${runtime_dll}" "${DESTINATION}/${filename}" ONLY_IF_DIFFERENT)
+  endif()
+endforeach()
+if(EXECUTABLE AND WIN32)
+  if(NOT DUMPBIN)
+    message(FATAL_ERROR "Cannot verify Windows runtime imports: dumpbin was not found")
+  endif()
+  set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM "windows+pe")
+  set(CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL "dumpbin")
+  set(CMAKE_GET_RUNTIME_DEPENDENCIES_COMMAND "${DUMPBIN}")
+  file(GET_RUNTIME_DEPENDENCIES EXECUTABLES "${EXECUTABLE}"
+    DIRECTORIES "${DESTINATION}" ${SEARCH_DIRECTORIES}
+    RESOLVED_DEPENDENCIES_VAR resolved UNRESOLVED_DEPENDENCIES_VAR unresolved
+    PRE_EXCLUDE_REGEXES "api-ms-.*" "ext-ms-.*"
+    POST_EXCLUDE_REGEXES ".*[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\].*")
+  if(unresolved)
+    message(FATAL_ERROR "Unresolved runtime DLLs for ${EXECUTABLE}: ${unresolved}")
+  endif()
+  foreach(runtime_dll IN LISTS resolved)
+    get_filename_component(filename "${runtime_dll}" NAME)
+    if(NOT "${runtime_dll}" STREQUAL "${DESTINATION}/${filename}")
+      file(COPY_FILE "${runtime_dll}" "${DESTINATION}/${filename}" ONLY_IF_DIFFERENT)
+    endif()
+  endforeach()
+  file(WRITE "${EXECUTABLE}.runtime-dependencies.txt" "${resolved}\n")
+endif()

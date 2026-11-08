@@ -70,6 +70,7 @@ jobs:
         with:
           name: ci-diagnostics-${{ runner.os }}
           path: |
+            build/**/*.runtime-dependencies.txt
             build/Testing/Temporary/
             build/CMakeFiles/CMakeConfigureLog.yaml
             playground/test-results
