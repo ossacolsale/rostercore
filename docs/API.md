@@ -17,7 +17,7 @@ build/rostercore rebuild-history current-scenario.json historical-contexts.json 
 
 Imports default to dry-run (`PREVIEW`). `--apply` returns `IMPORTED` with `scenario`. `--mappings` is an object such as `{"@duty":"closing"}`; CREATE/REPLACE still validate the entire resulting scenario. A mapped draft can remain inactive; activate it explicitly with draft=false and active=true after resolving all dependencies. `context` wraps the exported AI document under `context`; the playground exports that inner document directly. `version` and `help` return human-readable text.
 
-Exit 0 means a well-formed operation completed, including INFEASIBLE/UNKNOWN; inspect `status`. Exit 2 means input/validation or verification/model errors. Exit 3 means an unexpected internal exception. A JSON parse failure is VALIDATION_ERROR with JSON_PARSE; duplicate object keys are rejected. No shell expressions or user-defined executable expressions are supported.
+Exit 0 means a well-formed operation completed, including INFEASIBLE/UNKNOWN; inspect `status`. Exit 2 means input/validation or verification/model errors. Exit 3 means an unexpected internal exception. A JSON parse failure is VALIDATION_ERROR with JSON_PARSE; duplicate object keys are rejected. No shell expressions or user-defined executable expressions are supported. Python integrations on Windows should use `encoding="utf-8"` when capturing the UTF-8 JSON stream. The build stages required Windows DLLs next to each executable.
 
 ## Scenario
 

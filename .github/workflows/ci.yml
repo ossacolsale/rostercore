@@ -19,12 +19,26 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: playground/package-lock.json
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: cpp-deps
         with:
-          path: .deps
-          key: cpp-${{ runner.os }}-${{ runner.arch }}-ortools-9.15-json-3.12.0-schema-2.4.0-v1
+          path: |
+            .deps/ortools
+            .deps/json
+            .deps/json-schema-validator
+          key: cpp-${{ runner.os }}-${{ runner.arch }}-ortools-9.15-json-3.12.0-schema-2.4.0-v2
+          restore-keys: cpp-${{ runner.os }}-${{ runner.arch }}-ortools-9.15-json-3.12.0-schema-2.4.0-v1
       - name: Bootstrap dependencies
         run: python scripts/bootstrap.py --jobs 3
+      - name: Cache installed C++ dependencies
+        if: steps.cpp-deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .deps/ortools
+            .deps/json
+            .deps/json-schema-validator
+          key: ${{ steps.cpp-deps.outputs.cache-primary-key }}
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${{ github.workspace }}/.deps/ortools" -DFETCHCONTENT_SOURCE_DIR_NLOHMANN_JSON="${{ github.workspace }}/.deps/json" -DFETCHCONTENT_SOURCE_DIR_JSON_SCHEMA="${{ github.workspace }}/.deps/json-schema-validator"
       - name: Build
@@ -52,7 +66,11 @@ jobs:
           npm run test:server
           npm run test:e2e
       - uses: actions/upload-artifact@v4
-        if: failure() && runner.os == 'Linux'
+        if: failure()
         with:
-          name: browser-test-evidence
-          path: playground/test-results
+          name: ci-diagnostics-${{ runner.os }}
+          path: |
+            build/Testing/Temporary/
+            build/CMakeFiles/CMakeConfigureLog.yaml
+            playground/test-results
+          if-no-files-found: ignore

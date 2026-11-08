@@ -35,3 +35,11 @@ These are single local measurements, not performance guarantees. Larger models c
 ## Remaining acceptance
 
 Run the playground with a real intended workforce and inspect policies, availability, publication and historical context. Observe Windows/macOS CI before relying on those packages. Unsupported extensions and operational boundaries are documented in `LIMITATIONS.md`; none are presented as working.
+
+## CI portability fix
+
+The reported macOS configure failure is addressed by an explicit framework install destination. Windows native executables now stage the transitive DLLs described by their CMake targets beside the binaries. A 30-second CTest startup fixture verifies CLI loading and schema availability before the acceptance suite; standalone acceptance runs perform the same preflight. The Python launcher disables Windows loader dialogs in child processes, closes unused stdin, uses UTF-8 explicitly and reports exit codes in hexadecimal.
+
+Local verification: Release configure/build passed; all three CTest targets passed (including 37 acceptance tests, 32.73 seconds total); installed CLI startup/schema validation passed. A configure-only Windows-target DLL graph probe checked direct/transitive dependencies, paths with spaces and empty runtime lists; no Windows binary was executed locally. Launcher checks covered EOF, UTF-8 round-trip and nonzero exit reporting. Native macOS/Windows validation remains with the new CI run.
+
+The workflow saves installed dependencies immediately after bootstrap, even if a later project check fails, and uploads CMake/CTest diagnostics on every failed platform. Source and build intermediates are excluded from the new dependency cache.

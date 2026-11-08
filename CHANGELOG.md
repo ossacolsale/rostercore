@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix macOS framework install configuration and stage transitive Windows DLLs next to native executables. Add fail-fast CLI startup checks, explicit UTF-8 subprocess handling, early dependency caching and CI failure logs on every platform.
+
 - Add an English / Italian playground selector with browser persistence, translated editors/results/help, localized dates/numbers and known error messages. Preserve scenario data, diagnostic codes and original technical details.
 
 ## 0.1.0 — 2026-11-08

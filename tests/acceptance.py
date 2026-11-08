@@ -1,5 +1,5 @@
 """CLI acceptance, regression and mathematical invariant tests; no native wrapper."""
-import copy, hashlib, itertools, json, random, subprocess, sys, tempfile, unittest
+import copy, hashlib, itertools, json, random, sys, tempfile, unittest
 from collections import Counter
 from fractions import Fraction
 from pathlib import Path
@@ -7,6 +7,8 @@ ROOT=Path(__file__).resolve().parents[1]
 CLI=str(Path(sys.argv.pop(1)).resolve())
 sys.path.insert(0,str(ROOT/'scripts'))
 from create_example import scenario
+from cli_runner import process_details, run_cli
+from cli_smoke import check_cli
 
 def invoke(command,s,*extra,apply=False,mappings=None):
  with tempfile.TemporaryDirectory() as d:
@@ -14,14 +16,14 @@ def invoke(command,s,*extra,apply=False,mappings=None):
   for i,document in enumerate([s,*extra]):
    if isinstance(document,str): paths.append(document)
    else:
-    p=Path(d)/f'{i}.json';p.write_text(json.dumps(document));paths.append(str(p))
+    p=Path(d)/f'{i}.json';p.write_text(json.dumps(document),encoding='utf-8');paths.append(str(p))
   args=[CLI,command,*paths]
   if apply:args.append('--apply')
   if mappings is not None:
-   p=Path(d)/'mappings.json';p.write_text(json.dumps(mappings));args+=['--mappings',str(p)]
-  p=subprocess.run(args,capture_output=True,text=True,timeout=60)
+   p=Path(d)/'mappings.json';p.write_text(json.dumps(mappings),encoding='utf-8');args+=['--mappings',str(p)]
+  p=run_cli(args[0],*args[1:])
   try:return json.loads(p.stdout)
-  except Exception:raise AssertionError(f'{args}: {p.returncode} {p.stdout[:1000]} {p.stderr[:1000]}')
+  except Exception:raise AssertionError(f'{args}: {process_details(p)}')
 def fraction(v):return Fraction(v['numerator'],v['denominator'])
 def atom(n=1,comparison='EQ',shift='closing',selector=None):return {'op':'COUNT','selector':selector or {'typeIds':['staff']},'shiftId':shift,'comparison':comparison,'count':n}
 def policy_document(p,operation='CREATE',expected=None):
@@ -34,6 +36,9 @@ def event(revision=1,operation='UPSERT',status='APPROVED'):
 def hr(*events,**kwargs):return {'format':'rostercore.hr-events','schemaVersion':1,'events':list(events),**kwargs}
 
 class Acceptance(unittest.TestCase):
+ @classmethod
+ def setUpClass(cls):
+  check_cli(CLI)
  def solved(self,s):
   r=invoke('solve',s);self.assertEqual(r['status'],'OPTIMAL',{'diagnostics':r['diagnostics'],'phases':r.get('phases')});self.assertEqual(invoke('verify',s,r)['status'],'VERIFIED');self.assertEqual(r['metadata']['configurationHash'],hashlib.sha256(json.dumps(s,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode()).hexdigest())
   for report in r['fairness']:
@@ -133,13 +138,13 @@ class Acceptance(unittest.TestCase):
  def test_34_example_contracts(self):
   s=scenario()
   for name in ['policy-create','policy-replace','policy-draft']:
-   d=json.loads((ROOT/f'examples/{name}.json').read_text());self.assertEqual(invoke('import-policy',s,d)['status'],'PREVIEW')
-  d=json.loads((ROOT/'examples/policy-invalid.json').read_text());self.assertEqual(invoke('import-policy',s,d)['status'],'VALIDATION_ERROR')
+   d=json.loads((ROOT/f'examples/{name}.json').read_text(encoding='utf-8'));self.assertEqual(invoke('import-policy',s,d)['status'],'PREVIEW')
+  d=json.loads((ROOT/'examples/policy-invalid.json').read_text(encoding='utf-8'));self.assertEqual(invoke('import-policy',s,d)['status'],'VALIDATION_ERROR')
  def test_35_draft_must_declare_unknown_ids(self):
   s=scenario();p=copy.deepcopy(s['policies'][0]);p.update(id='bad-draft',active=False,draft=True,constraints=[],dependencies=[]);p['objective'].update(id='bad-objective',shiftIds=['@undeclared']);self.assertEqual(invoke('import-policy',s,policy_document(p))['status'],'VALIDATION_ERROR')
  def test_36_protected_consolidated_hr_conflict(self):
   s=scenario(3,end='2026-01-28');r=self.solved(s);a=next(a for a in r['assignments'] if a['shiftId']=='closing' and a['date']=='2026-01-26');s=invoke('consolidate',s,r,'2026-01-26')['scenario'];e=event();e['employeeId']=a['employeeId'];self.assertEqual(invoke('sync-hr',s,hr(e),apply=True)['diagnostics'][0]['code'],'HR_PROTECTED_CONFLICT')
  def test_37_duplicate_json_keys_rejected(self):
-  r=subprocess.run([CLI,'validate','-'],input='{"format":"rostercore.scenario","format":"override"}',capture_output=True,text=True);self.assertEqual(json.loads(r.stdout)['diagnostics'][0]['code'],'JSON_DUPLICATE_KEY')
+  r=run_cli(CLI,'validate','-',input_text='{"format":"rostercore.scenario","format":"override"}');self.assertEqual(json.loads(r.stdout)['diagnostics'][0]['code'],'JSON_DUPLICATE_KEY')
 
 if __name__=='__main__':unittest.main(verbosity=2)

@@ -22,16 +22,22 @@ if(MSVC)
 else()
  target_compile_options(rostercore PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+include(cmake/RuntimeDlls.cmake)
 add_executable(rostercore_cli src/cli.cpp)
 set_target_properties(rostercore_cli PROPERTIES OUTPUT_NAME rostercore)
 target_link_libraries(rostercore_cli PRIVATE rostercore)
+rostercore_stage_runtime_dlls(rostercore_cli)
 include(CTest)
 if(BUILD_TESTING)
  add_executable(core_tests tests/core_tests.cpp)
  target_link_libraries(core_tests PRIVATE rostercore)
+ rostercore_stage_runtime_dlls(core_tests)
  add_test(NAME core_invariants COMMAND core_tests)
  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+ add_test(NAME cli_startup COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_smoke.py $<TARGET_FILE:rostercore_cli>)
+ set_tests_properties(cli_startup PROPERTIES FIXTURES_SETUP cli_ready TIMEOUT 30)
  add_test(NAME acceptance COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/acceptance.py $<TARGET_FILE:rostercore_cli>)
+ set_tests_properties(acceptance PROPERTIES FIXTURES_REQUIRED cli_ready)
 endif()
 if(APPLE)
  set_target_properties(rostercore_cli PROPERTIES INSTALL_RPATH "@loader_path/../lib")
@@ -43,7 +49,7 @@ install(TARGETS rostercore_cli RUNTIME_DEPENDENCIES
  DIRECTORIES "${CMAKE_SOURCE_DIR}/.deps/ortools/lib" "${CMAKE_SOURCE_DIR}/.deps/ortools/bin"
  PRE_EXCLUDE_REGEXES "api-ms-.*" "ext-ms-.*"
  POST_EXCLUDE_REGEXES "^/lib/.*" "^/usr/lib/.*" "^/System/.*" ".*[Ww]indows[/\\].*"
- RUNTIME DESTINATION bin LIBRARY DESTINATION lib)
+ RUNTIME DESTINATION bin LIBRARY DESTINATION lib FRAMEWORK DESTINATION lib)
 install(FILES LICENSE NOTICE docs/THIRD_PARTY_NOTICES.md docs/THIRD_PARTY_LICENSES.txt DESTINATION share/rostercore)
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/.deps/ortools/" DESTINATION share/rostercore/dependency-notices OPTIONAL
  FILES_MATCHING PATTERN "LICENSE*" PATTERN "NOTICE*" PATTERN "COPYING*"
