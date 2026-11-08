@@ -9,6 +9,7 @@ Local environment: Ubuntu x86-64, GCC 15.2, CMake 4.2, Python 3.14, Node.js 22, 
 - TypeScript strict checking and Vite production build: passed.
 - Browser suite: **20 passed**, 40.6 seconds. It uses actual CLI optimization/validation, not mocked solver results. Desktop and Italian mobile screenshots were inspected.
 - Generated schemas: reproduced byte-for-byte. Diff whitespace checks passed.
+- Additional schema-3 operational smoke: sudden leave followed by regeneration returned OPTIMAL and independently VERIFIED with two changes; schema version 3 and its automatic rules were preserved. The restarted playground served the new example/preview API successfully.
 - Installed 0.3.0 CLI: inspect-patterns runs against the schema-3 example using installed schemas.
 - Full 35-day automatic-pattern example: **OPTIMAL**, 163 assignments, 2.9201 seconds measured wall time; independent verify returns **VERIFIED**. This is a single measurement, not a latency guarantee.
 
@@ -46,6 +47,6 @@ The pharmacy includes part-time hours, future conversion, hire/departure, closur
 
 The missing Windows DLL failure (`0xC0000135`) came from installed OR-Tools dependencies not fully represented by CMake imported-target runtime metadata. The build now stages installed dependency DLLs and inspects native PE imports with dumpbin, rejecting unresolved dependencies and retaining a dependency manifest. CLI startup remains a fail-fast CTest fixture; loader dialogs are disabled in test subprocesses. macOS retains an explicit framework install destination.
 
-The focused repair, commit `356962e`, passed Linux, Windows and macOS: [GitHub run 42501192207](https://github.com/ossacolsale/rostercore/actions/runs/42501192207). The earlier schema-2 release, commit `61391b5`, also passed the entire Linux/Windows/macOS matrix, including core tests and UI builds on all three platforms plus Linux API/browser integration: [GitHub run 42506266884](https://github.com/ossacolsale/rostercore/actions/runs/42506266884). Dependency cache/failure artifacts remain enabled. The 0.3.0 release is submitted to the same native matrix; the final handoff records its result.
+The focused repair, commit `356962e`, passed Linux, Windows and macOS: [GitHub run 42501192207](https://github.com/ossacolsale/rostercore/actions/runs/42501192207). The earlier schema-2 release, commit `61391b5`, also passed the entire Linux/Windows/macOS matrix, including core tests and UI builds on all three platforms plus Linux API/browser integration: [GitHub run 42506266884](https://github.com/ossacolsale/rostercore/actions/runs/42506266884). Dependency cache/failure artifacts remain enabled. The 0.3.0 release, commit `7d7a4e5`, passed Linux, Windows and macOS, including the full Linux API/browser suite: [GitHub run 42515437465](https://github.com/ossacolsale/rostercore/actions/runs/42515437465).
 
 Final acceptance should use the intended workforce and explicitly review holiday operation, availability, publication and retained historical context. Supported limits are in `LIMITATIONS.md`.
