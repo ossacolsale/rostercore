@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <functional>
 namespace rostercore {
-void validateEvolution(const Json &j) {
+void validateEvolution(const Json &j, bool workforceOnly) {
   auto error = [](std::string code, std::string path, std::string message) {
     throw Error(code, path, message);
   };
@@ -90,6 +90,7 @@ void validateEvolution(const Json &j) {
         valueType(a, values[a["id"].get<std::string>()]);
   };
   for (auto &e : j["employees"]) {
+    refs(types, Json::array({e["typeId"]}), "/employees/typeId");
     checkAttrs(e["attributes"]);
     if (e.contains("employment"))
       validRange(e["employment"], "/employees/employment");
@@ -101,12 +102,29 @@ void validateEvolution(const Json &j) {
     for (auto &v : versions) {
       if (v.contains("typeId"))
         refs(types, Json::array({v["typeId"]}), "/employees/versions/typeId");
-      if (v.contains("workPatternId"))
+      if (v.contains("workPatternId") && !v["workPatternId"].is_null())
         refs(patterns, Json::array({v["workPatternId"]}),
              "/employees/versions/workPatternId");
       if (v.contains("attributes"))
         checkAttrs(v["attributes"]);
     }
+  }
+  auto assignments = array("workPatternAssignmentRules");
+  if (j["schemaVersion"].get<int>() < 3) {
+    bool needs3 = j.contains("workPatternAssignmentRules");
+    for (auto &e : j["employees"])
+      for (auto &v : e.value("versions", Json::array()))
+        needs3 |= v.contains("workPatternId") && v["workPatternId"].is_null();
+    if (needs3)
+      error("SCHEMA_VERSION", "/schemaVersion",
+            "Automatic work-pattern rules and explicit automatic temporal "
+            "overrides require schema version 3; migrate explicitly");
+  }
+  registry(assignments, "/workPatternAssignmentRules");
+  for (auto &r : assignments) {
+    validRange(r, "/workPatternAssignmentRules");
+    refs(patterns, Json::array({r["workPatternId"]}),
+         "/workPatternAssignmentRules/workPatternId");
   }
   for (auto &p : array("workPatterns")) {
     timeline(p["versions"], "/workPatterns/versions", false);
@@ -117,6 +135,72 @@ void validateEvolution(const Json &j) {
         refs(shifts, x["shiftIds"], "/workPatterns/exceptions");
       }
     }
+  }
+  std::function<void(const Json &, int)> where = [&](const Json &x, int depth) {
+    if (depth > 32)
+      error("AST_LIMIT", "/selector/where",
+            "Selector predicate exceeds depth 32");
+    std::string op = x["op"];
+    if (op == "AND" || op == "OR") {
+      for (auto &c : x["children"])
+        where(c, depth + 1);
+      return;
+    }
+    if (op == "NOT") {
+      where(x["child"], depth + 1);
+      return;
+    }
+    refs(attrs, Json::array({x["attributeId"]}), "/selector/where/attributeId");
+    for (auto &a : array("attributeDefinitions"))
+      if (a["id"] == x["attributeId"]) {
+        if (x.contains("value"))
+          valueType(a, x["value"]);
+        if (x.contains("values"))
+          for (auto &v : x["values"])
+            valueType(a, v);
+        if ((op == "LT" || op == "LE" || op == "GT" || op == "GE") &&
+            a["type"] != "NUMBER" && a["type"] != "INTEGER")
+          error("ATTRIBUTE_TYPE", "/selector/where",
+                "Ordered comparisons require numeric attributes");
+      }
+  };
+  std::function<void(const Json &, bool)> walk = [&](const Json &x,
+                                                     bool draft) {
+    if (x.is_object()) {
+      if (x.contains("draft") && x["draft"].is_boolean() &&
+          x["draft"].get<bool>())
+        draft = true;
+      if (!draft && x.contains("selector") && x["selector"].is_object()) {
+        auto &sel = x["selector"];
+        if (sel.contains("where"))
+          where(sel["where"], 0);
+        if (sel.contains("employeeIds"))
+          refs(employees, sel["employeeIds"], "/selector/employeeIds");
+        if (sel.contains("typeIds"))
+          refs(types, sel["typeIds"], "/selector/typeIds");
+        if (sel.contains("groupIds"))
+          refs(groups, sel["groupIds"], "/selector/groupIds");
+      }
+      if (x.contains("scope") && x["scope"].is_object() &&
+          x["scope"].contains("weekProfileIds") && !draft)
+        refs(profiles, x["scope"]["weekProfileIds"], "/scope/weekProfileIds");
+      for (auto it = x.begin(); it != x.end(); ++it)
+        walk(it.value(), draft);
+    } else if (x.is_array())
+      for (auto &v : x)
+        walk(v, draft);
+  };
+  if (workforceOnly) {
+    Json workforce = Json::object();
+    for (auto key : {"employees", "groups", "attributeDefinitions",
+                     "workPatterns", "workPatternAssignmentRules"})
+      if (j.contains(key))
+        workforce[key] = j[key];
+    walk(workforce, false);
+    Scenario scenario(j);
+    for (auto &g : j["groups"])
+      scenario.select(g["selector"]);
+    return;
   }
   for (auto &p : array("weekProfiles")) {
     refs(rules, p["constraintIds"], "/weekProfiles/constraintIds");
@@ -180,60 +264,6 @@ void validateEvolution(const Json &j) {
       error("WEEK_OVERRIDE_REQUIRED", "/weekConfiguration/manual",
             "An override or frequency waiver requires a reason");
   }
-  std::function<void(const Json &, int)> where = [&](const Json &x, int depth) {
-    if (depth > 32)
-      error("AST_LIMIT", "/selector/where",
-            "Selector predicate exceeds depth 32");
-    std::string op = x["op"];
-    if (op == "AND" || op == "OR") {
-      for (auto &c : x["children"])
-        where(c, depth + 1);
-      return;
-    }
-    if (op == "NOT") {
-      where(x["child"], depth + 1);
-      return;
-    }
-    refs(attrs, Json::array({x["attributeId"]}), "/selector/where/attributeId");
-    for (auto &a : array("attributeDefinitions"))
-      if (a["id"] == x["attributeId"]) {
-        if (x.contains("value"))
-          valueType(a, x["value"]);
-        if (x.contains("values"))
-          for (auto &v : x["values"])
-            valueType(a, v);
-        if ((op == "LT" || op == "LE" || op == "GT" || op == "GE") &&
-            a["type"] != "NUMBER" && a["type"] != "INTEGER")
-          error("ATTRIBUTE_TYPE", "/selector/where",
-                "Ordered comparisons require numeric attributes");
-      }
-  };
-  std::function<void(const Json &, bool)> walk = [&](const Json &x,
-                                                     bool draft) {
-    if (x.is_object()) {
-      if (x.contains("draft") && x["draft"].is_boolean() &&
-          x["draft"].get<bool>())
-        draft = true;
-      if (!draft && x.contains("selector") && x["selector"].is_object()) {
-        auto &sel = x["selector"];
-        if (sel.contains("where"))
-          where(sel["where"], 0);
-        if (sel.contains("employeeIds"))
-          refs(employees, sel["employeeIds"], "/selector/employeeIds");
-        if (sel.contains("typeIds"))
-          refs(types, sel["typeIds"], "/selector/typeIds");
-        if (sel.contains("groupIds"))
-          refs(groups, sel["groupIds"], "/selector/groupIds");
-      }
-      if (x.contains("scope") && x["scope"].is_object() &&
-          x["scope"].contains("weekProfileIds") && !draft)
-        refs(profiles, x["scope"]["weekProfileIds"], "/scope/weekProfileIds");
-      for (auto it = x.begin(); it != x.end(); ++it)
-        walk(it.value(), draft);
-    } else if (x.is_array())
-      for (auto &v : x)
-        walk(v, draft);
-  };
   walk(j, false);
   auto intervals = [&](const Json &xs, bool off) {
     if (off && !xs.empty())
@@ -344,10 +374,12 @@ void validateEvolution(const Json &j) {
     for (size_t e = 0; e < scenario.employees.size(); ++e)
       if (scenario.active(int(e), d))
         for (auto &p :
-             scenario.weekOptions(d).value("profileIds", Json::array()))
+             scenario.weekOptions(d).value("profileIds", Json::array())) {
+          scenario.workPatternAssignment(int(e), d, p);
           for (size_t t = 0; t < scenario.shifts.size(); ++t) {
             auto v = scenario.intervals(int(e), d, int(t), p);
             (void)v;
           }
+        }
 }
 } // namespace rostercore

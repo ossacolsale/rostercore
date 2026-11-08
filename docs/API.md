@@ -1,4 +1,4 @@
-# Public JSON and CLI API · 0.2.0
+# Public JSON and CLI API · 0.3.0
 
 All commands consume one UTF-8 JSON document per file (or `-` for stdin) and return one JSON result on stdout. The library/CLI is stateless. Import/consolidation commands return a **new scenario**; the host decides where to store it. They never overwrite an input file. Use temporary output files and atomic replacement in a persistent integration. stderr is reserved for process/backend diagnostics.
 
@@ -92,3 +92,29 @@ Duty requirements distinguish RESPONSIBILITY (one selected witness covering all 
 A regeneration request is `{"from":"2027-05-10","previousScenario":{...},"previousResult":{...},"stabilityPriority":"BEFORE_FAIRNESS"}` (replace placeholders with full valid documents). The previous result must verify against its own scenario/hash. Dates before from are frozen; history and published locks still apply. AFTER_FAIRNESS is also supported. The response contains its effective `scenario` with explicit replanning baseline, chosen weeks, concrete assignments, coverage and `changes` with before/after logical IDs and intervals. Verify the result against that returned scenario. No operation overwrites the input.
 
 Known diagnostics add severity, object IDs, editor section and a suggestion where available; original code/path/message are retained. Validate may return informational/warning diagnostics without making the input invalid. Strict unknown-property/operator checks still apply.
+
+
+## Schema 3: automatic work-pattern assignments
+
+Schema 1/2 scenarios remain supported. `migrate` explicitly returns schema 3, preserving employee IDs, base/dated manual patterns, published assignments and history. The migration adds an empty workPatternAssignmentRules catalogue; it never infers rules or replaces individual assignments.
+
+```json
+{
+  "id":"automatic-full", "label":"Full-time employees", "enabled":true,
+  "selector":{"where":{"op":"EQ","attributeId":"contract","value":"FULL_TIME"}},
+  "workPatternId":"full", "priority":10, "validFrom":"2027-01-01"
+}
+```
+
+Place rules in scenario.workPatternAssignmentRules; optional validTo is exclusive. Higher numeric priority wins. Effective employment/default and dated attributes/dynamic groups are evaluated on the requested date using the existing selector grammar. Resolution precedence is effective employee-version pattern override, explicit individual base pattern, applicable automatic rule, then existing unrestricted behavior. Equal top-priority rules pointing to different patterns fail with WORK_PATTERN_ASSIGNMENT_CONFLICT; same-pattern ties are compatible. Disabled/ineffective rules do not participate. A referenced pattern must have an effective version.
+
+A schema-3 employee version may set `workPatternId:null` to return explicitly to automatic rules for that interval, suppressing the base pattern. Omitting the property still inherits the base. Ending that interval restores the usual precedence. A base automatic choice is represented by omitting employee.workPatternId. No automatic association is copied into employees. Domain resolution, concrete variants, solve and independent verification all use Scenario::workPatternAssignment. Retain dated rules/arrangements needed by historical boundary checks.
+
+```sh
+build/rostercore inspect-patterns examples/automatic-work-patterns.json 2027-06-01
+build/rostercore inspect examples/automatic-work-patterns.json 2027-06-01
+```
+
+`inspect-patterns` returns INSPECTED with workforce.employees (active flag, profile ID, resolved attributes, effective workPatternAssignment origin/ID/ruleIds) and workforce.rules (matching employee IDs per profile). Conflicts and gaps remain per-employee ERROR diagnostics while other rows remain available; unassigned active employees produce a warning when rules exist. INSPECTED means the preview was computed, **not** that the scenario passed full validation. Structural failures and invalid workforce-resolution references still return VALIDATION_ERROR. Pattern preview validates the workforce/assignment dependencies without requiring completed shift hours, coverage or policies; it does not certify those other sections. Standard validate/solve reject conflicting assignments. Free weekly-profile alternatives can yield multiple profile-specific preview rows.
+
+The new declarations are part of schema 3. Older schema numbers containing automatic rules or explicit null temporal overrides require migration, rather than silently changing the older contract. Policy exchange accepts engine 0.3.0/schema 3; AI context includes rule definitions and referenced dated attribute values. The loopback adapter whitelists inspect-patterns as a fixed CLI action.

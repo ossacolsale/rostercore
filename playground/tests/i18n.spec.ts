@@ -21,10 +21,10 @@ test("language switches immediately, persists and preserves the scenario", async
   ).toBeVisible();
   for (const [nav, heading] of [
     ["02 Personale e gruppi", "Personale e gruppi"],
-    ["04 Tipologie di turno", "Tipologie di turno"],
-    ["06 Calendario e disponibilità", "Calendario e disponibilità"],
-    ["08 Politiche di pianificazione", "Politiche di pianificazione"],
-    ["09 Importazioni AI e HR", "Importazioni AI e HR"],
+    ["03 Tipologie di turno", "Tipologie di turno"],
+    ["07 Calendario e disponibilità", "Calendario e disponibilità"],
+    ["09 Politiche di pianificazione", "Politiche di pianificazione"],
+    ["10 Importazioni AI e HR", "Importazioni AI e HR"],
   ]) {
     await page.getByRole("button", { name: nav }).click();
     await expect(
@@ -84,7 +84,9 @@ test("Italian results keep the same assignments without another solve", async ({
   expect(await page.locator(".shift-cell").allTextContents()).toEqual(shifts);
   expect(solves).toBe(1);
   await page.getByRole("button", { name: "Verifica indipendente" }).click();
-  await expect(page.getByRole("status")).toContainText("Verificato");
+  await expect(
+    page.locator(".notification").filter({ hasText: "Verificato" }).last(),
+  ).toBeVisible();
   await page.getByLabel(selector).selectOption("en");
   await expect(page.locator(".status")).toHaveText("OPTIMAL");
 });
@@ -95,7 +97,7 @@ test("Italian errors preserve diagnostic codes and original technical details", 
 }) => {
   await page.goto("/");
   await page.getByLabel(selector).selectOption("it");
-  await page.getByRole("button", { name: "09 Importazioni AI e HR" }).click();
+  await page.getByRole("button", { name: "10 Importazioni AI e HR" }).click();
   await page
     .getByLabel("Documento JSON di politica o eventi HR")
     .fill("{invalid");
@@ -114,27 +116,51 @@ test("Italian errors preserve diagnostic codes and original technical details", 
   await page
     .getByRole("button", { name: "Anteprima e validazione dell'importazione" })
     .click();
-  await expect(page.getByRole("status")).toContainText("Errore di validazione");
+  await expect(page.locator(".notification.error").last()).toContainText(
+    "Errore di validazione",
+  );
+  await page
+    .locator(".notification.error")
+    .getByRole("button", { name: "Visualizza diagnostiche" })
+    .click();
   await expect(page.locator(".diagnostic b")).toHaveText("SCHEMA");
-  await expect(page.getByRole("status")).toContainText(
+  await expect(page.getByRole("dialog")).toContainText(
     "Il documento non rispetta lo schema JSON.",
   );
   await page
-    .getByRole("status")
+    .getByRole("dialog")
     .getByText("Messaggio originale", { exact: true })
     .click();
   await expect(page.locator(".diagnostic pre")).not.toBeEmpty();
+  await page
+    .getByRole("button", { name: "Chiudi diagnostiche", exact: true })
+    .click();
+  await page
+    .locator(".notification.error")
+    .getByRole("button", { name: "Chiudi notifica", exact: true })
+    .click();
   const scenario = await (await request.get("/api/example")).json();
   scenario.employees[0].typeId = "missing-type";
   await page.getByRole("button", { name: "{ } JSON avanzato" }).click();
   await page.getByLabel("JSON dello scenario").fill(JSON.stringify(scenario));
   await page.getByRole("button", { name: "Valida e applica il JSON" }).click();
-  await expect(page.getByRole("status")).toContainText(
+  await page
+    .locator(".notification.error")
+    .getByRole("button", { name: "Visualizza diagnostiche" })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText(
     "Riferimento inesistente: missing-type",
   );
   await expect(page.locator(".diagnostic b")).toHaveText("REFERENCE");
+  await page
+    .getByRole("button", { name: "Chiudi diagnostiche", exact: true })
+    .click();
   await page.getByLabel(selector).selectOption("en");
-  await expect(page.getByRole("status")).toContainText(
+  await page
+    .locator(".notification.error")
+    .getByRole("button", { name: "View diagnostics" })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText(
     "Unknown reference: missing-type",
   );
 });
@@ -190,6 +216,9 @@ test("Italian catalogue covers UI keys and preserves interpolation parameters", 
     "evolution",
     "planning-editors",
     "operational-results",
+    "notifications",
+    "configuration-guide",
+    "pattern-assignments",
   ]) {
     const text = await readFile(
       new URL(`../src/${name}.tsx`, import.meta.url),

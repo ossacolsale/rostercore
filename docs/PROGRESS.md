@@ -20,3 +20,15 @@ Scope and semantics: `ARCHITECTURE.md`. Verification and measured performance: `
 | 4 — Integration and distribution | 37 legacy + 42 evolution tests, HR-to-regeneration browser workflow, protected intervals/prefix checks, verified full examples, measured benchmarks, installed CLI and documentation. Both the focused Windows repair and the 0.2.0 release passed the complete Linux/Windows/macOS GitHub matrix. | Complete for local evaluation |
 
 No industry behavior is embedded in the engine. The full five-week reference reaches OPTIMAL; the automatic-week example returns a verified FEASIBLE incumbent within its budget. Remaining bounds and operational responsibilities are explicit in `LIMITATIONS.md`.
+
+
+## 0.3 UX and automatic assignments — four phases
+
+| Phase | Implemented and checked | Status |
+| --- | --- | --- |
+| 1 — Notifications/navigation | Central bottom-of-viewport outcome center, persistent accessible errors/full diagnostics, bounded queue/deduplication and guided dependency order with free navigation. Frontend build and browser checks passed. | Complete |
+| 2 — Core/model | Schema-3 dated selector-to-pattern rules, manual/base precedence, compatible/conflicting ties, automatic temporal return, shared domain/variant/verifier resolution and explicit migration. All native tests passed. | Complete |
+| 3 — Editors/previews | Visual rules and individual modes/origins, core workforce/variant previews, reviewed future bulk changes, dependency-guarded deletion and unchanged saved legacy assignments. Complete visual authoring passes without JSON. | Complete |
+| 4 — Regression/distribution | 37 legacy + 42 evolution + 18 assignment tests, 20 bilingual browser tests, installed preview, reproducible schemas and independently verified full automatic-pattern example. Native release CI is observed after push. | Complete for local evaluation |
+
+`UX_ASSIGNMENTS.md` describes semantics and compatibility. Full validation remains separate from progressive editing and pattern-only preview.

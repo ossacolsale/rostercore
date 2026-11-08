@@ -892,10 +892,17 @@
           "pattern": "^[A-Za-z0-9_@.:-]+$"
         },
         "workPatternId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256,
-          "pattern": "^[A-Za-z0-9_@.:-]+$"
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "attributes": {
           "type": "object",
@@ -910,6 +917,56 @@
         }
       },
       "required": [
+        "validFrom"
+      ],
+      "additionalProperties": false
+    },
+    "workPatternAssignmentRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "workPatternId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "validFrom": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "validTo": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "enabled",
+        "selector",
+        "workPatternId",
+        "priority",
         "validFrom"
       ],
       "additionalProperties": false

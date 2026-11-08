@@ -7,7 +7,7 @@ RosterCore generates workforce schedules from declarative rules using a C++20 en
 Designed for integration into desktop applications and backend services, RosterCore aims to remain independent of any specific industry. Pharmacies are the initial reference use case, but the model is intended for healthcare, retail, hospitality, manufacturing, and other shift-based workplaces.
 
 > [!IMPORTANT]
-> **Version 0.2.0 — ready for local evaluation.** The native CLI and visual playground run real optimization and verify returned assignments. This is an initial release with explicit limits, not a certified HR system. See [implemented scope and limitations](docs/LIMITATIONS.md).
+> **Version 0.3.0 — ready for local evaluation.** The native CLI and visual playground run real optimization and verify returned assignments. This is an initial release with explicit limits, not a certified HR system. See [implemented scope and limitations](docs/LIMITATIONS.md).
 
 ## Why RosterCore?
 
@@ -19,6 +19,7 @@ RosterCore implements **continuous, history-aware fairness**: it will optimize f
 
 ## Implemented capabilities
 
+- **Automatic work-pattern assignments:** dated attribute/group selectors, explicit manual precedence, conflict diagnostics and core-backed previews.
 - **Dated workforce:** typed/default attributes, predicates, employment changes, reusable work patterns and logical shift variants.
 - **Weekly calendars:** manual/recurring/solver-selected ISO profiles, hard/desired frequencies, versioned Italian holidays and company closures.
 - **Operational coverage:** actual interval presence, distinct qualified responsibilities, lexicographic fallback resources and cross-day/rest rules.
@@ -128,6 +129,8 @@ npm run dev
 
 Open **http://127.0.0.1:4317**. The reference example is loaded automatically: five employees, fourteen closing duties, exact continuous fairness. Generate a schedule, inspect coverage and debts, edit policies visually, or create an empty scenario. Use **Load evolving pharmacy example** to try part-time hours, two closing duties, fallback, nights, dated hires/departures and closures, or **Load automatic week example** for solver-selected weeks. Follow the numbered editors, preview workforce hours and weekly classification, then generate, import leave and regenerate from its effective date. Inputs are kept in browser storage; export JSON for a portable backup. The **Language / Lingua** selector in the top bar switches between English and Italian and remembers the choice in this browser. Navigation, editors, results, dates, numbers and known diagnostics are localized; original diagnostic codes/details remain available. Switching language preserves scenario data, custom labels and JSON exports.
 
+The **automatic work-pattern example** demonstrates schema 3: full-time and part-time attributes select reusable arrangements dynamically, including a future contract change. Existing schema-1/2 individual pattern assignments remain explicit until you change them. Follow the guided order: people/attributes → logical shifts → work patterns and assignment rules → concrete variants → calendar/coverage/policies. Outcomes appear in the viewport-bottom notification center; errors persist and **View diagnostics** opens their full details. Catalogue deletion checks references, and bulk workforce edits require a review before application.
+
 For a production UI build on the same local adapter, run `npm run build && npm start`. This still binds only to loopback. `ROSTERCORE_CLI` can select a different native executable; `PORT` changes the local port. No AI, cloud or HR account is required.
 
 On Windows use a Developer PowerShell with Visual Studio 2022 C++ tools:
@@ -168,7 +171,7 @@ npm run test:e2e
 
 If Chrome is already installed, `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e` uses it instead of a downloaded browser. See [test report](docs/TEST_REPORT.md) and [measured benchmark data](docs/benchmark-results.json). Larger cases can exhaust their budget; FEASIBLE and UNKNOWN are reported honestly.
 
-`cmake --install build --prefix /your/install/path` installs the CLI, runtime libraries, headers, schemas and notices. `cpack --config build/CPackConfig.cmake -G TGZ` builds a native archive on Unix. Keep dependency license notices with redistributed binaries. [CI](.github/workflows/ci.yml) builds/tests Linux, Windows and macOS; the 0.2.0 release passed all three platforms, including Linux API/browser tests; see the test report for linked evidence.
+`cmake --install build --prefix /your/install/path` installs the CLI, runtime libraries, headers, schemas and notices. `cpack --config build/CPackConfig.cmake -G TGZ` builds a native archive on Unix. Keep dependency license notices with redistributed binaries. [CI](.github/workflows/ci.yml) builds/tests Linux, Windows and macOS; release-specific native validation is linked in the test report.
 
 ## Four implementation phases
 

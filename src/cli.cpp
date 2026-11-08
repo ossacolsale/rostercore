@@ -81,7 +81,8 @@ int main(int argc, char **argv) {
     if (command == "help" || command == "--help") {
       std::cout << "RosterCore " << version
                 << "\nCommands: validate|solve|context|migrate SCENARIO|-; "
-                   "inspect SCENARIO [DATE]; select SCENARIO SELECTOR [DATE]; "
+                   "inspect|inspect-patterns SCENARIO [DATE]; select SCENARIO "
+                   "SELECTOR [DATE]; "
                    "regenerate SCENARIO REQUEST; verify "
                    "SCENARIO RESULT; consolidate SCENARIO RESULT THROUGH; "
                    "import-policy|sync-hr|rebuild-history SCENARIO DOCUMENT "
@@ -118,6 +119,9 @@ int main(int argc, char **argv) {
       out["workforce"]["selectedEmployeeIds"] = Json::array();
       for (int e : s.select(selector, day(at)))
         out["workforce"]["selectedEmployeeIds"].push_back(s.employees[e].id);
+    } else if (command == "inspect-patterns") {
+      out = previewWorkPatterns(
+          j, argc > 3 ? argv[3] : j["calendar"]["start"].get<std::string>());
     } else if (command == "inspect") {
       out = inspect(j, argc > 3 ? argv[3]
                                 : j["calendar"]["start"].get<std::string>());

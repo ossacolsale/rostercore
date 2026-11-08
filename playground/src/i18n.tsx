@@ -30,6 +30,12 @@ export function translate(
 }
 
 const diagnosticSummaries: Record<string, string> = {
+  WORK_PATTERN_ASSIGNMENT_CONFLICT:
+    "Più regole automatiche con la stessa priorità massima assegnano schemi differenti alla stessa persona e data. Correggi le priorità, i selettori o gli intervalli di efficacia.",
+  WORK_PATTERN_UNASSIGNED:
+    "Nessuno schema viene risolto per il dipendente. Si applica il comportamento esistente senza restrizioni di schema; verifica se manca una regola.",
+  SCHEMA_VERSION:
+    "Questa funzione richiede il contratto versione 3. Esegui la migrazione esplicita preservando le assegnazioni individuali esistenti.",
   WEEK_CONFLICT:
     "Due regole o assegnazioni classificano la stessa settimana in modo incompatibile.",
   WEEK_OVERRIDE_REQUIRED:
@@ -80,7 +86,7 @@ const diagnosticSummaries: Record<string, string> = {
     "Il calcolo esatto supera i limiti numerici supportati oppure contiene un denominatore non valido.",
   DATE: "Data non valida. Usa date gregoriane nel formato AAAA-MM-GG, comprese tra il 1900 e il 2200.",
   DATE_RANGE: "La data iniziale deve precedere o coincidere con quella finale.",
-  HORIZON_LIMIT: "L'orizzonte deve contenere da 1 a 366 giornate.",
+  HORIZON_LIMIT: "L'orizzonte deve contenere da 1 a 1096 giornate.",
   SIZE_LIMIT:
     "Lo scenario supera i limiti di dimensione supportati. Controlla il numero di dipendenti, turni e giornate.",
   DUPLICATE_ID:

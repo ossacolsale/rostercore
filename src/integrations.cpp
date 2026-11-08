@@ -253,11 +253,12 @@ Json aiContext(const Json &j) {
                   {"policies", j["policies"]},
                   {"employees", Json::array()}};
   for (auto key : {"attributeDefinitions", "workPatterns", "weekProfiles",
-                   "weekConfiguration", "dutyRequirements", "temporalRules"})
+                   "weekConfiguration", "dutyRequirements", "temporalRules",
+                   "workPatternAssignmentRules"})
     context[key] =
         j.value(key, std::string(key) == "weekConfiguration" ? Json::object()
                                                              : Json::array());
-  context["schemaVersion"] = 2;
+  context["schemaVersion"] = 3;
   std::set<std::string> attributes;
   std::function<void(const Json &)> visit = [&](const Json &v) {
     if (v.is_object()) {

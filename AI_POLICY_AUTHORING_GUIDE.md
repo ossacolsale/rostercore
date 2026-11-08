@@ -1,6 +1,6 @@
 # RosterCore AI policy authoring guide
 
-Engine 0.2.0 · JSON Schema versions 1 and 2 · no AI service is required by RosterCore.
+Engine 0.3.0 · JSON Schema versions 1, 2 and 3 · no AI service is required by RosterCore.
 
 Generate **one complete policy exchange document**, containing both an objective and its hard constraints. Never generate scripts, code, SQL, custom expressions or unknown JSON fields. The authoritative contracts are `schemas/planning-policy.schema.json`, `schemas/scenario.schema.json` and `schemas/operators.json`. The executable core validates all paths, including visual configuration.
 
@@ -76,3 +76,10 @@ Use scope.weekProfileIds to keep objective quotas within their applicable profil
 SUCCESSION and FORBIDDEN_PAIR correlate start dates with explicit offsetDays. MIN_REST uses minimumMinutes of actual elapsed rest with UTC/Europe/Rome data only; ambiguous times require startFold/endFold. Night-to-OFF means no new shift starts on the following calendar day. Where an ordinary allowed-shift rule forbids OFF, allowRequiredRest explicitly admits only a qualifying required-rest exception. Retained history participates across profile and horizon boundaries.
 
 Use examples/pharmacy-evolution.json for the full reference and examples/pharmacy-automatic-weeks.json for solver-selected weeks. Exported AI context includes new catalogues and dated arrangements with filtered referenced attributes; it excludes workforce names and history. The context is an authoring reference, not a replacement scenario. Validate and preview every CREATE/REPLACE document before applying it.
+
+
+## Automatic arrangements (schema 3)
+
+Scenario workPatternAssignmentRules bind an existing selector to a workPatternId with enabled, priority and half-open effective dates. Use the existing `where` grammar; do not invent attributeCondition or an executable expression. Higher priority wins; incompatible ties are invalid. Individual base assignments and effective individual overrides take precedence. A dated workPatternId:null returns to automatic rules for that interval, whereas omission inherits the base. Never remove existing explicit patterns during migration or populate employee fields as an automatic-rule side effect.
+
+Rules belong to the scenario catalogue, not to a policy exchange CREATE/REPLACE patch. Reuse them when describing variant workPatternIds. The context exposes rule definitions and needed attributes. Preview actual employee/date resolutions with inspect-patterns; a preview carrying ERROR diagnostics is not a validated schedule. Use examples/automatic-work-patterns.json for a complete reference.

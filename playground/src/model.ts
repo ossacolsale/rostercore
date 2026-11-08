@@ -2,6 +2,7 @@ import type {
   AttributeDefinition,
   EmployeeVersion,
   WorkPattern,
+  WorkPatternAssignmentRule,
   ShiftVariant,
   WeekProfile,
   WeekConfiguration,
@@ -86,9 +87,10 @@ export type Assignment = {
 };
 export type Scenario = {
   format: "rostercore.scenario";
-  schemaVersion: 1 | 2;
+  schemaVersion: 1 | 2 | 3;
   attributeDefinitions?: AttributeDefinition[];
   workPatterns?: WorkPattern[];
+  workPatternAssignmentRules?: WorkPatternAssignmentRule[];
   weekProfiles?: WeekProfile[];
   weekConfiguration?: WeekConfiguration;
   dutyRequirements?: DutyRequirement[];

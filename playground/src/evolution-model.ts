@@ -33,8 +33,28 @@ export type AttributeDefinition = {
 };
 export type EmployeeVersion = Effective & {
   typeId?: string;
-  workPatternId?: string;
+  workPatternId?: string | null;
   attributes?: Record<string, Scalar | null>;
+};
+export type WorkPatternAssignmentRule = Effective & {
+  id: string;
+  label: string;
+  enabled: boolean;
+  selector: Selector;
+  workPatternId: string;
+  priority: number;
+};
+export type WorkPatternAssignment = {
+  origin:
+    | "AUTOMATIC_RULE"
+    | "INDIVIDUAL"
+    | "TEMPORAL_OVERRIDE"
+    | "NONE"
+    | "INACTIVE"
+    | "CONFLICT";
+  workPatternId?: string;
+  ruleIds?: string[];
+  message?: string;
 };
 export type WorkPattern = {
   id: string;
@@ -139,7 +159,9 @@ export type WorkforcePreview = {
     employeeId: string;
     label: string;
     active: boolean;
+    profileId?: string;
     state: { typeId: string; workPatternId?: string };
+    workPatternAssignment?: WorkPatternAssignment;
     attributes: Record<
       string,
       { origin: "EXPLICIT" | "DEFAULT" | "MISSING"; value?: Scalar }
@@ -154,6 +176,7 @@ export type WorkforcePreview = {
     }[];
   }[];
   selectedEmployeeIds?: string[];
+  rules?: { ruleId: string; employeeIds: string[]; profileId?: string }[];
 };
 export type WeekAssignment = {
   week: string;
@@ -163,7 +186,7 @@ export type WeekAssignment = {
   origin: string;
 };
 export function initializeEvolution(s: Scenario) {
-  s.schemaVersion = 2;
+  if (s.schemaVersion < 2) s.schemaVersion = 2;
   s.attributeDefinitions ??= [];
   s.workPatterns ??= [];
   s.weekProfiles ??= [];

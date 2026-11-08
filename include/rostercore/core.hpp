@@ -8,7 +8,7 @@
 #include <vector>
 namespace rostercore {
 using Json = nlohmann::json;
-inline constexpr auto version = "0.2.0";
+inline constexpr auto version = "0.3.0";
 struct Error : std::runtime_error {
   std::string code, path;
   Error(std::string c, std::string p, std::string m)
@@ -62,6 +62,7 @@ struct Scenario {
   bool plannable(int, int) const;
   bool operational(int) const;
   Json employeeState(int, int) const;
+  Json workPatternAssignment(int, int, const std::string &profileId = "") const;
   Json resolvedAttributes(int, int) const;
   Json intervals(int, int, int, const std::string &profileId = "") const;
   std::vector<int> domain(int, int, const std::string &profileId = "") const;
@@ -79,9 +80,10 @@ void validate(const Json &);
 Json solve(const Json &);
 Json migrate(const Json &);
 Json inspect(const Json &, const std::string &);
+Json previewWorkPatterns(const Json &, const std::string &);
 Json configurationDiagnostics(const Json &);
 Json regenerate(const Json &, const Json &);
-void validateEvolution(const Json &);
+void validateEvolution(const Json &, bool workforceOnly = false);
 int isoMonday(int);
 bool effective(const Json &, int);
 const Json &catalogues();

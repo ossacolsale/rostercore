@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-11-08
+
+- Centralize viewport-bottom operation notifications with translated outcomes, persistent errors, deduplication/queueing, keyboard-accessible full diagnostics and safe mobile spacing. Distinguish infeasible/unknown/invalid outcomes from successful HTTP transport.
+- Reorder guided configuration around logical shifts → work patterns/rules → concrete variants, with local progress/dependency states and free previous/next navigation.
+- Add schema-3 dynamic work-pattern assignment rules using existing typed selectors, dated/default attributes, priority/conflict checks, manual/base precedence and explicit temporal return to automatic mode. Preserve old scenarios and individual assignments through explicit migration.
+- Add visual rule/override editors, core-resolved origins/matching previews, variant applicability, reviewed bulk changes and guarded catalogue deletion. Retain saved unfinished drafts on reload.
+- Add a complete automatic-assignment example, native/browser regression coverage and updated English/Italian authoring/API documentation.
+
 ## 0.2.0 — 2026-11-08
 
 - Add schema-2 week profiles/cycles and automatic hard/soft frequency optimization, versioned Italian holidays and closures.

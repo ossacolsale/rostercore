@@ -1,4 +1,11 @@
-import { useState, type ReactNode } from "react";
+import {
+  PatternChoice,
+  AssignmentOrigin,
+  VariantApplicability,
+  ReviewDialog,
+  enableAssignmentRules,
+} from "./pattern-assignments";
+import { useEffect, useState, type ReactNode } from "react";
 import { type Scenario, type Selector, type Scope, id } from "./model";
 import {
   type AttributeDefinition,
@@ -33,7 +40,7 @@ export function UpgradeNotice({
   onUpgrade: () => void;
 }) {
   const { t } = useI18n();
-  return s.schemaVersion === 1 ? (
+  return s.schemaVersion < 3 ? (
     <div className="notice">
       <p>
         {t(
@@ -492,9 +499,75 @@ export function Workforce({ s, update }: { s: Scenario; update: Update }) {
     [previewDate, setPreviewDate] = useState(s.calendar.start),
     [preview, setPreview] = useState<Result>(),
     [error, setError] = useState("");
+  const [assignmentPreview, setAssignmentPreview] = useState<Result>();
+  const [bulkReview, setBulkReview] = useState<{
+    employeeIds: string[];
+    attributeId: string;
+    value: Scalar;
+    from?: string;
+  }>();
+  useEffect(() => {
+    let active = true;
+    const timer = setTimeout(() => {
+      coreAction(
+        "inspect-patterns",
+        s,
+        { onDate: previewDate },
+        { silent: true },
+      )
+        .then((r) => {
+          if (active) setAssignmentPreview(r);
+        })
+        .catch(() => {});
+    }, 500);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [s, previewDate]);
   const definitions = s.attributeDefinitions || [];
   return (
     <>
+      {bulkReview && (
+        <ReviewDialog
+          title={t("Review workforce changes")}
+          onCancel={() => setBulkReview(undefined)}
+          onConfirm={() => {
+            update((d) => {
+              for (const employee of d.employees)
+                if (bulkReview.employeeIds.includes(employee.id)) {
+                  if (bulkReview.from)
+                    scheduleVersion(employee, {
+                      validFrom: bulkReview.from,
+                      attributes: {
+                        [bulkReview.attributeId]: bulkReview.value,
+                      },
+                    });
+                  else
+                    employee.attributes[bulkReview.attributeId] =
+                      bulkReview.value;
+                }
+            });
+            setBulkReview(undefined);
+          }}
+        >
+          <p>
+            {t("Affected employees: {count}", {
+              count: bulkReview.employeeIds.length,
+            })}
+          </p>
+          <p>
+            {bulkReview.employeeIds
+              .map((id) => s.employees.find((e) => e.id === id)?.label ?? id)
+              .join(", ")}
+          </p>
+          <p>
+            {definitions.find((a) => a.id === bulkReview.attributeId)?.label}:{" "}
+            {String(bulkReview.value)} ·{" "}
+            {bulkReview.from ?? t("Base individual value")}
+          </p>
+        </ReviewDialog>
+      )}
       <section className="panel">
         <EntityHeader title={t("Reusable attributes")} />
         <p className="hint">
@@ -688,9 +761,10 @@ export function Workforce({ s, update }: { s: Scenario; update: Update }) {
           <button
             disabled={!chosen.length || !attribute}
             onClick={() =>
-              update((d) => {
-                for (const e of d.employees)
-                  if (chosen.includes(e.id)) e.attributes[attribute] = bulk;
+              setBulkReview({
+                employeeIds: [...chosen],
+                attributeId: attribute,
+                value: bulk,
               })
             }
           >
@@ -709,13 +783,11 @@ export function Workforce({ s, update }: { s: Scenario; update: Update }) {
               (!!s.history.through && from <= s.history.through)
             }
             onClick={() =>
-              update((d) => {
-                for (const e of d.employees)
-                  if (chosen.includes(e.id))
-                    scheduleVersion(e, {
-                      validFrom: from,
-                      attributes: { [attribute]: bulk },
-                    });
+              setBulkReview({
+                employeeIds: [...chosen],
+                attributeId: attribute,
+                value: bulk,
+                from,
               })
             }
           >
@@ -761,19 +833,22 @@ export function Workforce({ s, update }: { s: Scenario; update: Update }) {
                   })
                 }
               />
-              <Select
-                createKind="pattern"
-                label={t("Base work pattern")}
-                value={e.workPatternId || ""}
-                options={[
-                  { id: "", label: t("No work pattern") },
-                  ...(s.workPatterns || []),
-                ]}
+              <PatternChoice
+                s={s}
+                value={e.workPatternId}
                 onChange={(x) =>
                   update((d) => {
-                    if (x) d.employees[i].workPatternId = x;
+                    if (typeof x === "string") d.employees[i].workPatternId = x;
                     else delete d.employees[i].workPatternId;
                   })
+                }
+              />
+              <AssignmentOrigin
+                s={s}
+                value={
+                  assignmentPreview?.workforce?.employees.find(
+                    (person) => person.employeeId === e.id,
+                  )?.workPatternAssignment
                 }
               />
             </div>
@@ -831,21 +906,20 @@ export function Workforce({ s, update }: { s: Scenario; update: Update }) {
                       })
                     }
                   />
-                  <Select
-                    createKind="pattern"
-                    label={t("Work pattern override")}
-                    value={v.workPatternId || ""}
-                    options={[
-                      { id: "", label: t("Use base value") },
-                      ...(s.workPatterns || []),
-                    ]}
+                  <PatternChoice
+                    s={s}
+                    temporal
+                    value={v.workPatternId}
                     onChange={(x) =>
                       update((d) => {
-                        if (x) d.employees[i].versions![j].workPatternId = x;
+                        if (x === null) enableAssignmentRules(d);
+                        if (x !== undefined)
+                          d.employees[i].versions![j].workPatternId = x;
                         else delete d.employees[i].versions![j].workPatternId;
                       })
                     }
                   />
+
                   <button
                     onClick={() =>
                       update((d) => {
@@ -1291,6 +1365,7 @@ export function Variants({ s, update }: { s: Scenario; update: Update }) {
                   })
                 }
               />
+              <VariantApplicability s={s} shiftId={shift.id} variantId={v.id} />
               <IntervalEditor
                 value={v.intervals}
                 onChange={(x) =>

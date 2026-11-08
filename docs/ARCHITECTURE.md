@@ -1,6 +1,6 @@
 # Architecture and mathematical contract
 
-RosterCore 0.2 uses a stateless C++20 library and JSON CLI. The domain and interpreter do not expose OR-Tools. Structural validation precedes semantic normalization. The CP-SAT adapter compiles the same expressions evaluated independently by the verifier. A loopback-only Node adapter invokes the CLI with argument arrays, never a shell. No data is transmitted to AI/HR services.
+RosterCore 0.3 uses a stateless C++20 library and JSON CLI. The domain and interpreter do not expose OR-Tools. Structural validation precedes semantic normalization. The CP-SAT adapter compiles the same expressions evaluated independently by the verifier. A loopback-only Node adapter invokes the CLI with argument arrays, never a shell. No data is transmitted to AI/HR services.
 
 ## Time
 
@@ -32,3 +32,10 @@ CP-SAT is a proven solver, but finite-horizon fairness is not an infinite-future
 ## Evolution modules
 
 `calendar.cpp` resolves week classification, migration and offline catalogues. `workforce.cpp` resolves dated employees, predicates, domains, variants and physical spans. `evolution_validation.cpp` validates the additive declarative structures. `compiler_extensions.inc` stays inside the solver Compiler and contains weekly, coverage, temporal and stability CP-SAT variables. `verification.cpp` independently interprets chosen profiles, explicit duty witnesses, frequency counts, temporal rules and regeneration. The existing history interpreter retains dated participation snapshots and actual assignment intervals; new hires receive no earlier quota and departed people remain in replay. No reference-example role names occur in domain behavior.
+
+
+## Automatic arrangements and progressive UX
+
+`UX_ASSIGNMENTS.md` defines schema-3 precedence and migration. The workforce interpreter separates raw dated employee state from effective work-pattern resolution, so automatic selectors can reuse resolved attributes/groups without recursively resolving patterns. Domain/variant consumers and preview share that resolver; the verifier checks actual schedules against it. Individual source records are never rewritten by rule evaluation.
+
+The playground's local progress/dependency checks guide unfinished forms; they do not replace C++ validation or reproduce scheduling resolution. Operation notifications are centralized, bounded and deduplicated, with persistent errors and explicit diagnostic actions. Logical shifts precede arrangements, and concrete variants have their own step after arrangements. Existing internal navigation IDs remain stable.

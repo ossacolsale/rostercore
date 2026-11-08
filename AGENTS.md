@@ -1,6 +1,6 @@
 # RosterCore — agent operating contract
 
-Adapted from [AgentForge Universal AGENTS.md](https://github.com/ossacolsale/AgentForge-Universal-AGENTS.md). This file governs work; requirements live in `docs/SPECIFICATION.md` and the evolution contract `docs/EVOLUTION.md`.
+Adapted from [AgentForge Universal AGENTS.md](https://github.com/ossacolsale/AgentForge-Universal-AGENTS.md). This file governs work; requirements live in `docs/SPECIFICATION.md` and the evolution contract `docs/EVOLUTION.md` and `docs/UX_ASSIGNMENTS.md`.
 
 - Inspect Git and relevant code before editing; preserve unrelated user changes. Read only documents needed for the task. `docs/ARCHITECTURE.md` defines semantics and `docs/PROGRESS.md` records the four implementation phases.
 - Deliver the smallest **complete** useful change. Prefer development progress and runnable features over polishing every intermediate step. Conserve tokens: avoid repeated audits, verbose logs, speculative abstractions and redundant documentation. The user performs final product acceptance and can request refinements.

@@ -372,7 +372,7 @@ Json regenerate(const Json &scenario, const Json &request) {
     throw Error("REGENERATION_RANGE", "/from",
                 "Regeneration date must be inside the current horizon");
   Json updated = scenario;
-  updated["schemaVersion"] = 2;
+  updated["schemaVersion"] = std::max(2, scenario["schemaVersion"].get<int>());
   updated["replanning"] = {
       {"from", request["from"]},
       {"baseline", previous["assignments"]},

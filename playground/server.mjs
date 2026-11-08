@@ -26,6 +26,7 @@ const actions = new Set([
   "rebuild-history",
   "regenerate",
   "inspect",
+  "inspect-patterns",
   "select",
   "migrate",
 ]);
@@ -71,7 +72,7 @@ async function run(body) {
       await writeFile(extra, JSON.stringify(body.document ?? body.result));
       args.push(extra);
     }
-    if (body.action === "inspect")
+    if (["inspect", "inspect-patterns"].includes(body.action))
       args.push(body.onDate || body.scenario.calendar.start);
     if (body.action === "select") {
       const selector = path.join(dir, "selector.json");
@@ -164,9 +165,11 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { status: "ready", engine: executable });
     if (
       req.method === "GET" &&
-      ["/api/example-evolution", "/api/example-automatic"].includes(
-        url.pathname,
-      )
+      [
+        "/api/example-evolution",
+        "/api/example-automatic",
+        "/api/example-patterns",
+      ].includes(url.pathname)
     )
       return json(
         res,
@@ -176,9 +179,11 @@ const server = http.createServer(async (req, res) => {
             path.join(
               root,
               "examples",
-              url.pathname.endsWith("automatic")
-                ? "pharmacy-automatic-weeks.json"
-                : "pharmacy-evolution.json",
+              url.pathname.endsWith("patterns")
+                ? "automatic-work-patterns.json"
+                : url.pathname.endsWith("automatic")
+                  ? "pharmacy-automatic-weeks.json"
+                  : "pharmacy-evolution.json",
             ),
             "utf8",
           ),

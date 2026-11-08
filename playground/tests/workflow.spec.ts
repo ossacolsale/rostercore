@@ -19,7 +19,9 @@ test("reference scenario generates verified real assignments and fairness", asyn
     page.getByRole("img", { name: "Fairness debt trajectory" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Verify independently" }).click();
-  await expect(page.getByRole("status")).toContainText("VERIFIED");
+  await expect(
+    page.locator(".notification").filter({ hasText: "VERIFIED" }).last(),
+  ).toBeVisible();
 });
 test("visual people, shifts and recursive rules are editable", async ({
   page,
@@ -30,10 +32,10 @@ test("visual people, shifts and recursive rules are editable", async ({
     "New employee",
   );
   await page.getByLabel("Name / label").last().fill("Finley");
-  await page.getByRole("button", { name: "04 Shift types" }).click();
+  await page.getByRole("button", { name: "03 Shift types" }).click();
   await page.getByRole("button", { name: "Add time interval" }).first().click();
   await expect(page.getByText("Interval 3")).toBeVisible();
-  await page.getByRole("button", { name: "08 Planning policies" }).click();
+  await page.getByRole("button", { name: "09 Planning policies" }).click();
   await page
     .getByRole("button", { name: "+ OR group", exact: true })
     .first()
@@ -47,7 +49,7 @@ test("visual people, shifts and recursive rules are editable", async ({
 test("policy preview requires confirmation and applies one policy", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: "09 AI & HR imports" }).click();
+  await page.getByRole("button", { name: "10 AI & HR imports" }).click();
   const text = await readFile(
     new URL("../../examples/policy-create.json", import.meta.url),
     "utf8",
@@ -59,8 +61,10 @@ test("policy preview requires confirmation and applies one policy", async ({
   await page.getByRole("button", { name: "Preview & validate import" }).click();
   await expect(page.getByText("Changes awaiting confirmation")).toBeVisible();
   await page.getByRole("button", { name: "Confirm and apply import" }).click();
-  await expect(page.getByRole("status")).toContainText("IMPORTED");
-  await page.getByRole("button", { name: "08 Planning policies" }).click();
+  await expect(
+    page.locator(".notification").filter({ hasText: "IMPORTED" }).last(),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "09 Planning policies" }).click();
   await expect(
     page.getByRole("heading", { name: "Regular duty fairness" }),
   ).toBeVisible();
@@ -68,7 +72,7 @@ test("policy preview requires confirmation and applies one policy", async ({
 test("HR import reaches core and shows absence in a generated schedule", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: "09 AI & HR imports" }).click();
+  await page.getByRole("button", { name: "10 AI & HR imports" }).click();
   await page.getByLabel("Document kind").selectOption("sync-hr");
   const text = await readFile(
     new URL("../../examples/hr-events.json", import.meta.url),
@@ -78,7 +82,9 @@ test("HR import reaches core and shows absence in a generated schedule", async (
   await page.getByRole("button", { name: "Preview & validate import" }).click();
   await expect(page.getByText("Changes awaiting confirmation")).toBeVisible();
   await page.getByRole("button", { name: "Confirm and apply import" }).click();
-  await expect(page.getByRole("status")).toContainText("IMPORTED");
+  await expect(
+    page.locator(".notification").filter({ hasText: "IMPORTED" }).last(),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Generate schedule" }).first().click();
   await expect(
     page.getByRole("heading", { name: "Assignment calendar" }),
@@ -118,7 +124,7 @@ test("an empty scenario can be configured and solved without JSON", async ({
       .click();
     await page.getByLabel("Name / label").last().fill(name);
   }
-  await page.getByRole("button", { name: "04 Shift types" }).click();
+  await page.getByRole("button", { name: "03 Shift types" }).click();
   await page
     .getByRole("button", { name: "Add shift type", exact: true })
     .click();
@@ -128,7 +134,7 @@ test("an empty scenario can be configured and solved without JSON", async ({
     .click();
   await page.getByLabel("Shift label").last().fill("Rest");
   await page.getByLabel("Structural type").last().selectOption("OFF");
-  await page.getByRole("button", { name: "08 Planning policies" }).click();
+  await page.getByRole("button", { name: "09 Planning policies" }).click();
   await page.getByRole("button", { name: "Add policy" }).click();
   await page
     .getByRole("button", { name: "Add policy rule", exact: true })

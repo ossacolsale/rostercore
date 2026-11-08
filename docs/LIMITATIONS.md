@@ -1,8 +1,8 @@
-# Implemented scope and limits · 0.2.0
+# Implemented scope and limits · 0.3.0
 
-RosterCore is runnable for local evaluation. Schema-1 scenarios remain accepted; explicit migration adds schema-2 catalogues while preserving IDs and history. See `EVOLUTION.md` for the evolution contract and `TEST_REPORT.md` for executed evidence.
+RosterCore is runnable for local evaluation. Schema-1 scenarios remain accepted; explicit migration adds schema-3 catalogues while preserving IDs and history. See `EVOLUTION.md` for the evolution contract and `TEST_REPORT.md` for executed evidence.
 
-Implemented: ISO week profiles with manual/recurring/solver-selected classification and hard/desired frequencies; offline versioned Italian holidays and closures; dated employment, typed/default attributes and predicate selectors; versioned work patterns; logical shifts and actual variants; responsibility and interval-presence coverage with lexicographic substitutes; cross-day sequences and minimum elapsed rest; cumulative rational COUNT fairness across profiles and workforce changes; independent verification; history/publication protection and partial regeneration. The bilingual local playground edits these declarations, previews core-resolved hours/profiles, imports AI/HR documents and shows operational substitutions and differences.
+Implemented: dated automatic work-pattern rules with explicit manual precedence and traceable core previews; guided catalogue editing and accessible outcome notifications; ISO week profiles with manual/recurring/solver-selected classification and hard/desired frequencies; offline versioned Italian holidays and closures; dated employment, typed/default attributes and predicate selectors; versioned work patterns; logical shifts and actual variants; responsibility and interval-presence coverage with lexicographic substitutes; cross-day sequences and minimum elapsed rest; cumulative rational COUNT fairness across profiles and workforce changes; independent verification; history/publication protection and partial regeneration. The bilingual local playground edits these declarations, previews core-resolved hours/profiles, imports AI/HR documents and shows operational substitutions and differences.
 
 Explicit limits:
 
@@ -16,3 +16,5 @@ Explicit limits:
 - Infeasibility assumption sets are sufficient and need not be minimal. The verifier independently checks feasibility and accounting; CP-SAT phase statuses supply optimality evidence.
 
 Native platform results and measured examples are recorded in `TEST_REPORT.md`. Final operational acceptance remains with the user.
+
+Automatic rules do not imply a mandatory arrangement: no match preserves unrestricted legacy behavior and is identified in the preview. Keep effective rule/pattern history when editing future configurations. Variant applicability previews cover up to 14 days per request; assignment preview supports a selected date and may show separate weekly-profile alternatives. Local progress indicators establish local coherence only, not global feasibility. Notifications display three at once with a bounded eight-entry queue; excess distinct errors are grouped with their full diagnostics and remain dismissible. Preview/important warning actions remain available until dismissed; ordinary successes auto-dismiss after about five seconds (paused during interaction).

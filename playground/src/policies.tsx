@@ -354,7 +354,12 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                 download(`${p.id}.policy.json`, {
                   format: "rostercore.planning-policy",
                   schemaVersion: s.schemaVersion,
-                  engineVersion: s.schemaVersion === 2 ? "0.2.0" : "0.1.0",
+                  engineVersion:
+                    s.schemaVersion === 3
+                      ? "0.3.0"
+                      : s.schemaVersion === 2
+                        ? "0.2.0"
+                        : "0.1.0",
                   operation: "CREATE",
                   policy: { ...p, revision: 1 },
                 })

@@ -79,7 +79,9 @@ test("dated pharmacy workflow previews hours, imports leave and regenerates with
   await page
     .getByRole("button", { name: "Confirm and apply import", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("IMPORTED");
+  await expect(
+    page.locator(".notification").filter({ hasText: "IMPORTED" }).last(),
+  ).toBeVisible();
   await page.getByLabel("Regenerate from", { exact: true }).fill("2027-05-10");
   await page
     .getByRole("button", { name: "Regenerate from this date", exact: true })
@@ -100,7 +102,9 @@ test("dated pharmacy workflow previews hours, imports leave and regenerates with
   await page
     .getByRole("button", { name: "Verify independently", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("VERIFIED");
+  await expect(
+    page.locator(".notification").filter({ hasText: "VERIFIED" }).last(),
+  ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("evolution-desktop.png"),
     fullPage: true,
@@ -143,6 +147,7 @@ test("new catalogues, logical variants, recurrence and undo are editable without
   await page
     .getByRole("button", { name: "Add shift type", exact: true })
     .click();
+  await page.getByTestId("nav-variants").click();
   await page
     .getByRole("button", { name: "Add concrete variant", exact: true })
     .click();

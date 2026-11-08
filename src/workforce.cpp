@@ -16,6 +16,71 @@ Json Scenario::employeeState(int e, int d) const {
     }
   return state;
 }
+Json Scenario::workPatternAssignment(int e, int d,
+                                     const std::string &given) const {
+  if (!active(e, d))
+    return {{"origin", "INACTIVE"}};
+  auto resolved = [&](Json result) {
+    if (result.contains("workPatternId")) {
+      bool present = false;
+      for (auto &p : source.value("workPatterns", Json::array()))
+        if (p["id"] == result["workPatternId"])
+          for (auto &v : p["versions"])
+            present |= effective(v, d);
+      if (!present)
+        throw Error("WORK_PATTERN_GAP", "/workPatterns",
+                    "No effective work pattern for " + employees[e].id +
+                        " on " + date(d) + ": " +
+                        result["workPatternId"].get<std::string>());
+    }
+    return result;
+  };
+  auto &employee = source["employees"].at(size_t(e));
+  bool automatic = false;
+  for (auto &v : employee.value("versions", Json::array()))
+    if (effective(v, d) && v.contains("workPatternId")) {
+      if (!v["workPatternId"].is_null())
+        return resolved({{"origin", "TEMPORAL_OVERRIDE"},
+                         {"workPatternId", v["workPatternId"]},
+                         {"validFrom", v["validFrom"]}});
+      automatic = true;
+    }
+  if (!automatic && employee.contains("workPatternId"))
+    return resolved({{"origin", "INDIVIDUAL"},
+                     {"workPatternId", employee["workPatternId"]}});
+  int priority = -1;
+  std::string pattern;
+  Json ids = Json::array();
+  std::set<std::string> patterns;
+  for (auto &r : source.value("workPatternAssignmentRules", Json::array()))
+    if (r["enabled"].get<bool>() && effective(r, d)) {
+      auto members = select(r["selector"], d, {}, given);
+      if (std::find(members.begin(), members.end(), e) == members.end())
+        continue;
+      int rank = r["priority"];
+      if (rank < priority)
+        continue;
+      if (rank > priority) {
+        priority = rank;
+        pattern = r["workPatternId"];
+        ids = Json::array();
+        patterns.clear();
+      }
+      ids.push_back(r["id"]);
+      patterns.insert(r["workPatternId"].get<std::string>());
+    }
+  if (patterns.size() > 1)
+    throw Error("WORK_PATTERN_ASSIGNMENT_CONFLICT",
+                "/workPatternAssignmentRules",
+                "Employee " + employees[e].id + " on " + date(d) +
+                    " matches incompatible top-priority work-pattern rules: " +
+                    ids.dump());
+  if (priority >= 0)
+    return resolved({{"origin", "AUTOMATIC_RULE"},
+                     {"workPatternId", pattern},
+                     {"ruleIds", ids}});
+  return {{"origin", "NONE"}};
+}
 bool Scenario::active(int e, int d) const {
   auto &employee = source["employees"].at(size_t(e));
   return !employee.contains("employment") ||
@@ -38,9 +103,15 @@ Json Scenario::resolvedAttributes(int e, int d) const {
       resolved[it.key()] = {{"origin", "MISSING"}};
       continue;
     }
-    resolved[it.key()] = it.value().is_null() ? Json{{"origin", "MISSING"}}
-                                              : Json{{"origin", "EXPLICIT"},
-                                                     {"value", it.value()}};
+    std::string origin = "EXPLICIT";
+    for (auto &v :
+         source["employees"].at(size_t(e)).value("versions", Json::array()))
+      if (effective(v, d) && v.contains("attributes") &&
+          v["attributes"].contains(it.key()))
+        origin = "TEMPORAL_OVERRIDE";
+    resolved[it.key()] = it.value().is_null()
+                             ? Json{{"origin", "MISSING"}}
+                             : Json{{"origin", origin}, {"value", it.value()}};
   }
   return resolved;
 }
@@ -184,7 +255,7 @@ Json Scenario::intervals(int e, int d, int shift,
   if (variants.empty())
     return {{"id", definition["id"]}, {"intervals", definition["intervals"]}};
   std::string p = given.empty() ? profile(d) : given;
-  auto state = employeeState(e, d);
+  auto arrangement = workPatternAssignment(e, d, p);
   Json selected = nullptr;
   int priority = -1;
   for (auto &v : variants) {
@@ -192,9 +263,9 @@ Json Scenario::intervals(int e, int d, int shift,
       continue;
     if (v.contains("workPatternIds")) {
       auto &patterns = v["workPatternIds"];
-      if (!state.contains("workPatternId") ||
-          std::find(patterns.begin(), patterns.end(), state["workPatternId"]) ==
-              patterns.end())
+      if (!arrangement.contains("workPatternId") ||
+          std::find(patterns.begin(), patterns.end(),
+                    arrangement["workPatternId"]) == patterns.end())
         continue;
     }
     auto members = select(v["selector"], d, {}, p);
@@ -217,11 +288,12 @@ std::vector<int> Scenario::domain(int e, int d,
   if (!plannable(e, d))
     return {};
   std::string p = given.empty() ? profile(d) : given;
-  auto prof = profileDefinition(p), state = employeeState(e, d);
+  auto prof = profileDefinition(p),
+       arrangement = workPatternAssignment(e, d, p);
   Json pattern = nullptr;
-  if (state.contains("workPatternId")) {
+  if (arrangement.contains("workPatternId")) {
     for (auto &definition : source.value("workPatterns", Json::array()))
-      if (definition["id"] == state["workPatternId"])
+      if (definition["id"] == arrangement["workPatternId"])
         for (auto &v : definition["versions"])
           if (effective(v, d))
             pattern = v;

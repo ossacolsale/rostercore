@@ -64,7 +64,7 @@ export function WeekPlanner({ s, update }: { s: Scenario; update: Update }) {
   useEffect(() => {
     let current = true;
     const timer = setTimeout(() => {
-      coreAction("inspect", s)
+      coreAction("inspect", s, {}, { silent: true })
         .then((r) => {
           if (current) {
             setPreview(r);

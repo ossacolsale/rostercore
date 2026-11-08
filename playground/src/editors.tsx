@@ -2,7 +2,7 @@ import { PredicateEditor } from "./evolution";
 import { useCatalogue, type CatalogueKind } from "./catalogue-context";
 import { coreAction } from "./api";
 import { useI18n } from "./i18n";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   type Scenario,
   type Selector,
@@ -65,6 +65,7 @@ export function Select({
   const { t } = useI18n();
   const [query, setQuery] = useState("");
   const create = useCatalogue();
+  useEffect(() => setQuery(""), [options.length]);
   const shown = options.filter(
     (x) =>
       x.id === value ||
@@ -88,6 +89,13 @@ export function Select({
           value={value}
           onChange={(e) => onChange(e.target.value)}
         >
+          {!options.some((x) => x.id === value) && (
+            <option value={value}>
+              {value
+                ? t("Missing reference: {id}", { id: value })
+                : t("Choose an item")}
+            </option>
+          )}
           {shown.map((x) => (
             <option key={x.id} value={x.id}>
               {x.label}

@@ -167,9 +167,10 @@ bool Scenario::matches(const Json &item, int d,
 Json migrate(const Json &j) {
   validate(j);
   Json updated = j;
-  updated["schemaVersion"] = 2;
-  for (auto key : {"attributeDefinitions", "workPatterns", "weekProfiles",
-                   "dutyRequirements", "temporalRules"})
+  updated["schemaVersion"] = 3;
+  for (auto key :
+       {"attributeDefinitions", "workPatterns", "weekProfiles",
+        "dutyRequirements", "temporalRules", "workPatternAssignmentRules"})
     if (!updated.contains(key))
       updated[key] = Json::array();
   if (!updated.contains("weekConfiguration"))
@@ -182,7 +183,7 @@ Json migrate(const Json &j) {
   auto out = response("MIGRATED");
   out["scenario"] = updated;
   out["migration"] = {{"fromSchemaVersion", j["schemaVersion"]},
-                      {"toSchemaVersion", 2},
+                      {"toSchemaVersion", 3},
                       {"identifiersPreserved", true},
                       {"historyPreserved", true},
                       {"manualActions", Json::array()}};
@@ -213,6 +214,13 @@ Json inspect(const Json &j, const std::string &onDate) {
          {"attributes", s.resolvedAttributes(int(e), d)}});
   for (size_t e = 0; e < s.employees.size(); ++e) {
     auto &person = out["workforce"]["employees"][e];
+    person["workPatternAssignment"] =
+        s.workPatternAssignment(int(e), d, s.profile(d));
+    if (person["workPatternAssignment"].contains("workPatternId"))
+      person["state"]["workPatternId"] =
+          person["workPatternAssignment"]["workPatternId"];
+    else
+      person["state"].erase("workPatternId");
     person["groups"] = Json::array();
     for (auto &g : j["groups"]) {
       auto members = s.select(g["selector"], d);
@@ -234,6 +242,68 @@ Json inspect(const Json &j, const std::string &onDate) {
                {"admissible", std::find(allowed.begin(), allowed.end(),
                                         int(t)) != allowed.end()}});
       }
+    }
+  }
+  return out;
+}
+Json previewWorkPatterns(const Json &j, const std::string &onDate) {
+  validateSchema(j, "scenario");
+  validateEvolution(j, true);
+  Scenario s(j);
+  int d = day(onDate);
+  auto out = response("INSPECTED");
+  out["workforce"] = {
+      {"date", onDate}, {"employees", Json::array()}, {"rules", Json::array()}};
+  auto options = s.weekOptions(d).value("profileIds", Json::array());
+  for (auto &pid : options) {
+    std::string profile = pid;
+    for (auto &r : j.value("workPatternAssignmentRules", Json::array())) {
+      Json ids = Json::array();
+      if (r["enabled"].get<bool>() && effective(r, d))
+        for (int e : s.select(r["selector"], d, {}, profile))
+          ids.push_back(s.employees[e].id);
+      out["workforce"]["rules"].push_back(
+          {{"ruleId", r["id"]}, {"profileId", profile}, {"employeeIds", ids}});
+    }
+    for (size_t e = 0; e < s.employees.size(); ++e) {
+      Json resolved;
+      try {
+        resolved = s.workPatternAssignment(int(e), d, profile);
+      } catch (const Error &error) {
+        resolved = {{"origin", "CONFLICT"}, {"message", error.what()}};
+        out["diagnostics"].push_back(
+            {{"code", error.code},
+             {"path", error.path},
+             {"message", error.what()},
+             {"severity", "ERROR"},
+             {"section", "contracts"},
+             {"objectIds", Json::array({s.employees[e].id})}});
+      }
+      if (resolved["origin"] == "NONE" &&
+          !j.value("workPatternAssignmentRules", Json::array()).empty())
+        out["diagnostics"].push_back(
+            {{"code", "WORK_PATTERN_UNASSIGNED"},
+             {"path", "/workPatternAssignmentRules"},
+             {"message", "No work pattern resolves for " + s.employees[e].id +
+                             " on " + onDate +
+                             "; existing unrestricted behavior applies"},
+             {"severity", "WARNING"},
+             {"section", "contracts"}});
+      auto state = s.employeeState(int(e), d);
+      if (resolved.contains("workPatternId"))
+        state["workPatternId"] = resolved["workPatternId"];
+      else
+        state.erase("workPatternId");
+      out["workforce"]["employees"].push_back(
+          {{"employeeId", s.employees[e].id},
+           {"label", s.employees[e].label},
+           {"active", s.active(int(e), d)},
+           {"profileId", profile},
+           {"state", state},
+           {"workPatternAssignment", resolved},
+           {"attributes", s.resolvedAttributes(int(e), d)},
+           {"groups", Json::array()},
+           {"shifts", Json::array()}});
     }
   }
   return out;

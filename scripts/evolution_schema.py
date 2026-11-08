@@ -13,12 +13,13 @@ def extend(defs, scenario, policy, hr, result, obj, arr, enum, ref, s, id_, inte
     defs['interval']['properties'].update({'startFold':enum(0,1),'endFold':enum(0,1)})
     defs['effective']=obj(validity,['validFrom'])
     defs['attributeDefinition']=obj({'id':id_,'label':label,'type':enum('STRING','BOOLEAN','NUMBER','INTEGER','ENUM'),'description':label,'values':arr({'type':['string','number','boolean']}),'default':{'type':['string','number','boolean']},'unit':label,'visible':{'type':'boolean'},**validity},['id','label','type'])
-    defs['employeeVersion']=obj({**validity,'typeId':id_,'workPatternId':id_,'attributes':{'type':'object','additionalProperties':scalar}},['validFrom'])
+    defs['employeeVersion']=obj({**validity,'typeId':id_,'workPatternId':{'anyOf':[id_,{'type':'null'}]},'attributes':{'type':'object','additionalProperties':scalar}},['validFrom'])
     employee=scenario['properties']['employees']['items']
     employee['properties']['attributes']['additionalProperties']=scalar
     employee['properties'].update({'employment':ref('effective'),'versions':arr(ref('employeeVersion')),'workPatternId':id_})
     scenario['properties']['groups']['items']['properties']['scope']=ref('scope')
     pattern_version=obj({**validity,'weekdays':{'type':'array','uniqueItems':True,'items':{'type':'integer','minimum':1,'maximum':7}},'shiftIds':ids,'exceptions':arr(obj({'date':date,'shiftIds':ids},['date','shiftIds']))},['validFrom','weekdays','shiftIds'])
+    defs['workPatternAssignmentRule']=obj({'id':id_,'label':label,'enabled':{'type':'boolean'},'selector':ref('selector'),'workPatternId':id_,'priority':integer,**validity},['id','label','enabled','selector','workPatternId','priority','validFrom'])
     defs['workPattern']=obj({'id':id_,'label':label,'versions':arr(pattern_version)},['id','label','versions'])
     defs['shiftVariant']=obj({'id':id_,'label':label,'priority':integer,'selector':ref('selector'),'scope':ref('scope'),'workPatternIds':ids,'intervals':arr(ref('interval'))},['id','label','priority','selector','scope','intervals'])
     scenario['properties']['shifts']['items']['properties'].update({'variants':arr(ref('shiftVariant')),'fairnessTags':ids})
@@ -33,7 +34,7 @@ def extend(defs, scenario, policy, hr, result, obj, arr, enum, ref, s, id_, inte
     defs['coverageLevel']=obj({'selector':ref('selector'),'level':integer},['selector','level'])
     defs['dutyRequirement']=obj({'id':id_,'label':label,'mode':enum('RESPONSIBILITY','PRESENCE'),'shiftIds':ids,'levels':{'type':'array','minItems':1,'items':ref('coverageLevel')},'comparison':enum('EQ','GE','LE'),'count':integer,'intervals':arr(ref('interval')),'scope':ref('scope'),'preferencePriority':integer,'exclusiveGroup':id_,'bindAssignments':{'type':'boolean'}},['id','label','mode','shiftIds','levels','comparison','count','intervals','scope','preferencePriority'])
     defs['temporalRule']=obj({'id':id_,'label':label,'type':enum('SUCCESSION','FORBIDDEN_PAIR','MIN_REST'),'selector':ref('selector'),'fromShiftIds':ids,'toShiftIds':ids,'offsetDays':{'type':'integer','minimum':1,'maximum':14},'minimumMinutes':integer,'scope':ref('scope')},['id','label','type','selector','fromShiftIds','toShiftIds','offsetDays','scope'])
-    scenario['properties'].update({'attributeDefinitions':arr(ref('attributeDefinition')),'workPatterns':arr(ref('workPattern')),'weekProfiles':arr(ref('weekProfile')),'weekConfiguration':ref('weekConfiguration'),'dutyRequirements':arr(ref('dutyRequirement')),'temporalRules':arr(ref('temporalRule')),'replanning':obj({'from':date,'baseline':arr(ref('assignment')),'stabilityPriority':enum('BEFORE_FAIRNESS','AFTER_FAIRNESS')},['from','baseline','stabilityPriority'])})
+    scenario['properties'].update({'attributeDefinitions':arr(ref('attributeDefinition')),'workPatterns':arr(ref('workPattern')),'workPatternAssignmentRules':arr(ref('workPatternAssignmentRule')),'weekProfiles':arr(ref('weekProfile')),'weekConfiguration':ref('weekConfiguration'),'dutyRequirements':arr(ref('dutyRequirement')),'temporalRules':arr(ref('temporalRule')),'replanning':obj({'from':date,'baseline':arr(ref('assignment')),'stabilityPriority':enum('BEFORE_FAIRNESS','AFTER_FAIRNESS')},['from','baseline','stabilityPriority'])})
     scenario['properties']['calendar']['properties'].update({'holidays':ref('holidaySettings'),'closures':arr(ref('closure'))})
     scenario['properties']['allowedShifts']['items']['properties']['allowRequiredRest']={'type':'boolean'}
     defs['policy']['properties'].update({'dutyRequirements':arr(ref('dutyRequirement')),'temporalRules':arr(ref('temporalRule'))})
@@ -41,8 +42,8 @@ def extend(defs, scenario, policy, hr, result, obj, arr, enum, ref, s, id_, inte
     defs['assignment']['properties'].update({'variantId':id_,'intervals':arr(ref('interval')),'weekProfileId':id_})
     defs['snapshot']['properties']['weekProfileId']=id_
     defs['dependency']['properties']['kind']=enum('employee','type','group','shift','constraint','constraintSet','attribute','workPattern','weekProfile')
-    for root in [scenario,policy,hr,result]:root['properties']['schemaVersion']=enum(1,2)
-    policy['properties']['engineVersion']=enum('0.1.0','0.2.0')
+    for root in [scenario,policy,hr,result]:root['properties']['schemaVersion']=enum(1,2,3)
+    policy['properties']['engineVersion']=enum('0.1.0','0.2.0','0.3.0')
     for key in ['weekAssignments','calendarDays','coverage','changes']:result['properties'][key]={'type':'array'}
     for key in ['workforce','migration']:result['properties'][key]={'type':'object'}
     result['properties']['status']['enum']+=['MIGRATED','INSPECTED']

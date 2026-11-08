@@ -44,3 +44,11 @@ def pharmacy():
 if __name__=='__main__':
  s=pharmacy();(ROOT/'examples/pharmacy-evolution.json').write_text(json.dumps(s,indent=2)+'\n',encoding='utf-8')
  auto=copy.deepcopy(s);auto['id']='automatic-week-demo';auto['label']='Solver-selected week profiles';auto['weekConfiguration']={'manual':[],'recurrences':[],'history':[],'automatic':{'validFrom':'2027-05-03','profileIds':['regular','special']},'frequencies':[{'id':'four-week-frequency','profileId':'special','windowWeeks':4,'minCount':1,'maxCount':1,'desiredCount':1}]};(ROOT/'examples/pharmacy-automatic-weeks.json').write_text(json.dumps(auto,indent=2)+'\n',encoding='utf-8')
+
+ # Schema-3 example intentionally uses dynamic associations; existing examples keep explicit assignments.
+ patterns=copy.deepcopy(s);patterns.update(schemaVersion=3,id='automatic-work-patterns',label='Automatic work-pattern assignments')
+ for employee in patterns['employees']:
+  employee.pop('workPatternId',None)
+  for version in employee.get('versions',[]):version.pop('workPatternId',None)
+ patterns['workPatternAssignmentRules']=[{'id':name,'label':label,'enabled':True,'selector':{'where':{'op':'EQ','attributeId':'contract','value':value}},'workPatternId':pattern,'priority':10,'validFrom':'2027-01-01'} for name,label,value,pattern in [('automatic-full','Full-time employees','FULL_TIME','full'),('automatic-part','Part-time morning arrangement','PART_TIME','part')]]
+ (ROOT/'examples/automatic-work-patterns.json').write_text(json.dumps(patterns,indent=2)+'\n',encoding='utf-8')

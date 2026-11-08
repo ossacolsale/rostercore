@@ -1,3 +1,12 @@
+import { PatternAssignmentRules, ReviewDialog } from "./pattern-assignments";
+import {
+  dependentReferences,
+  editorForPath,
+  referenceLabel,
+  type Catalogue,
+} from "./configuration";
+import { ConfigurationGuide } from "./configuration-guide";
+import { notifyError, notifyResult, notifyMessage } from "./notifications";
 import { CatalogueContext, type CatalogueKind } from "./catalogue-context";
 import { initializeEvolution } from "./evolution-model";
 import {
@@ -31,14 +40,15 @@ import { Text, Select, EntityHeader } from "./editors";
 const tabs = [
   ["overview", "01", "Overview"],
   ["people", "02", "People & groups"],
-  ["contracts", "03", "Contracts & work patterns"],
-  ["shifts", "04", "Shift types"],
-  ["weeks", "05", "Week profiles & recurrence"],
-  ["calendar", "06", "Calendar & availability"],
-  ["coverage", "07", "Coverage & temporal rules"],
-  ["policies", "08", "Planning policies"],
-  ["imports", "09", "AI & HR imports"],
-  ["results", "10", "Schedule & fairness"],
+  ["shifts", "03", "Shift types"],
+  ["contracts", "04", "Contracts & work patterns"],
+  ["variants", "05", "Shift time variants"],
+  ["weeks", "06", "Week profiles & recurrence"],
+  ["calendar", "07", "Calendar & availability"],
+  ["coverage", "08", "Coverage & temporal rules"],
+  ["policies", "09", "Planning policies"],
+  ["imports", "10", "AI & HR imports"],
+  ["results", "11", "Schedule & fairness"],
   ["advanced", "{ }", "Advanced JSON"],
 ];
 type Solved = { scenario: Scenario; result: Result };
@@ -49,11 +59,61 @@ export default function App() {
     [tab, setTab] = useState("overview"),
     [busy, setBusy] = useState(false),
     [action, setAction] = useState(""),
-    [message, setMessage] = useState<Result>(),
-    [fatal, setFatal] = useState(""),
+    [fatal, setFatalState] = useState(""),
     [solved, setSolved] = useState<Solved>(),
     [previous, setPrevious] = useState<Result>(),
     [raw, setRaw] = useState("");
+  const setFatal = (text: string) => {
+    setFatalState(text);
+    if (text) notifyError(text);
+  };
+  const setMessage = (result: Result | undefined, operation?: string) => {
+    if (result) notifyResult(result, operation);
+  };
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const key = (event as CustomEvent<string>).detail;
+      if (key === "advanced") setRaw(JSON.stringify(s, null, 2));
+      setTab(key);
+    };
+    window.addEventListener("rostercore:editor", handler);
+    return () => window.removeEventListener("rostercore:editor", handler);
+  }, [s]);
+  const [deletion, setDeletion] = useState<{
+    next: Scenario;
+    labels: string[];
+    dependencies: { path: string }[];
+  }>();
+  const previousConfiguration = useRef<Scenario | undefined>(undefined);
+  const lastBlur = useRef("");
+  useEffect(() => {
+    if (!s) return;
+    const previous = previousConfiguration.current;
+    previousConfiguration.current = s;
+    if (
+      previous &&
+      [
+        "employees",
+        "employeeTypes",
+        "attributeDefinitions",
+        "groups",
+        "workPatterns",
+        "workPatternAssignmentRules",
+        "shifts",
+        "weekProfiles",
+        "policies",
+      ].some(
+        (key) =>
+          (s[key as keyof Scenario] as unknown[] | undefined)?.length !==
+          (previous[key as keyof Scenario] as unknown[] | undefined)?.length,
+      )
+    )
+      notifyMessage("Configuration items updated");
+  }, [s]);
+  const [validationContext, setValidationContext] = useState<{
+    hash: string;
+    paths: string[];
+  }>();
   const undoStack = useRef<Scenario[]>([]);
   const [, setUndoVersion] = useState(0);
   const [createKind, setCreateKind] = useState<CatalogueKind | null>(null),
@@ -75,10 +135,11 @@ export default function App() {
               body: JSON.stringify({ action: "validate", scenario: candidate }),
             });
             const check = await response.json();
-            if (check.status === "VALID") {
-              if (active) setS(candidate);
-              return;
+            if (active) {
+              setS(candidate);
+              if (check.status !== "VALID") notifyResult(check);
             }
+            return;
           }
         }
         const r = await fetch("/api/example");
@@ -104,17 +165,52 @@ export default function App() {
         );
       }
   }, [s]);
-  const update: Update = (fn) =>
-    setS((current) => {
-      if (!current) return current;
-      if (undoStack.current.at(-1) !== current) {
-        undoStack.current.push(current);
-        if (undoStack.current.length > 20) undoStack.current.shift();
-      }
-      const next = structuredClone(current);
-      fn(next);
-      return next;
-    });
+  const commitEdit = (next: Scenario) => {
+    if (s) {
+      undoStack.current.push(s);
+      if (undoStack.current.length > 20) undoStack.current.shift();
+    }
+    setS(next);
+  };
+  const update: Update = (fn) => {
+    if (!s) return;
+    const next = structuredClone(s);
+    fn(next);
+    const removed: { catalogue: Catalogue; id: string; label: string }[] = [];
+    for (const catalogue of [
+      "employeeTypes",
+      "employees",
+      "attributeDefinitions",
+      "groups",
+      "workPatterns",
+      "shifts",
+      "weekProfiles",
+      "constraints",
+      "policies",
+    ] as Catalogue[]) {
+      const before = s[catalogue] ?? [],
+        after = next[catalogue] ?? [];
+      if (after.length < before.length)
+        for (const item of before)
+          if (!after.some((x) => x.id === item.id))
+            removed.push({
+              catalogue,
+              id: item.id,
+              label: item.label ?? item.id,
+            });
+    }
+    if (removed.length) {
+      setDeletion({
+        next,
+        labels: removed.map((x) => x.label),
+        dependencies: removed.flatMap((x) =>
+          dependentReferences(next, x.catalogue, x.id),
+        ),
+      });
+      return;
+    }
+    commitEdit(next);
+  };
   const run = async (
     command: string,
     extra: Record<string, unknown> = {},
@@ -132,7 +228,16 @@ export default function App() {
       });
       const r = await response.json();
       if (!response.ok || r.error) throw new Error(r.error || "Request failed");
-      setMessage(r);
+      setMessage(r, command);
+      if (command === "validate")
+        setValidationContext({
+          hash: JSON.stringify(extra.scenario ?? snapshot),
+          paths: r.diagnostics
+            .filter(
+              (d: { severity?: string }) => (d.severity ?? "ERROR") === "ERROR",
+            )
+            .map((d: { path: string }) => d.path),
+        });
       if (command === "solve" || command === "regenerate") {
         if (solved?.result.assignments) setPrevious(solved.result);
         setSolved({ scenario: r.scenario ?? snapshot, result: r });
@@ -160,13 +265,17 @@ export default function App() {
   const loadExample = async (kind = "legacy") => {
     try {
       const res = await fetch(
-        kind === "evolution"
-          ? "/api/example-evolution"
-          : kind === "automatic"
-            ? "/api/example-automatic"
-            : "/api/example",
+        kind === "patterns"
+          ? "/api/example-patterns"
+          : kind === "evolution"
+            ? "/api/example-evolution"
+            : kind === "automatic"
+              ? "/api/example-automatic"
+              : "/api/example",
       );
+      if (!res.ok) throw new Error("Cannot load example");
       setS(await res.json());
+      notifyMessage("Example loaded");
       setSolved(undefined);
       setMessage(undefined);
       setTab("overview");
@@ -218,6 +327,25 @@ export default function App() {
     next.history = { assignments: [], fairnessSnapshots: [] };
     next.publishedAssignments = [];
     next.hrState = { events: [], snapshotRevisions: {} };
+    for (const key of [
+      "attributeDefinitions",
+      "workPatterns",
+      "workPatternAssignmentRules",
+      "weekProfiles",
+      "dutyRequirements",
+      "temporalRules",
+    ] as const)
+      next[key] = [];
+    next.schemaVersion = 3;
+    next.weekConfiguration = {
+      manual: [],
+      recurrences: [],
+      frequencies: [],
+      history: [],
+    };
+    delete next.replanning;
+    delete next.calendar.holidays;
+    next.calendar.closures = [];
     initializeEvolution(next);
     undoStack.current = [];
     setS(next);
@@ -250,7 +378,62 @@ export default function App() {
         setNewLabel("");
       }}
     >
-      <div className="app">
+      <div
+        className="app"
+        onFocusCapture={() => {
+          lastBlur.current = JSON.stringify(s);
+        }}
+        onBlurCapture={() => {
+          if (lastBlur.current && lastBlur.current !== JSON.stringify(s)) {
+            notifyMessage("Configuration updated");
+            lastBlur.current = JSON.stringify(s);
+          }
+        }}
+      >
+        {deletion && (
+          <ReviewDialog
+            title={t("Review catalogue deletion")}
+            onCancel={() => setDeletion(undefined)}
+            disabled={!!deletion.dependencies.length}
+            onConfirm={() => {
+              commitEdit(deletion.next);
+              setDeletion(undefined);
+              notifyMessage("Catalogue item removed");
+            }}
+          >
+            <p>{deletion.labels.join(", ")}</p>
+            {deletion.dependencies.length ? (
+              <>
+                <p className="error">
+                  {t(
+                    "This item is still used. Update its dependants before deleting it.",
+                  )}
+                </p>
+                <ul>
+                  {deletion.dependencies.map((ref, i) => (
+                    <li key={i}>
+                      <button
+                        onClick={() => {
+                          setDeletion(undefined);
+                          choose(editorForPath(ref.path));
+                        }}
+                      >
+                        {referenceLabel(s, ref.path)}
+                      </button>{" "}
+                      <code>{ref.path}</code>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p>
+                {t(
+                  "No remaining explicit references. Confirm removal of these items.",
+                )}
+              </p>
+            )}
+          </ReviewDialog>
+        )}
         <aside className="sidebar">
           <a
             className="brand"
@@ -283,7 +466,7 @@ export default function App() {
             ))}
           </nav>
           <div className="sidebar-bottom">
-            <span className="version">v0.2.0 · CP-SAT</span>
+            <span className="version">v0.3.0 · CP-SAT</span>
             <p>
               {t("Continuous fairness.")} <br />
               {t("One shared model.")}{" "}
@@ -332,79 +515,19 @@ export default function App() {
               {t("WORKFORCE OPTIMIZATION")} <span>●</span>{" "}
               {t("LOCAL & PRIVATE")}{" "}
             </div>
-            {fatal && (
-              <div role="alert" className="notice error">
-                {localizeError(fatal)}
-              </div>
-            )}
-            {message && (
-              <div
-                className={`feedback ${message.diagnostics.some((d) => (d.severity || "ERROR") === "ERROR") ? "has-errors" : ""}`}
-                role="status"
-              >
-                <strong>{t(message.status)}</strong>
-                {message.diagnostics.length === 0 && (
-                  <span>
-                    {message.status === "VALID"
-                      ? t("Scenario passed structural and semantic validation.")
-                      : message.status === "VERIFIED"
-                        ? t(
-                            "Assignments, hard constraints and fairness accounting verified.",
-                          )
-                        : message.status === "PREVIEW"
-                          ? t(
-                              "Import is valid. Review the preview before applying.",
-                            )
-                          : ""}
-                  </span>
-                )}
-                {message.diagnostics.map((d, i) => (
-                  <div className="diagnostic" key={i}>
-                    <b>{d.code}</b>
-                    <code>{d.path}</code>
-                    <span className="badge">{t(d.severity || "ERROR")}</span>
-                    <button
-                      onClick={() =>
-                        choose(
-                          d.section ||
-                            (d.path.startsWith("/week")
-                              ? "weeks"
-                              : d.path.startsWith("/workPatterns")
-                                ? "contracts"
-                                : d.path.startsWith("/calendar")
-                                  ? "calendar"
-                                  : d.path.startsWith("/shifts")
-                                    ? "shifts"
-                                    : d.path.startsWith("/duty") ||
-                                        d.path.startsWith("/temporal")
-                                      ? "coverage"
-                                      : d.path.startsWith("/policies")
-                                        ? "policies"
-                                        : "people"),
-                        )
-                      }
-                    >
-                      {t("Open related editor")}
-                    </button>
-                    <p>{diagnostic(d)}</p>
-                    {diagnostic(d) !== d.message && (
-                      <details>
-                        <summary>{t("Original message")}</summary>
-                        <pre lang="en">{d.message}</pre>
-                      </details>
-                    )}
-                  </div>
-                ))}
-                <button
-                  className="subtle"
-                  aria-label={t("Dismiss diagnostic")}
-                  onClick={() => setMessage(undefined)}
-                >
-                  ×
-                </button>
-              </div>
-            )}
             <div className={busy ? "busy-content" : ""} aria-busy={busy}>
+              <ConfigurationGuide
+                s={s}
+                tab={tab}
+                onNavigate={choose}
+                errorPaths={
+                  validationContext?.hash === JSON.stringify(s)
+                    ? validationContext.paths
+                    : []
+                }
+                result={solved?.result}
+                stale={stale}
+              />
               <UpgradeNotice s={s} onUpgrade={() => run("migrate")} />
               {solved?.result.assignments &&
                 ["overview", "results", "calendar", "imports"].includes(
@@ -573,6 +696,9 @@ export default function App() {
                         <button onClick={() => loadExample("automatic")}>
                           {t("Load automatic week example")}
                         </button>
+                        <button onClick={() => loadExample("patterns")}>
+                          {t("Load automatic work-pattern example")}
+                        </button>
                         <button onClick={blank}>
                           {t("Create an empty scenario")}
                         </button>
@@ -664,7 +790,13 @@ export default function App() {
                   </section>
                 </>
               )}
-              {tab === "contracts" && <WorkPatterns s={s} update={update} />}
+              {tab === "contracts" && (
+                <>
+                  <WorkPatterns s={s} update={update} />
+                  <PatternAssignmentRules s={s} update={update} />
+                </>
+              )}
+              {tab === "variants" && <Variants s={s} update={update} />}
               {tab === "weeks" && <WeekPlanner s={s} update={update} />}
               {tab === "coverage" && <CoverageRules s={s} update={update} />}
               {tab === "people" && (
@@ -676,7 +808,6 @@ export default function App() {
               {tab === "shifts" && (
                 <>
                   <Shifts s={s} update={update} />
-                  <Variants s={s} update={update} />
                 </>
               )}
               {tab === "calendar" && (
