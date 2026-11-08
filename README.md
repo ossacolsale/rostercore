@@ -7,7 +7,7 @@ RosterCore generates workforce schedules from declarative rules using a C++20 en
 Designed for integration into desktop applications and backend services, RosterCore aims to remain independent of any specific industry. Pharmacies are the initial reference use case, but the model is intended for healthcare, retail, hospitality, manufacturing, and other shift-based workplaces.
 
 > [!IMPORTANT]
-> **Version 0.1.0 — ready for local evaluation.** The native CLI and visual playground run real optimization and verify returned assignments. This is an initial release with explicit limits, not a certified HR system. See [implemented scope and limitations](docs/LIMITATIONS.md).
+> **Version 0.2.0 — ready for local evaluation.** The native CLI and visual playground run real optimization and verify returned assignments. This is an initial release with explicit limits, not a certified HR system. See [implemented scope and limitations](docs/LIMITATIONS.md).
 
 ## Why RosterCore?
 
@@ -19,7 +19,9 @@ RosterCore implements **continuous, history-aware fairness**: it will optimize f
 
 ## Implemented capabilities
 
-- **Declarative workforce model:** employees, roles, groups, shift types, multiple time intervals, calendars, and availability.
+- **Dated workforce:** typed/default attributes, predicates, employment changes, reusable work patterns and logical shift variants.
+- **Weekly calendars:** manual/recurring/solver-selected ISO profiles, hard/desired frequencies, versioned Italian holidays and company closures.
+- **Operational coverage:** actual interval presence, distinct qualified responsibilities, lexicographic fallback resources and cross-day/rest rules.
 - **Composable hard constraints:** exact/minimum/maximum staffing counts, allowed shifts, exclusions, and nested `AND`/`OR` expressions.
 - **Reusable planning policies:** a named objective together with its associated constraints and references to shared rules.
 - **Continuous fairness:** cumulative assignment counts, ideal shares, historical balances, and optimization across rolling planning horizons.
@@ -124,7 +126,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:4317**. The reference example is loaded automatically: five employees, fourteen closing duties, exact continuous fairness. Generate a schedule, inspect coverage and debts, edit policies visually, or create an empty scenario. Inputs are kept in browser storage; export JSON for a portable backup. The **Language / Lingua** selector in the top bar switches between English and Italian and remembers the choice in this browser. Navigation, editors, results, dates, numbers and known diagnostics are localized; original diagnostic codes/details remain available. Switching language preserves scenario data, custom labels and JSON exports.
+Open **http://127.0.0.1:4317**. The reference example is loaded automatically: five employees, fourteen closing duties, exact continuous fairness. Generate a schedule, inspect coverage and debts, edit policies visually, or create an empty scenario. Use **Load evolving pharmacy example** to try part-time hours, two closing duties, fallback, nights, dated hires/departures and closures, or **Load automatic week example** for solver-selected weeks. Follow the numbered editors, preview workforce hours and weekly classification, then generate, import leave and regenerate from its effective date. Inputs are kept in browser storage; export JSON for a portable backup. The **Language / Lingua** selector in the top bar switches between English and Italian and remembers the choice in this browser. Navigation, editors, results, dates, numbers and known diagnostics are localized; original diagnostic codes/details remain available. Switching language preserves scenario data, custom labels and JSON exports.
 
 For a production UI build on the same local adapter, run `npm run build && npm start`. This still binds only to loopback. `ROSTERCORE_CLI` can select a different native executable; `PORT` changes the local port. No AI, cloud or HR account is required.
 
@@ -166,7 +168,7 @@ npm run test:e2e
 
 If Chrome is already installed, `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e` uses it instead of a downloaded browser. See [test report](docs/TEST_REPORT.md) and [measured benchmark data](docs/benchmark-results.json). Larger cases can exhaust their budget; FEASIBLE and UNKNOWN are reported honestly.
 
-`cmake --install build --prefix /your/install/path` installs the CLI, runtime libraries, headers, schemas and notices. `cpack --config build/CPackConfig.cmake -G TGZ` builds a native archive on Unix. Keep dependency license notices with redistributed binaries. [CI](.github/workflows/ci.yml) builds/tests Linux, Windows and macOS; local verification does not imply those remote jobs have passed.
+`cmake --install build --prefix /your/install/path` installs the CLI, runtime libraries, headers, schemas and notices. `cpack --config build/CPackConfig.cmake -G TGZ` builds a native archive on Unix. Keep dependency license notices with redistributed binaries. [CI](.github/workflows/ci.yml) builds/tests Linux, Windows and macOS; the focused Windows loader repair passed all three platforms; see the test report for release-specific evidence.
 
 ## Four implementation phases
 

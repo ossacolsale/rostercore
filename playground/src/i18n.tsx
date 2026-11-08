@@ -30,6 +30,46 @@ export function translate(
 }
 
 const diagnosticSummaries: Record<string, string> = {
+  WEEK_CONFLICT:
+    "Due regole o assegnazioni classificano la stessa settimana in modo incompatibile.",
+  WEEK_OVERRIDE_REQUIRED:
+    "La deroga alla ricorrenza richiede un'autorizzazione esplicita e una motivazione.",
+  WEEK_UNCLASSIFIED:
+    "La settimana non ha un profilo. Configura una ricorrenza, la scelta automatica o un profilo predefinito.",
+  WEEK_ALIGNMENT:
+    "Le decorrenze dei cicli e della selezione automatica devono essere lunedì ISO.",
+  TEMPORAL_OVERLAP: "Gli intervalli di validità temporale si sovrappongono.",
+  ATTRIBUTE_TYPE:
+    "Il valore non rispetta il tipo o l'enumerazione definiti nel catalogo degli attributi.",
+  WORK_PATTERN_GAP:
+    "Il dipendente non dispone di uno schema di lavoro valido per la data indicata.",
+  VARIANT_AMBIGUITY:
+    "Più varianti orarie hanno la stessa priorità per lo stesso dipendente e la stessa data.",
+  INSUFFICIENT_COVERAGE:
+    "Le disponibilità, le abilitazioni o gli orari effettivi non permettono di soddisfare la copertura richiesta.",
+  COVERAGE_INTERVALS:
+    "La copertura per presenza richiede fasce orarie effettive.",
+  COVERAGE_LEVEL:
+    "I livelli di preferenza devono essere univoci all'interno del requisito.",
+  CLOSURE_PROTECTED_CONFLICT:
+    "La chiusura aziendale si sovrappone a un turno protetto, anche per la parte notturna nel giorno successivo.",
+  UNSUPPORTED_TIMEZONE:
+    "I vincoli di riposo effettivo supportano UTC ed Europe/Rome. Gli altri fusi non vengono interpretati come minuti civili esatti.",
+  AMBIGUOUS_LOCAL_TIME:
+    "L'ora locale è ambigua al cambio d'ora. Specifica l'occorrenza iniziale o finale della fascia.",
+  NONEXISTENT_LOCAL_TIME:
+    "L'ora locale non esiste al cambio d'ora oppure non rientra nel periodo coperto dai dati offline.",
+  HOLIDAY_OPERATIONAL:
+    "La data è festiva, ma il profilo settimanale consente di lavorare: la configurazione è ammessa.",
+  NO_EXPLICIT_REFERENCE:
+    "Questo elemento del catalogo non ha riferimenti espliciti. I selettori generali possono comunque includerlo.",
+  FREQUENCY:
+    "La frequenza configurata contiene limiti incompatibili o una finestra mobile mancante.",
+  REGENERATION_RANGE:
+    "La data di rigenerazione deve rientrare nell'orizzonte corrente.",
+  HISTORY_PROTECTED:
+    "Non è consentito modificare il profilo di una settimana già consolidata.",
+
   SCHEMA:
     "Il documento non rispetta lo schema JSON. Controlla campi obbligatori, proprietà sconosciute, tipi e funzioni supportate.",
   SCHEMA_NOT_FOUND:

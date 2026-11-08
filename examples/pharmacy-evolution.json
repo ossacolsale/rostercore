@@ -1,0 +1,1057 @@
+{
+  "format": "rostercore.scenario",
+  "schemaVersion": 2,
+  "id": "pharmacy-evolution",
+  "label": "Pharmacy \u00b7 evolving workforce",
+  "revision": 1,
+  "employeeTypes": [
+    {
+      "id": "pharmacist",
+      "label": "Pharmacist"
+    },
+    {
+      "id": "store",
+      "label": "Store staff"
+    },
+    {
+      "id": "reserve",
+      "label": "Reserve resource"
+    }
+  ],
+  "employees": [
+    {
+      "id": "p1",
+      "label": "Pharmacist A",
+      "typeId": "pharmacist",
+      "attributes": {
+        "nightEligible": true
+      },
+      "workPatternId": "full",
+      "employment": {
+        "validFrom": "2027-01-01"
+      },
+      "versions": []
+    },
+    {
+      "id": "p2",
+      "label": "Pharmacist B",
+      "typeId": "pharmacist",
+      "attributes": {
+        "nightEligible": true
+      },
+      "workPatternId": "full",
+      "employment": {
+        "validFrom": "2027-01-01",
+        "validTo": "2027-06-01"
+      },
+      "versions": []
+    },
+    {
+      "id": "p3",
+      "label": "Pharmacist C",
+      "typeId": "pharmacist",
+      "attributes": {
+        "contract": "PART_TIME"
+      },
+      "workPatternId": "part",
+      "employment": {
+        "validFrom": "2027-01-01"
+      },
+      "versions": [
+        {
+          "validFrom": "2027-06-01",
+          "attributes": {
+            "contract": "FULL_TIME",
+            "nightEligible": true
+          },
+          "workPatternId": "full"
+        }
+      ]
+    },
+    {
+      "id": "s1",
+      "label": "Store A",
+      "typeId": "store",
+      "attributes": {},
+      "workPatternId": "full",
+      "employment": {
+        "validFrom": "2027-01-01"
+      },
+      "versions": []
+    },
+    {
+      "id": "r1",
+      "label": "Reserve A",
+      "typeId": "reserve",
+      "attributes": {
+        "nightEligible": true
+      },
+      "workPatternId": "full",
+      "employment": {
+        "validFrom": "2027-01-01"
+      },
+      "versions": []
+    },
+    {
+      "id": "p4",
+      "label": "New colleague",
+      "typeId": "pharmacist",
+      "attributes": {
+        "nightEligible": true
+      },
+      "workPatternId": "full",
+      "employment": {
+        "validFrom": "2027-06-01"
+      },
+      "versions": []
+    }
+  ],
+  "groups": [
+    {
+      "id": "ordinary",
+      "label": "Ordinary resources",
+      "selector": {
+        "typeIds": [
+          "pharmacist",
+          "store"
+        ]
+      }
+    },
+    {
+      "id": "part-time",
+      "label": "Part-time resources",
+      "selector": {
+        "where": {
+          "op": "EQ",
+          "attributeId": "contract",
+          "value": "PART_TIME"
+        }
+      }
+    }
+  ],
+  "shifts": [
+    {
+      "id": "normal",
+      "label": "Normal",
+      "kind": "WORKING",
+      "intervals": [],
+      "fairnessTags": [],
+      "variants": [
+        {
+          "id": "normal-full",
+          "label": "Full-day hours",
+          "priority": 0,
+          "selector": {
+            "where": {
+              "op": "EQ",
+              "attributeId": "contract",
+              "value": "FULL_TIME"
+            }
+          },
+          "scope": {},
+          "intervals": [
+            {
+              "start": "08:30",
+              "end": "13:00",
+              "endDayOffset": 0
+            },
+            {
+              "start": "16:30",
+              "end": "20:00",
+              "endDayOffset": 0
+            }
+          ]
+        },
+        {
+          "id": "normal-part-friday",
+          "label": "Part-time Friday",
+          "priority": 10,
+          "selector": {
+            "groupIds": [
+              "part-time"
+            ]
+          },
+          "scope": {
+            "weekdays": [
+              5
+            ]
+          },
+          "intervals": [
+            {
+              "start": "08:30",
+              "end": "13:00",
+              "endDayOffset": 0
+            },
+            {
+              "start": "16:30",
+              "end": "20:00",
+              "endDayOffset": 0
+            }
+          ]
+        },
+        {
+          "id": "normal-part-morning",
+          "label": "Part-time morning",
+          "priority": 10,
+          "selector": {
+            "groupIds": [
+              "part-time"
+            ]
+          },
+          "scope": {
+            "weekdays": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          "intervals": [
+            {
+              "start": "08:30",
+              "end": "13:00",
+              "endDayOffset": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "close-evening",
+      "label": "Evening closing",
+      "kind": "WORKING",
+      "intervals": [],
+      "fairnessTags": [
+        "closing"
+      ],
+      "variants": [
+        {
+          "id": "close-evening-full",
+          "label": "Full-day hours",
+          "priority": 0,
+          "selector": {
+            "where": {
+              "op": "EQ",
+              "attributeId": "contract",
+              "value": "FULL_TIME"
+            }
+          },
+          "scope": {},
+          "intervals": [
+            {
+              "start": "09:00",
+              "end": "13:00",
+              "endDayOffset": 0
+            },
+            {
+              "start": "16:30",
+              "end": "20:30",
+              "endDayOffset": 0
+            }
+          ]
+        },
+        {
+          "id": "close-evening-part-friday",
+          "label": "Part-time Friday",
+          "priority": 10,
+          "selector": {
+            "groupIds": [
+              "part-time"
+            ]
+          },
+          "scope": {
+            "weekdays": [
+              5
+            ]
+          },
+          "intervals": [
+            {
+              "start": "09:00",
+              "end": "13:00",
+              "endDayOffset": 0
+            },
+            {
+              "start": "16:30",
+              "end": "20:30",
+              "endDayOffset": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "close-both",
+      "label": "Morning and evening closing",
+      "kind": "WORKING",
+      "intervals": [],
+      "fairnessTags": [
+        "closing"
+      ],
+      "variants": [
+        {
+          "id": "close-both-full",
+          "label": "Full-day hours",
+          "priority": 0,
+          "selector": {
+            "where": {
+              "op": "EQ",
+              "attributeId": "contract",
+              "value": "FULL_TIME"
+            }
+          },
+          "scope": {},
+          "intervals": [
+            {
+              "start": "09:00",
+              "end": "13:30",
+              "endDayOffset": 0
+            },
+            {
+              "start": "16:30",
+              "end": "20:30",
+              "endDayOffset": 0
+            }
+          ]
+        },
+        {
+          "id": "close-both-part-friday",
+          "label": "Part-time Friday",
+          "priority": 10,
+          "selector": {
+            "groupIds": [
+              "part-time"
+            ]
+          },
+          "scope": {
+            "weekdays": [
+              5
+            ]
+          },
+          "intervals": [
+            {
+              "start": "09:00",
+              "end": "13:30",
+              "endDayOffset": 0
+            },
+            {
+              "start": "16:30",
+              "end": "20:30",
+              "endDayOffset": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "night",
+      "label": "Night",
+      "kind": "WORKING",
+      "intervals": [],
+      "fairnessTags": [
+        "night"
+      ],
+      "variants": [
+        {
+          "id": "night-qualified",
+          "label": "Qualified night",
+          "priority": 0,
+          "selector": {
+            "where": {
+              "op": "EQ",
+              "attributeId": "nightEligible",
+              "value": true
+            }
+          },
+          "scope": {},
+          "intervals": [
+            {
+              "start": "22:00",
+              "end": "08:00",
+              "endDayOffset": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "off",
+      "label": "Rest",
+      "kind": "OFF",
+      "intervals": [],
+      "fairnessTags": []
+    }
+  ],
+  "calendar": {
+    "start": "2027-05-03",
+    "end": "2027-06-06",
+    "timezone": "Europe/Rome",
+    "excludedDates": [],
+    "excludedRanges": [],
+    "excludedIsoWeeks": [],
+    "closures": [
+      {
+        "id": "annual-closure",
+        "label": "Company closure",
+        "validFrom": "2027-05-27",
+        "validTo": "2027-05-29",
+        "selector": {},
+        "reason": "Annual shutdown, not individual vacation accounting",
+        "exceptions": []
+      }
+    ],
+    "holidays": {
+      "country": "IT",
+      "catalogueVersion": "IT-2001-2026.1",
+      "localDates": []
+    }
+  },
+  "availability": [
+    {
+      "id": "planned-leave",
+      "selector": {
+        "employeeIds": [
+          "p2"
+        ]
+      },
+      "scope": {
+        "start": "2027-05-10",
+        "end": "2027-05-11"
+      },
+      "state": "ABSENT"
+    }
+  ],
+  "allowedShifts": [
+    {
+      "id": "ordinary-regular",
+      "selector": {
+        "groupIds": [
+          "ordinary"
+        ]
+      },
+      "shiftIds": [
+        "normal",
+        "close-evening",
+        "close-both"
+      ],
+      "scope": {
+        "weekProfileIds": [
+          "regular"
+        ],
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "dayType": "NON_HOLIDAY"
+      },
+      "allowRequiredRest": true
+    },
+    {
+      "id": "reserve-regular",
+      "selector": {
+        "typeIds": [
+          "reserve"
+        ]
+      },
+      "shiftIds": [
+        "off",
+        "close-evening",
+        "close-both"
+      ],
+      "scope": {
+        "weekProfileIds": [
+          "regular"
+        ],
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "dayType": "NON_HOLIDAY"
+      }
+    },
+    {
+      "id": "ordinary-special",
+      "selector": {
+        "groupIds": [
+          "ordinary"
+        ]
+      },
+      "shiftIds": [
+        "normal",
+        "off"
+      ],
+      "scope": {
+        "weekProfileIds": [
+          "special"
+        ],
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      }
+    },
+    {
+      "id": "sunday-special",
+      "selector": {
+        "groupIds": [
+          "ordinary"
+        ]
+      },
+      "shiftIds": [
+        "normal",
+        "night",
+        "off"
+      ],
+      "scope": {
+        "weekProfileIds": [
+          "special"
+        ],
+        "weekdays": [
+          7
+        ]
+      }
+    },
+    {
+      "id": "reserve-special",
+      "selector": {
+        "typeIds": [
+          "reserve"
+        ]
+      },
+      "shiftIds": [
+        "off",
+        "night"
+      ],
+      "scope": {
+        "weekProfileIds": [
+          "special"
+        ]
+      }
+    }
+  ],
+  "constraints": [],
+  "baseConstraintIds": [],
+  "constraintSets": [],
+  "policies": [
+    {
+      "id": "regular-both",
+      "label": "Regular Both",
+      "revision": 1,
+      "active": true,
+      "draft": false,
+      "dependencies": [],
+      "constraints": [],
+      "sharedConstraintIds": [],
+      "constraintSetIds": [],
+      "objective": {
+        "id": "regular-both-count",
+        "label": "Continuous duty balance",
+        "type": "CUMULATIVE_FAIRNESS",
+        "mode": "CONTINUOUS_BALANCED",
+        "measure": "COUNT",
+        "selector": {
+          "typeIds": [
+            "pharmacist"
+          ]
+        },
+        "shiftIds": [
+          "close-both"
+        ],
+        "participation": "AVAILABILITY_WEIGHTED",
+        "metrics": [
+          "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "FINAL_ABSOLUTE_DEVIATION"
+        ],
+        "priority": 0,
+        "scope": {
+          "weekProfileIds": [
+            "regular"
+          ],
+          "weekdays": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "dayType": "NON_HOLIDAY"
+        }
+      }
+    },
+    {
+      "id": "regular-evening",
+      "label": "Regular Evening",
+      "revision": 1,
+      "active": true,
+      "draft": false,
+      "dependencies": [],
+      "constraints": [],
+      "sharedConstraintIds": [],
+      "constraintSetIds": [],
+      "objective": {
+        "id": "regular-evening-count",
+        "label": "Continuous duty balance",
+        "type": "CUMULATIVE_FAIRNESS",
+        "mode": "CONTINUOUS_BALANCED",
+        "measure": "COUNT",
+        "selector": {
+          "groupIds": [
+            "ordinary"
+          ]
+        },
+        "shiftIds": [
+          "close-evening"
+        ],
+        "participation": "AVAILABILITY_WEIGHTED",
+        "metrics": [
+          "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "FINAL_ABSOLUTE_DEVIATION"
+        ],
+        "priority": 1,
+        "scope": {
+          "weekProfileIds": [
+            "regular"
+          ],
+          "weekdays": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "dayType": "NON_HOLIDAY"
+        }
+      }
+    },
+    {
+      "id": "special-nights",
+      "label": "Special Nights",
+      "revision": 1,
+      "active": true,
+      "draft": false,
+      "dependencies": [],
+      "constraints": [],
+      "sharedConstraintIds": [],
+      "constraintSetIds": [],
+      "objective": {
+        "id": "special-nights-count",
+        "label": "Continuous duty balance",
+        "type": "CUMULATIVE_FAIRNESS",
+        "mode": "CONTINUOUS_BALANCED",
+        "measure": "COUNT",
+        "selector": {
+          "typeIds": [
+            "pharmacist"
+          ]
+        },
+        "shiftIds": [
+          "night"
+        ],
+        "participation": "AVAILABILITY_WEIGHTED",
+        "metrics": [
+          "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "FINAL_ABSOLUTE_DEVIATION"
+        ],
+        "priority": 2,
+        "scope": {
+          "weekProfileIds": [
+            "special"
+          ]
+        }
+      }
+    },
+    {
+      "id": "special-weekends",
+      "label": "Special Weekends",
+      "revision": 1,
+      "active": true,
+      "draft": false,
+      "dependencies": [],
+      "constraints": [],
+      "sharedConstraintIds": [],
+      "constraintSetIds": [],
+      "objective": {
+        "id": "special-weekends-count",
+        "label": "Continuous duty balance",
+        "type": "CUMULATIVE_FAIRNESS",
+        "mode": "CONTINUOUS_BALANCED",
+        "measure": "COUNT",
+        "selector": {
+          "typeIds": [
+            "pharmacist"
+          ]
+        },
+        "shiftIds": [
+          "normal"
+        ],
+        "participation": "AVAILABILITY_WEIGHTED",
+        "metrics": [
+          "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "FINAL_ABSOLUTE_DEVIATION"
+        ],
+        "priority": 3,
+        "scope": {
+          "weekProfileIds": [
+            "special"
+          ],
+          "weekdays": [
+            6,
+            7
+          ]
+        }
+      }
+    }
+  ],
+  "history": {
+    "assignments": [],
+    "fairnessSnapshots": []
+  },
+  "publishedAssignments": [],
+  "hrState": {
+    "events": [],
+    "snapshotRevisions": {}
+  },
+  "search": {
+    "maxTimeSeconds": 15,
+    "seed": 42,
+    "workers": 1,
+    "deterministic": true
+  },
+  "attributeDefinitions": [
+    {
+      "id": "contract",
+      "label": "Contract type",
+      "type": "ENUM",
+      "values": [
+        "FULL_TIME",
+        "PART_TIME"
+      ],
+      "default": "FULL_TIME",
+      "visible": true
+    },
+    {
+      "id": "nightEligible",
+      "label": "Night qualified",
+      "type": "BOOLEAN",
+      "default": false,
+      "visible": true
+    }
+  ],
+  "workPatterns": [
+    {
+      "id": "full",
+      "label": "Full-time arrangement",
+      "versions": [
+        {
+          "validFrom": "2027-01-01",
+          "weekdays": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "shiftIds": [
+            "normal",
+            "close-evening",
+            "close-both",
+            "night",
+            "off"
+          ],
+          "exceptions": []
+        }
+      ]
+    },
+    {
+      "id": "part",
+      "label": "Morning arrangement with full Friday",
+      "versions": [
+        {
+          "validFrom": "2027-01-01",
+          "weekdays": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "shiftIds": [
+            "normal",
+            "close-evening",
+            "close-both",
+            "off"
+          ],
+          "exceptions": []
+        }
+      ]
+    }
+  ],
+  "weekProfiles": [
+    {
+      "id": "regular",
+      "label": "Regular week",
+      "offWeekdays": [
+        6,
+        7
+      ],
+      "holidayMode": "OFF",
+      "constraintIds": [],
+      "policyIds": []
+    },
+    {
+      "id": "special",
+      "label": "Duty week",
+      "offWeekdays": [],
+      "holidayMode": "NORMAL",
+      "constraintIds": [],
+      "policyIds": []
+    }
+  ],
+  "dutyRequirements": [
+    {
+      "id": "two-closings",
+      "label": "Two Closings",
+      "mode": "RESPONSIBILITY",
+      "shiftIds": [
+        "close-both"
+      ],
+      "levels": [
+        {
+          "selector": {
+            "typeIds": [
+              "pharmacist"
+            ]
+          },
+          "level": 0
+        },
+        {
+          "selector": {
+            "typeIds": [
+              "reserve"
+            ]
+          },
+          "level": 1
+        }
+      ],
+      "comparison": "EQ",
+      "count": 1,
+      "intervals": [
+        {
+          "start": "13:00",
+          "end": "13:30",
+          "endDayOffset": 0
+        },
+        {
+          "start": "20:00",
+          "end": "20:30",
+          "endDayOffset": 0
+        }
+      ],
+      "scope": {
+        "weekProfileIds": [
+          "regular"
+        ],
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "dayType": "NON_HOLIDAY"
+      },
+      "preferencePriority": 0,
+      "exclusiveGroup": "daily-responsibilities"
+    },
+    {
+      "id": "evening-closing",
+      "label": "Evening Closing",
+      "mode": "RESPONSIBILITY",
+      "shiftIds": [
+        "close-evening"
+      ],
+      "levels": [
+        {
+          "selector": {
+            "groupIds": [
+              "ordinary"
+            ]
+          },
+          "level": 0
+        },
+        {
+          "selector": {
+            "typeIds": [
+              "reserve"
+            ]
+          },
+          "level": 1
+        }
+      ],
+      "comparison": "EQ",
+      "count": 1,
+      "intervals": [
+        {
+          "start": "20:00",
+          "end": "20:30",
+          "endDayOffset": 0
+        }
+      ],
+      "scope": {
+        "weekProfileIds": [
+          "regular"
+        ],
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "dayType": "NON_HOLIDAY"
+      },
+      "preferencePriority": 0,
+      "exclusiveGroup": "daily-responsibilities"
+    },
+    {
+      "id": "sunday-night",
+      "label": "Sunday Night",
+      "mode": "RESPONSIBILITY",
+      "shiftIds": [
+        "night"
+      ],
+      "levels": [
+        {
+          "selector": {
+            "typeIds": [
+              "pharmacist"
+            ]
+          },
+          "level": 0
+        },
+        {
+          "selector": {
+            "typeIds": [
+              "reserve"
+            ]
+          },
+          "level": 1
+        }
+      ],
+      "comparison": "EQ",
+      "count": 1,
+      "intervals": [
+        {
+          "start": "22:00",
+          "end": "08:00",
+          "endDayOffset": 1
+        }
+      ],
+      "scope": {
+        "weekProfileIds": [
+          "special"
+        ],
+        "weekdays": [
+          7
+        ]
+      },
+      "preferencePriority": 0,
+      "exclusiveGroup": "daily-responsibilities"
+    },
+    {
+      "id": "weekend-presence",
+      "label": "Saturday morning presence",
+      "mode": "PRESENCE",
+      "shiftIds": [
+        "normal"
+      ],
+      "levels": [
+        {
+          "selector": {
+            "typeIds": [
+              "pharmacist"
+            ]
+          },
+          "level": 0
+        }
+      ],
+      "comparison": "GE",
+      "count": 1,
+      "intervals": [
+        {
+          "start": "09:00",
+          "end": "12:00",
+          "endDayOffset": 0
+        }
+      ],
+      "scope": {
+        "weekProfileIds": [
+          "special"
+        ],
+        "weekdays": [
+          6
+        ]
+      },
+      "preferencePriority": 0
+    }
+  ],
+  "temporalRules": [
+    {
+      "id": "night-next-day-off",
+      "label": "Rest on the day after night start",
+      "type": "SUCCESSION",
+      "selector": {},
+      "fromShiftIds": [
+        "night"
+      ],
+      "toShiftIds": [
+        "off"
+      ],
+      "offsetDays": 1,
+      "scope": {}
+    }
+  ],
+  "weekConfiguration": {
+    "manual": [
+      {
+        "week": "2027-05-17",
+        "profileId": "special",
+        "overrideRecurrence": true,
+        "waiveFrequencyIds": [],
+        "reason": "Demonstration of an authorized one-week exception"
+      }
+    ],
+    "recurrences": [
+      {
+        "id": "rotation",
+        "label": "One duty week in four",
+        "anchor": "2027-05-05",
+        "sequence": [
+          "special",
+          "regular",
+          "regular",
+          "regular"
+        ],
+        "validFrom": "2027-01-04"
+      }
+    ],
+    "frequencies": [],
+    "history": [],
+    "defaultProfileId": "regular"
+  }
+}

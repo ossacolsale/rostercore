@@ -1,5 +1,20 @@
+import { CatalogueContext, type CatalogueKind } from "./catalogue-context";
+import { initializeEvolution } from "./evolution-model";
+import {
+  Workforce,
+  WorkPatterns,
+  Variants,
+  RegenerationControl,
+  CatalogueUsage,
+  UpgradeNotice,
+} from "./evolution";
+import {
+  WeekPlanner,
+  HolidayClosures,
+  CoverageRules,
+} from "./planning-editors";
 import { LanguageSelector, useI18n } from "./i18n";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   type Scenario,
   type Result,
@@ -16,11 +31,14 @@ import { Text, Select, EntityHeader } from "./editors";
 const tabs = [
   ["overview", "01", "Overview"],
   ["people", "02", "People & groups"],
-  ["shifts", "03", "Shift types"],
-  ["calendar", "04", "Calendar & availability"],
-  ["policies", "05", "Planning policies"],
-  ["imports", "06", "AI & HR imports"],
-  ["results", "07", "Schedule & fairness"],
+  ["contracts", "03", "Contracts & work patterns"],
+  ["shifts", "04", "Shift types"],
+  ["weeks", "05", "Week profiles & recurrence"],
+  ["calendar", "06", "Calendar & availability"],
+  ["coverage", "07", "Coverage & temporal rules"],
+  ["policies", "08", "Planning policies"],
+  ["imports", "09", "AI & HR imports"],
+  ["results", "10", "Schedule & fairness"],
   ["advanced", "{ }", "Advanced JSON"],
 ];
 type Solved = { scenario: Scenario; result: Result };
@@ -36,6 +54,10 @@ export default function App() {
     [solved, setSolved] = useState<Solved>(),
     [previous, setPrevious] = useState<Result>(),
     [raw, setRaw] = useState("");
+  const undoStack = useRef<Scenario[]>([]);
+  const [, setUndoVersion] = useState(0);
+  const [createKind, setCreateKind] = useState<CatalogueKind | null>(null),
+    [newLabel, setNewLabel] = useState("");
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -85,6 +107,10 @@ export default function App() {
   const update: Update = (fn) =>
     setS((current) => {
       if (!current) return current;
+      if (undoStack.current.at(-1) !== current) {
+        undoStack.current.push(current);
+        if (undoStack.current.length > 20) undoStack.current.shift();
+      }
       const next = structuredClone(current);
       fn(next);
       return next;
@@ -107,14 +133,17 @@ export default function App() {
       const r = await response.json();
       if (!response.ok || r.error) throw new Error(r.error || "Request failed");
       setMessage(r);
-      if (command === "solve") {
+      if (command === "solve" || command === "regenerate") {
         if (solved?.result.assignments) setPrevious(solved.result);
-        setSolved({ scenario: snapshot, result: r });
+        setSolved({ scenario: r.scenario ?? snapshot, result: r });
         setTab("results");
       }
       if (r.scenario) {
         setS(r.scenario);
-        if (command === "consolidate") setTab("overview");
+        if (command === "consolidate") {
+          undoStack.current = [];
+          setTab("overview");
+        }
       }
       return r;
     } catch (e) {
@@ -128,9 +157,15 @@ export default function App() {
     if (key === "advanced") setRaw(JSON.stringify(s, null, 2));
     setTab(key);
   };
-  const loadExample = async () => {
+  const loadExample = async (kind = "legacy") => {
     try {
-      const res = await fetch("/api/example");
+      const res = await fetch(
+        kind === "evolution"
+          ? "/api/example-evolution"
+          : kind === "automatic"
+            ? "/api/example-automatic"
+            : "/api/example",
+      );
       setS(await res.json());
       setSolved(undefined);
       setMessage(undefined);
@@ -183,6 +218,8 @@ export default function App() {
     next.history = { assignments: [], fairnessSnapshots: [] };
     next.publishedAssignments = [];
     next.hrState = { events: [], snapshotRevisions: {} };
+    initializeEvolution(next);
+    undoStack.current = [];
     setS(next);
     setSolved(undefined);
     setMessage(undefined);
@@ -207,444 +244,628 @@ export default function App() {
       d.policies.push(p);
     });
   return (
-    <div className="app">
-      <aside className="sidebar">
-        <a
-          className="brand"
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            choose("overview");
-          }}
-        >
-          <span className="logo-mark">R</span>
-          <span>
-            RosterCore<small>{t("PLANNING PLAYGROUND")}</small>
-          </span>
-        </a>
-        <div className="workspace-label">
-          {t("LOCAL WORKSPACE")} <span className="live-dot" />
-        </div>
-        <nav aria-label={t("Main navigation")}>
-          {tabs.map(([key, num, label]) => (
-            <button
-              key={key}
-              className={tab === key ? "active" : ""}
-              onClick={() => choose(key)}
-            >
-              <span>{num}</span>
-              {t(label)}
-              {key === "results" && solved?.result.assignments && <i />}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <span className="version">v0.1.0 · CP-SAT</span>
-          <p>
-            {t("Continuous fairness.")} <br />
-            {t("One shared model.")}{" "}
-          </p>
-          <span className="privacy-dot">●</span>{" "}
-          {t("Runs on your computer")}{" "}
-        </div>
-      </aside>
-      <div className="workspace">
-        <header className="topbar">
-          <div className="breadcrumb">
-            {t("Workspace")} <span>/</span>{" "}
-            {t(tabs.find((tabInfo) => tabInfo[0] === tab)?.[2] || "Overview")}
+    <CatalogueContext.Provider
+      value={(kind) => {
+        setCreateKind(kind);
+        setNewLabel("");
+      }}
+    >
+      <div className="app">
+        <aside className="sidebar">
+          <a
+            className="brand"
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              choose("overview");
+            }}
+          >
+            <span className="logo-mark">R</span>
+            <span>
+              RosterCore<small>{t("PLANNING PLAYGROUND")}</small>
+            </span>
+          </a>
+          <div className="workspace-label">
+            {t("LOCAL WORKSPACE")} <span className="live-dot" />
           </div>
-          <div className="top-actions">
-            <LanguageSelector />
-            <button disabled={busy} onClick={() => run("validate")}>
-              {t("Validate scenario")}{" "}
-            </button>
-            <button
-              className="primary"
-              disabled={busy}
-              onClick={() => run("solve")}
-            >
-              {busy
-                ? action === "solve"
-                  ? `${t("Solving")}…`
-                  : t("Working…")
-                : t("Generate schedule")}{" "}
-              <span>↗</span>
-            </button>
-          </div>
-        </header>
-        <main>
-          <div className="page-eyebrow">
-            {t("WORKFORCE OPTIMIZATION")} <span>●</span>{" "}
-            {t("LOCAL & PRIVATE")}{" "}
-          </div>
-          {fatal && (
-            <div role="alert" className="notice error">
-              {localizeError(fatal)}
-            </div>
-          )}
-          {message && (
-            <div
-              className={`feedback ${message.diagnostics.length ? "has-errors" : ""}`}
-              role="status"
-            >
-              <strong>{t(message.status)}</strong>
-              {message.diagnostics.length === 0 && (
-                <span>
-                  {message.status === "VALID"
-                    ? t("Scenario passed structural and semantic validation.")
-                    : message.status === "VERIFIED"
-                      ? t(
-                          "Assignments, hard constraints and fairness accounting verified.",
-                        )
-                      : message.status === "PREVIEW"
-                        ? t(
-                            "Import is valid. Review the preview before applying.",
-                          )
-                        : ""}
-                </span>
-              )}
-              {message.diagnostics.map((d, i) => (
-                <div className="diagnostic" key={i}>
-                  <b>{d.code}</b>
-                  <code>{d.path}</code>
-                  <p>{diagnostic(d)}</p>
-                  {diagnostic(d) !== d.message && (
-                    <details>
-                      <summary>{t("Original message")}</summary>
-                      <pre lang="en">{d.message}</pre>
-                    </details>
-                  )}
-                </div>
-              ))}
+          <nav aria-label={t("Main navigation")}>
+            {tabs.map(([key, num, label]) => (
               <button
-                className="subtle"
-                aria-label={t("Dismiss diagnostic")}
-                onClick={() => setMessage(undefined)}
+                key={key}
+                data-testid={"nav-" + key}
+                className={tab === key ? "active" : ""}
+                onClick={() => choose(key)}
               >
-                ×
+                <span>{num}</span>
+                {t(label)}
+                {key === "results" && solved?.result.assignments && <i />}
+              </button>
+            ))}
+          </nav>
+          <div className="sidebar-bottom">
+            <span className="version">v0.2.0 · CP-SAT</span>
+            <p>
+              {t("Continuous fairness.")} <br />
+              {t("One shared model.")}{" "}
+            </p>
+            <span className="privacy-dot">●</span>{" "}
+            {t("Runs on your computer")}{" "}
+          </div>
+        </aside>
+        <div className="workspace">
+          <header className="topbar">
+            <div className="breadcrumb">
+              {t("Workspace")} <span>/</span>{" "}
+              {t(tabs.find((tabInfo) => tabInfo[0] === tab)?.[2] || "Overview")}
+            </div>
+            <div className="top-actions">
+              <LanguageSelector />
+              <button
+                disabled={busy || !undoStack.current.length}
+                onClick={() => {
+                  const previous = undoStack.current.pop();
+                  if (previous) setS(previous);
+                  setUndoVersion((v) => v + 1);
+                }}
+              >
+                {t("Undo change")}
+              </button>
+              <button disabled={busy} onClick={() => run("validate")}>
+                {t("Validate scenario")}{" "}
+              </button>
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={() => run("solve")}
+              >
+                {busy
+                  ? action === "solve"
+                    ? `${t("Solving")}…`
+                    : t("Working…")
+                  : t("Generate schedule")}{" "}
+                <span>↗</span>
               </button>
             </div>
-          )}
-          <div className={busy ? "busy-content" : ""} aria-busy={busy}>
-            {tab === "overview" && (
-              <>
-                <div className="hero">
-                  <div>
-                    <span className="pill">
-                      {t("DECLARATIVE PLANNING ENGINE")}
-                    </span>
-                    <h1>
-                      {t("A fairer schedule,")} <br />
-                      <em>{t("across every horizon.")}</em>
-                    </h1>
+          </header>
+          <main>
+            <div className="page-eyebrow">
+              {t("WORKFORCE OPTIMIZATION")} <span>●</span>{" "}
+              {t("LOCAL & PRIVATE")}{" "}
+            </div>
+            {fatal && (
+              <div role="alert" className="notice error">
+                {localizeError(fatal)}
+              </div>
+            )}
+            {message && (
+              <div
+                className={`feedback ${message.diagnostics.some((d) => (d.severity || "ERROR") === "ERROR") ? "has-errors" : ""}`}
+                role="status"
+              >
+                <strong>{t(message.status)}</strong>
+                {message.diagnostics.length === 0 && (
+                  <span>
+                    {message.status === "VALID"
+                      ? t("Scenario passed structural and semantic validation.")
+                      : message.status === "VERIFIED"
+                        ? t(
+                            "Assignments, hard constraints and fairness accounting verified.",
+                          )
+                        : message.status === "PREVIEW"
+                          ? t(
+                              "Import is valid. Review the preview before applying.",
+                            )
+                          : ""}
+                  </span>
+                )}
+                {message.diagnostics.map((d, i) => (
+                  <div className="diagnostic" key={i}>
+                    <b>{d.code}</b>
+                    <code>{d.path}</code>
+                    <span className="badge">{t(d.severity || "ERROR")}</span>
+                    <button
+                      onClick={() =>
+                        choose(
+                          d.section ||
+                            (d.path.startsWith("/week")
+                              ? "weeks"
+                              : d.path.startsWith("/workPatterns")
+                                ? "contracts"
+                                : d.path.startsWith("/calendar")
+                                  ? "calendar"
+                                  : d.path.startsWith("/shifts")
+                                    ? "shifts"
+                                    : d.path.startsWith("/duty") ||
+                                        d.path.startsWith("/temporal")
+                                      ? "coverage"
+                                      : d.path.startsWith("/policies")
+                                        ? "policies"
+                                        : "people"),
+                        )
+                      }
+                    >
+                      {t("Open related editor")}
+                    </button>
+                    <p>{diagnostic(d)}</p>
+                    {diagnostic(d) !== d.message && (
+                      <details>
+                        <summary>{t("Original message")}</summary>
+                        <pre lang="en">{d.message}</pre>
+                      </details>
+                    )}
+                  </div>
+                ))}
+                <button
+                  className="subtle"
+                  aria-label={t("Dismiss diagnostic")}
+                  onClick={() => setMessage(undefined)}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            <div className={busy ? "busy-content" : ""} aria-busy={busy}>
+              <UpgradeNotice s={s} onUpgrade={() => run("migrate")} />
+              {solved?.result.assignments &&
+                ["overview", "results", "calendar", "imports"].includes(
+                  tab,
+                ) && (
+                  <RegenerationControl
+                    s={s}
+                    previousScenario={solved.scenario}
+                    previousResult={solved.result}
+                    run={run}
+                  />
+                )}
+              {tab === "overview" && (
+                <CatalogueUsage s={s} onNavigate={choose} />
+              )}
+              {tab === "overview" && (
+                <>
+                  <div className="hero">
+                    <div>
+                      <span className="pill">
+                        {t("DECLARATIVE PLANNING ENGINE")}
+                      </span>
+                      <h1>
+                        {t("A fairer schedule,")} <br />
+                        <em>{t("across every horizon.")}</em>
+                      </h1>
+                      <p>
+                        {t(
+                          "Define your people and rules. Generate a real schedule. Carry every fairness balance forward.",
+                        )}{" "}
+                      </p>
+                      <div className="row">
+                        <button
+                          className="primary"
+                          disabled={busy}
+                          onClick={() => run("solve")}
+                        >
+                          {t("Generate schedule ↗")}{" "}
+                        </button>
+                        <button onClick={() => choose("policies")}>
+                          {t("Configure policies")}{" "}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="hero-graphic" aria-hidden="true">
+                      <div className="orbit one" />
+                      <div className="orbit two" />
+                      <div className="orbit three" />
+                      <span className="core-dot" />
+                      <span className="orbit-dot a" />
+                      <span className="orbit-dot b" />
+                      <span className="orbit-dot c" />
+                      <small>{t("IDEAL − ACTUAL = DEBT")}</small>
+                    </div>
+                  </div>
+                  <div className="stats">
+                    <div>
+                      <span>{t("People")}</span>
+                      <strong>
+                        {s.employees.length.toString().padStart(2, "0")}
+                      </strong>
+                      <small>
+                        {t("across {count} types", {
+                          count: s.employeeTypes.length,
+                        })}
+                      </small>
+                    </div>
+                    <div>
+                      <span>{t("Shift types")}</span>
+                      <strong>
+                        {s.shifts.length.toString().padStart(2, "0")}
+                      </strong>
+                      <small>{t("working & scheduled rest")}</small>
+                    </div>
+                    <div>
+                      <span>{t("Active policies")}</span>
+                      <strong>
+                        {s.policies
+                          .filter((p) => p.active)
+                          .length.toString()
+                          .padStart(2, "0")}
+                      </strong>
+                      <small>{t("solved jointly")}</small>
+                    </div>
+                    <div>
+                      <span>{t("Consolidated assignments")}</span>
+                      <strong>{s.history.assignments.length}</strong>
+                      <small>{t("no monthly reset")}</small>
+                    </div>
+                  </div>
+                  <section className="panel">
+                    <EntityHeader title={t("Your planning scenario")}>
+                      <span className="badge">
+                        {t("JSON contract v{version}", {
+                          version: s.schemaVersion,
+                        })}
+                      </span>
+                    </EntityHeader>
+                    <div className="row">
+                      <Text
+                        label={t("Scenario ID")}
+                        value={s.id}
+                        onChange={(v) =>
+                          update((d) => {
+                            d.id = v;
+                          })
+                        }
+                      />
+                      <Text
+                        label={t("Scenario label")}
+                        value={s.label}
+                        onChange={(v) =>
+                          update((d) => {
+                            d.label = v;
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="row">
+                      <Text
+                        label={t("Planning start")}
+                        type="date"
+                        value={s.calendar.start}
+                        onChange={(v) =>
+                          update((d) => {
+                            d.calendar.start = v;
+                          })
+                        }
+                      />
+                      <Text
+                        label={t("Planning end")}
+                        type="date"
+                        value={s.calendar.end}
+                        onChange={(v) =>
+                          update((d) => {
+                            d.calendar.end = v;
+                          })
+                        }
+                      />
+                      <Text
+                        label={t("Timezone")}
+                        value={s.calendar.timezone}
+                        onChange={(v) =>
+                          update((d) => {
+                            d.calendar.timezone = v;
+                          })
+                        }
+                      />
+                    </div>
+                  </section>
+                  <div className="two-columns">
+                    <section className="panel">
+                      <h3>{t("Get started")}</h3>
+                      <p className="hint">
+                        {t(
+                          "The pharmacy reference is a complete generic example: five people, one closing duty per day, and continuous fairness across a month boundary.",
+                        )}{" "}
+                      </p>
+                      <div className="stack">
+                        <button onClick={() => loadExample()}>
+                          {t("Load pharmacy reference")}{" "}
+                        </button>
+                        <button onClick={() => loadExample("evolution")}>
+                          {t("Load evolving pharmacy example")}
+                        </button>
+                        <button onClick={() => loadExample("automatic")}>
+                          {t("Load automatic week example")}
+                        </button>
+                        <button onClick={blank}>
+                          {t("Create an empty scenario")}
+                        </button>
+                        <button
+                          disabled={
+                            !s.shifts.some((sh) => sh.kind === "WORKING")
+                          }
+                          onClick={simple}
+                        >
+                          {t("Add simple balanced-duty template")}{" "}
+                        </button>
+                      </div>
+                    </section>
+                    <section className="panel">
+                      <h3>{t("Search controls")}</h3>
+                      <Text
+                        label={t("Global solve time budget (seconds)")}
+                        type="number"
+                        value={s.search.maxTimeSeconds}
+                        onChange={(v) =>
+                          update((d) => {
+                            d.search.maxTimeSeconds = Number(v);
+                          })
+                        }
+                      />
+                      <div className="row">
+                        <Text
+                          label={t("Random seed")}
+                          type="number"
+                          value={s.search.seed}
+                          onChange={(v) =>
+                            update((d) => {
+                              d.search.seed = Number(v);
+                            })
+                          }
+                        />
+                        <Text
+                          label={t("Workers")}
+                          type="number"
+                          value={s.search.workers}
+                          onChange={(v) =>
+                            update((d) => {
+                              d.search.workers = Number(v);
+                              if (Number(v) > 1) d.search.deterministic = false;
+                            })
+                          }
+                        />
+                      </div>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={s.search.deterministic}
+                          onChange={(e) =>
+                            update((d) => {
+                              d.search.deterministic = e.target.checked;
+                              if (e.target.checked) d.search.workers = 1;
+                            })
+                          }
+                        />{" "}
+                        {t("Deterministic mode (one worker)")}{" "}
+                      </label>
+                    </section>
+                  </div>
+                  <section className="panel">
+                    <h3>{t("Portable configuration")}</h3>
+                    <div className="row">
+                      <button onClick={() => download(`${s.id}.json`, s)}>
+                        {t("Export scenario JSON")}{" "}
+                      </button>
+                      <label className="button">
+                        {t("Import scenario JSON")}{" "}
+                        <input
+                          hidden
+                          type="file"
+                          accept=".json,application/json"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) await importScenario(await file.text());
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                      <span className="hint">
+                        {t(
+                          "Changes are saved in this browser. Export to move or back up your workspace.",
+                        )}{" "}
+                      </span>
+                    </div>
+                  </section>
+                </>
+              )}
+              {tab === "contracts" && <WorkPatterns s={s} update={update} />}
+              {tab === "weeks" && <WeekPlanner s={s} update={update} />}
+              {tab === "coverage" && <CoverageRules s={s} update={update} />}
+              {tab === "people" && (
+                <>
+                  <People s={s} update={update} />
+                  <Workforce s={s} update={update} />
+                </>
+              )}
+              {tab === "shifts" && (
+                <>
+                  <Shifts s={s} update={update} />
+                  <Variants s={s} update={update} />
+                </>
+              )}
+              {tab === "calendar" && (
+                <>
+                  <Calendar s={s} update={update} />
+                  <HolidayClosures s={s} update={update} />
+                </>
+              )}
+              {tab === "policies" && <Policies s={s} update={update} />}
+              {tab === "imports" && <Imports s={s} run={run} busy={busy} />}
+              {tab === "results" &&
+                (solved ? (
+                  <Results
+                    s={solved.scenario}
+                    r={solved.result}
+                    previous={previous}
+                    stale={stale}
+                    run={run}
+                    publish={() => {
+                      update((d) => {
+                        const keys = new Set(
+                          solved.result.assignments?.map(
+                            (a) => a.employeeId + ":" + a.date,
+                          ),
+                        );
+                        d.publishedAssignments = [
+                          ...d.publishedAssignments.filter(
+                            (a) => !keys.has(a.employeeId + ":" + a.date),
+                          ),
+                          ...(solved.result.assignments || []),
+                        ];
+                      });
+                      setMessage({ status: "IMPORTED", diagnostics: [] });
+                    }}
+                  />
+                ) : (
+                  <section className="empty-state">
+                    <div className="empty-glyph">▦</div>
+                    <h2>{t("Your next schedule starts here")}</h2>
                     <p>
                       {t(
-                        "Define your people and rules. Generate a real schedule. Carry every fairness balance forward.",
+                        "Generate a schedule to inspect assignments, coverage, and cumulative fairness.",
                       )}{" "}
                     </p>
+                    <button className="primary" onClick={() => run("solve")}>
+                      {t("Generate schedule")}{" "}
+                    </button>
+                  </section>
+                ))}
+              {tab === "advanced" && (
+                <>
+                  <EntityHeader title={t("Advanced JSON")} />
+                  <p className="intro">
+                    {t(
+                      "This is the same document used by the visual editors and CLI. Apply only after core validation.",
+                    )}{" "}
+                  </p>
+                  <section className="panel">
+                    <label className="field">
+                      <span>{t("Scenario JSON")}</span>
+                      <textarea
+                        className="json-editor full"
+                        value={raw}
+                        onChange={(e) => setRaw(e.target.value)}
+                      />
+                    </label>
                     <div className="row">
                       <button
                         className="primary"
                         disabled={busy}
-                        onClick={() => run("solve")}
+                        onClick={() => importScenario(raw)}
                       >
-                        {t("Generate schedule ↗")}{" "}
-                      </button>
-                      <button onClick={() => choose("policies")}>
-                        {t("Configure policies")}{" "}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="hero-graphic" aria-hidden="true">
-                    <div className="orbit one" />
-                    <div className="orbit two" />
-                    <div className="orbit three" />
-                    <span className="core-dot" />
-                    <span className="orbit-dot a" />
-                    <span className="orbit-dot b" />
-                    <span className="orbit-dot c" />
-                    <small>{t("IDEAL − ACTUAL = DEBT")}</small>
-                  </div>
-                </div>
-                <div className="stats">
-                  <div>
-                    <span>{t("People")}</span>
-                    <strong>
-                      {s.employees.length.toString().padStart(2, "0")}
-                    </strong>
-                    <small>
-                      {t("across {count} types", {
-                        count: s.employeeTypes.length,
-                      })}
-                    </small>
-                  </div>
-                  <div>
-                    <span>{t("Shift types")}</span>
-                    <strong>
-                      {s.shifts.length.toString().padStart(2, "0")}
-                    </strong>
-                    <small>{t("working & scheduled rest")}</small>
-                  </div>
-                  <div>
-                    <span>{t("Active policies")}</span>
-                    <strong>
-                      {s.policies
-                        .filter((p) => p.active)
-                        .length.toString()
-                        .padStart(2, "0")}
-                    </strong>
-                    <small>{t("solved jointly")}</small>
-                  </div>
-                  <div>
-                    <span>{t("Consolidated assignments")}</span>
-                    <strong>{s.history.assignments.length}</strong>
-                    <small>{t("no monthly reset")}</small>
-                  </div>
-                </div>
-                <section className="panel">
-                  <EntityHeader title={t("Your planning scenario")}>
-                    <span className="badge">{t("JSON contract v1")}</span>
-                  </EntityHeader>
-                  <div className="row">
-                    <Text
-                      label={t("Scenario ID")}
-                      value={s.id}
-                      onChange={(v) =>
-                        update((d) => {
-                          d.id = v;
-                        })
-                      }
-                    />
-                    <Text
-                      label={t("Scenario label")}
-                      value={s.label}
-                      onChange={(v) =>
-                        update((d) => {
-                          d.label = v;
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="row">
-                    <Text
-                      label={t("Planning start")}
-                      type="date"
-                      value={s.calendar.start}
-                      onChange={(v) =>
-                        update((d) => {
-                          d.calendar.start = v;
-                        })
-                      }
-                    />
-                    <Text
-                      label={t("Planning end")}
-                      type="date"
-                      value={s.calendar.end}
-                      onChange={(v) =>
-                        update((d) => {
-                          d.calendar.end = v;
-                        })
-                      }
-                    />
-                    <Text
-                      label={t("Timezone")}
-                      value={s.calendar.timezone}
-                      onChange={(v) =>
-                        update((d) => {
-                          d.calendar.timezone = v;
-                        })
-                      }
-                    />
-                  </div>
-                </section>
-                <div className="two-columns">
-                  <section className="panel">
-                    <h3>{t("Get started")}</h3>
-                    <p className="hint">
-                      {t(
-                        "The pharmacy reference is a complete generic example: five people, one closing duty per day, and continuous fairness across a month boundary.",
-                      )}{" "}
-                    </p>
-                    <div className="stack">
-                      <button onClick={loadExample}>
-                        {t("Load pharmacy reference")}{" "}
-                      </button>
-                      <button onClick={blank}>
-                        {t("Create an empty scenario")}
+                        {t("Validate & apply JSON")}{" "}
                       </button>
                       <button
-                        disabled={!s.shifts.some((sh) => sh.kind === "WORKING")}
-                        onClick={simple}
+                        onClick={() => setRaw(JSON.stringify(s, null, 2))}
                       >
-                        {t("Add simple balanced-duty template")}{" "}
+                        {t("Reset editor from current scenario")}{" "}
+                      </button>
+                      <button onClick={() => download(`${s.id}.json`, s)}>
+                        {t("Export current scenario")}{" "}
                       </button>
                     </div>
                   </section>
-                  <section className="panel">
-                    <h3>{t("Search controls")}</h3>
-                    <Text
-                      label={t("Global solve time budget (seconds)")}
-                      type="number"
-                      value={s.search.maxTimeSeconds}
-                      onChange={(v) =>
-                        update((d) => {
-                          d.search.maxTimeSeconds = Number(v);
-                        })
-                      }
-                    />
-                    <div className="row">
-                      <Text
-                        label={t("Random seed")}
-                        type="number"
-                        value={s.search.seed}
-                        onChange={(v) =>
-                          update((d) => {
-                            d.search.seed = Number(v);
-                          })
-                        }
-                      />
-                      <Text
-                        label={t("Workers")}
-                        type="number"
-                        value={s.search.workers}
-                        onChange={(v) =>
-                          update((d) => {
-                            d.search.workers = Number(v);
-                            if (Number(v) > 1) d.search.deterministic = false;
-                          })
-                        }
-                      />
-                    </div>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={s.search.deterministic}
-                        onChange={(e) =>
-                          update((d) => {
-                            d.search.deterministic = e.target.checked;
-                            if (e.target.checked) d.search.workers = 1;
-                          })
-                        }
-                      />{" "}
-                      {t("Deterministic mode (one worker)")}{" "}
-                    </label>
-                  </section>
-                </div>
-                <section className="panel">
-                  <h3>{t("Portable configuration")}</h3>
-                  <div className="row">
-                    <button onClick={() => download(`${s.id}.json`, s)}>
-                      {t("Export scenario JSON")}{" "}
-                    </button>
-                    <label className="button">
-                      {t("Import scenario JSON")}{" "}
-                      <input
-                        hidden
-                        type="file"
-                        accept=".json,application/json"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) await importScenario(await file.text());
-                          e.target.value = "";
-                        }}
-                      />
-                    </label>
-                    <span className="hint">
-                      {t(
-                        "Changes are saved in this browser. Export to move or back up your workspace.",
-                      )}{" "}
-                    </span>
-                  </div>
-                </section>
-              </>
-            )}
-            {tab === "people" && <People s={s} update={update} />}
-            {tab === "shifts" && <Shifts s={s} update={update} />}
-            {tab === "calendar" && <Calendar s={s} update={update} />}
-            {tab === "policies" && <Policies s={s} update={update} />}
-            {tab === "imports" && <Imports s={s} run={run} busy={busy} />}
-            {tab === "results" &&
-              (solved ? (
-                <Results
-                  s={solved.scenario}
-                  r={solved.result}
-                  previous={previous}
-                  stale={stale}
-                  run={run}
-                  publish={() => {
+                </>
+              )}
+            </div>
+            <footer>
+              RosterCore <span>{t("Open-source scheduling · Apache-2.0")}</span>
+              <span>{t("Local civil time · Exact rational fairness")}</span>
+            </footer>
+          </main>
+        </div>
+        {createKind && (
+          <div className="dialog-backdrop">
+            <section
+              className="panel catalogue-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-label={t("Create catalogue item")}
+            >
+              <h2>{t("Create catalogue item")}</h2>
+              <Text
+                label={t("Display label")}
+                value={newLabel}
+                onChange={setNewLabel}
+              />
+              <div className="row">
+                <button onClick={() => setCreateKind(null)}>
+                  {t("Cancel")}
+                </button>
+                <button
+                  className="primary"
+                  disabled={!newLabel.trim()}
+                  onClick={() => {
                     update((d) => {
-                      const keys = new Set(
-                        solved.result.assignments?.map(
-                          (a) => a.employeeId + ":" + a.date,
-                        ),
-                      );
-                      d.publishedAssignments = [
-                        ...d.publishedAssignments.filter(
-                          (a) => !keys.has(a.employeeId + ":" + a.date),
-                        ),
-                        ...(solved.result.assignments || []),
-                      ];
+                      initializeEvolution(d);
+                      switch (createKind) {
+                        case "attribute":
+                          d.attributeDefinitions!.push({
+                            id: id("attribute"),
+                            label: newLabel,
+                            type: "STRING",
+                            visible: true,
+                          });
+                          break;
+                        case "pattern":
+                          d.workPatterns!.push({
+                            id: id("pattern"),
+                            label: newLabel,
+                            versions: [
+                              {
+                                validFrom: d.calendar.start,
+                                weekdays: [1, 2, 3, 4, 5],
+                                shiftIds: d.shifts.map((x) => x.id),
+                                exceptions: [],
+                              },
+                            ],
+                          });
+                          break;
+                        case "profile": {
+                          const profileId = id("profile");
+                          d.weekProfiles!.push({
+                            id: profileId,
+                            label: newLabel,
+                            offWeekdays: [],
+                            holidayMode: "NORMAL",
+                            constraintIds: [],
+                            policyIds: [],
+                          });
+                          if (!d.weekConfiguration!.defaultProfileId)
+                            d.weekConfiguration!.defaultProfileId = profileId;
+                          break;
+                        }
+                        case "group":
+                          d.groups.push({
+                            id: id("group"),
+                            label: newLabel,
+                            selector: {},
+                          });
+                          break;
+                        case "employeeType":
+                          d.employeeTypes.push({
+                            id: id("type"),
+                            label: newLabel,
+                          });
+                          break;
+                        case "shift":
+                          d.shifts.push({
+                            id: id("shift"),
+                            label: newLabel,
+                            kind: "WORKING",
+                            intervals: [
+                              { start: "09:00", end: "17:00", endDayOffset: 0 },
+                            ],
+                          });
+                          break;
+                      }
                     });
-                    setMessage({ status: "IMPORTED", diagnostics: [] });
+                    setCreateKind(null);
                   }}
-                />
-              ) : (
-                <section className="empty-state">
-                  <div className="empty-glyph">▦</div>
-                  <h2>{t("Your next schedule starts here")}</h2>
-                  <p>
-                    {t(
-                      "Generate a schedule to inspect assignments, coverage, and cumulative fairness.",
-                    )}{" "}
-                  </p>
-                  <button className="primary" onClick={() => run("solve")}>
-                    {t("Generate schedule")}{" "}
-                  </button>
-                </section>
-              ))}
-            {tab === "advanced" && (
-              <>
-                <EntityHeader title={t("Advanced JSON")} />
-                <p className="intro">
-                  {t(
-                    "This is the same document used by the visual editors and CLI. Apply only after core validation.",
-                  )}{" "}
-                </p>
-                <section className="panel">
-                  <label className="field">
-                    <span>{t("Scenario JSON")}</span>
-                    <textarea
-                      className="json-editor full"
-                      value={raw}
-                      onChange={(e) => setRaw(e.target.value)}
-                    />
-                  </label>
-                  <div className="row">
-                    <button
-                      className="primary"
-                      disabled={busy}
-                      onClick={() => importScenario(raw)}
-                    >
-                      {t("Validate & apply JSON")}{" "}
-                    </button>
-                    <button onClick={() => setRaw(JSON.stringify(s, null, 2))}>
-                      {t("Reset editor from current scenario")}{" "}
-                    </button>
-                    <button onClick={() => download(`${s.id}.json`, s)}>
-                      {t("Export current scenario")}{" "}
-                    </button>
-                  </div>
-                </section>
-              </>
-            )}
+                >
+                  {t("Create and reuse")}
+                </button>
+              </div>
+            </section>
           </div>
-          <footer>
-            RosterCore <span>{t("Open-source scheduling · Apache-2.0")}</span>
-            <span>{t("Local civil time · Exact rational fairness")}</span>
-          </footer>
-        </main>
+        )}
       </div>
-    </div>
+    </CatalogueContext.Provider>
   );
 }

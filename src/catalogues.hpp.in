@@ -1,0 +1,2 @@
+#pragma once
+inline constexpr const char* rostercore_catalogue_json = R"catalogue(@ROSTERCORE_CATALOGUE_JSON@)catalogue";

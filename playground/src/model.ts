@@ -1,11 +1,29 @@
+import type {
+  AttributeDefinition,
+  EmployeeVersion,
+  WorkPattern,
+  ShiftVariant,
+  WeekProfile,
+  WeekConfiguration,
+  Closure,
+  DutyRequirement,
+  TemporalRule,
+  Condition,
+  WorkforcePreview,
+  WeekAssignment,
+  Interval,
+} from "./evolution-model";
 import type { Translate } from "./i18n";
 export type Selector = {
+  where?: Condition;
   employeeIds?: string[];
   typeIds?: string[];
   groupIds?: string[];
   attributes?: Record<string, string | number | boolean>;
 };
 export type Scope = {
+  weekProfileIds?: string[];
+  dayType?: "ANY" | "HOLIDAY" | "NON_HOLIDAY";
   start?: string;
   end?: string;
   weekdays?: number[];
@@ -36,6 +54,7 @@ export type Objective = {
   measure: "COUNT";
   selector: Selector;
   shiftIds: string[];
+  fairnessTags?: string[];
   participation: "EQUAL" | "AVAILABILITY_WEIGHTED" | "CUSTOM_WEIGHTED";
   weights?: Record<string, number>;
   metrics: string[];
@@ -51,14 +70,34 @@ export type Policy = {
   dependencies: { symbol: string; kind: string }[];
   objective: Objective;
   constraints: Constraint[];
+  dutyRequirements?: DutyRequirement[];
+  temporalRules?: TemporalRule[];
   sharedConstraintIds: string[];
   constraintSetIds: string[];
   scope?: Scope;
 };
-export type Assignment = { employeeId: string; date: string; shiftId: string };
+export type Assignment = {
+  employeeId: string;
+  date: string;
+  shiftId: string;
+  intervals?: Interval[];
+  variantId?: string;
+  weekProfileId?: string;
+};
 export type Scenario = {
   format: "rostercore.scenario";
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
+  attributeDefinitions?: AttributeDefinition[];
+  workPatterns?: WorkPattern[];
+  weekProfiles?: WeekProfile[];
+  weekConfiguration?: WeekConfiguration;
+  dutyRequirements?: DutyRequirement[];
+  temporalRules?: TemporalRule[];
+  replanning?: {
+    from: string;
+    baseline: Assignment[];
+    stabilityPriority: "BEFORE_FAIRNESS" | "AFTER_FAIRNESS";
+  };
   id: string;
   label: string;
   revision: number;
@@ -67,14 +106,19 @@ export type Scenario = {
     id: string;
     label: string;
     typeId: string;
-    attributes: Record<string, string | number | boolean>;
+    attributes: Record<string, string | number | boolean | null>;
+    employment?: { validFrom: string; validTo?: string };
+    versions?: EmployeeVersion[];
+    workPatternId?: string;
   }[];
-  groups: { id: string; label: string; selector: Selector }[];
+  groups: { id: string; label: string; selector: Selector; scope?: Scope }[];
   shifts: {
     id: string;
     label: string;
     kind: "WORKING" | "OFF";
-    intervals: { start: string; end: string; endDayOffset: number }[];
+    intervals: Interval[];
+    variants?: ShiftVariant[];
+    fairnessTags?: string[];
   }[];
   calendar: {
     start: string;
@@ -83,6 +127,12 @@ export type Scenario = {
     excludedDates: string[];
     excludedRanges: { start: string; end: string }[];
     excludedIsoWeeks: string[];
+    holidays?: {
+      country: "IT";
+      catalogueVersion: "IT-2001-2026.1";
+      localDates: { date: string; label: string; holiday: boolean }[];
+    };
+    closures?: Closure[];
   };
   availability: {
     id: string;
@@ -91,6 +141,7 @@ export type Scenario = {
     state: "ABSENT";
   }[];
   allowedShifts: {
+    allowRequiredRest?: boolean;
     id: string;
     selector: Selector;
     scope: Scope;
@@ -126,7 +177,43 @@ export type Balance = {
 };
 export type Result = {
   status: string;
-  diagnostics: { code: string; path: string; message: string }[];
+  diagnostics: {
+    code: string;
+    path: string;
+    message: string;
+    severity?: "ERROR" | "WARNING" | "INFORMATION";
+    objectIds?: string[];
+    suggestion?: string;
+    section?: string;
+  }[];
+  workforce?: WorkforcePreview;
+  weekAssignments?: WeekAssignment[];
+  calendarDays?: {
+    date: string;
+    profileId: string;
+    holidays: { id: string; label: string; source?: string }[];
+    excluded?: boolean;
+  }[];
+  coverage?: {
+    requirementId: string;
+    label: string;
+    date: string;
+    people: {
+      employeeId: string;
+      date: string;
+      shiftId: string;
+      level: number;
+      substitution: boolean;
+    }[];
+  }[];
+  changes?: {
+    employeeId: string;
+    date: string;
+    beforeShiftId: string | null;
+    afterShiftId: string | null;
+    beforeIntervals?: import("./evolution-model").Interval[];
+    afterIntervals?: import("./evolution-model").Interval[];
+  }[];
   assignments?: Assignment[];
   calendarStates?: { employeeId: string; date: string; state: string }[];
   fairness?: {
@@ -160,6 +247,8 @@ export const metrics = [
   "FINAL_ABSOLUTE_DEVIATION",
 ];
 export const metricNames: Record<string, string> = {
+  DESIRED_WEEK_FREQUENCY: "Desired week frequency",
+  SCHEDULE_CHANGES: "Schedule changes",
   MAX_ABSOLUTE_PREFIX_DEVIATION: "Worst prefix debt",
   SUM_ABSOLUTE_PREFIX_DEVIATIONS: "Total prefix debt",
   FINAL_ABSOLUTE_DEVIATION: "Final residual debt",

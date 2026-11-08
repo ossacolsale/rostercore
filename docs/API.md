@@ -1,4 +1,4 @@
-# Public JSON and CLI API · 0.1.0
+# Public JSON and CLI API · 0.2.0
 
 All commands consume one UTF-8 JSON document per file (or `-` for stdin) and return one JSON result on stdout. The library/CLI is stateless. Import/consolidation commands return a **new scenario**; the host decides where to store it. They never overwrite an input file. Use temporary output files and atomic replacement in a persistent integration. stderr is reserved for process/backend diagnostics.
 
@@ -25,19 +25,19 @@ Exit 0 means a well-formed operation completed, including INFEASIBLE/UNKNOWN; in
 
 `constraints` is the shared definition registry; `baseConstraintIds` activates base rules. Active policies additionally enforce their own rules and shared references/constraint sets within their scope. Shared rules can be referenced by multiple policies without being modified. All active policies optimize one combined assignment model. Unknown fields, unsupported operators, unsupported measures and inactive draft references that were not declared as dependencies are rejected.
 
-The engine accepts at most 200 employees, 40 shift types, 366 horizon days, 1,000,000 assignment grid cells, 10,000 constraint nodes and AST depth 32. JSON CLI input is limited to 8 MiB and nesting 80. Worker count is 1–32, solve time budget 0–600 seconds, integer weights 1–1,000,000. Exact arithmetic has a conservative 10^12 bound, including LCM scaling. Resource-limit rejection is a validation diagnostic, never hidden rounding.
+The engine accepts at most 200 employees, 40 shift types, 1,096 horizon days, 1,000,000 assignment grid cells, 10,000 constraint nodes and AST depth 32. JSON CLI input is limited to 8 MiB and nesting 80. Worker count is 1–32, solve time budget 0–600 seconds, integer weights 1–1,000,000. Exact arithmetic has a conservative 10^12 bound, including LCM scaling. Resource-limit rejection is a validation diagnostic, never hidden rounding.
 
-Civil dates are 1900–2200, weekdays ISO Monday=1. A timezone label is mandatory and must use UTC or IANA-style notation; timezone database existence is not resolved because this version does no elapsed-time conversion. A host needing strict timezone registry validation must supply it. Dates/ranges/ISO weeks and interval order/overlap are checked. Overnight intervals cannot cross into a globally excluded or individually absent date. Work intervals on consecutive dates, including the historical boundary, cannot overlap. No minimum-rest or maximum-hours labor rule is implicit.
+Civil dates are 1900–2200, weekdays ISO Monday=1. A timezone label is mandatory and must use UTC or IANA-style notation; civil scheduling preserves that label. MIN_REST requires supported offline timezone data (UTC or Europe/Rome, 2000–2100). Dates/ranges/ISO weeks and interval order/overlap are checked. Overnight intervals cannot cross into a globally excluded or individually absent date. Work intervals on consecutive dates, including the historical boundary, cannot overlap. No minimum-rest or maximum-hours labor rule is implicit.
 
 ## Results and reproducibility
 
-Solver statuses: VALIDATION_ERROR, MODEL_INVALID, INFEASIBLE, FEASIBLE, OPTIMAL, UNKNOWN. Non-solver commands also use VALID, VERIFIED, PREVIEW, IMPORTED, CONSOLIDATED and CONTEXT. `diagnostics` contains code/path/message. Infeasibility assumptions identify a sufficient conflicting set, not a guaranteed minimal set; empty assignment domains are diagnosed before solving.
+Solver statuses: VALIDATION_ERROR, MODEL_INVALID, INFEASIBLE, FEASIBLE, OPTIMAL, UNKNOWN. Non-solver commands also use VALID, VERIFIED, PREVIEW, IMPORTED, CONSOLIDATED CONTEXT, MIGRATED and INSPECTED. `diagnostics` contains code/path/message. Infeasibility assumptions identify a sufficient conflicting set, not a guaranteed minimal set; empty assignment domains are diagnosed before solving.
 
 `metadata` records engine/backend versions, normalized configuration SHA-256, actual search parameters, policy revisions and wall time. Normalization sorts object keys and preserves array order; no defaults are inferred. Archive the **entire input scenario** with a result to reproduce it. Seed and one worker support deterministic search; wall-time cutoffs, platform and backend differences can still affect interrupted runs.
 
 `phases` records each attempted lexicographic metric, status, integer scale, exact incumbent value and best scaled bound. The global time budget includes validation/model compilation; cancellation checks occur at phase boundaries and CP-SAT receives the remaining search budget. Model preparation and verification can exceed the search budget. An unproven phase stops subsequent optimization. If a prior incumbent exists, it remains FEASIBLE; OPTIMAL requires all requested phases to prove optimum. No nonzero gap tolerance is enabled.
 
-`assignments` contains ordinary shifts. `calendarStates` contains ABSENT/EXCLUDED cells. `fairness` exposes exact rational initial/final values, dated prefixes and metrics. The engine runs `verify` before returning a solution; this verifier directly checks assignment completeness, domains, constraints, publication locks, overnight overlap and independently replays quota/debt accounting. It verifies feasibility/accounting, not mathematical optimality.
+`assignments` contains ordinary shifts. `calendarStates` contains ABSENT/EXCLUDED/CLOSED/INACTIVE cells. `fairness` exposes exact rational initial/final values, dated prefixes and metrics. The engine runs `verify` before returning a solution; this verifier directly checks assignment completeness, domains, constraints, publication locks, overnight overlap and independently replays quota/debt accounting. It verifies feasibility/accounting, not mathematical optimality.
 
 ## Rolling horizon and rebuilding history
 
@@ -71,3 +71,24 @@ if result["status"] in ("FEASIBLE", "OPTIMAL"):
 ```
 
 Node.js: use `spawn`/`execFile` with an argument array and write JSON to stdin. .NET: use `ProcessStartInfo.ArgumentList`, redirect stdin/stdout and parse with System.Text.Json. Do not interpolate JSON into a shell command. C++ hosts can link the `rostercore` CMake target and call `validate`, `solve`, `verify` and import functions from `include/rostercore/core.hpp`. The C++ API is source-level and not a stable ABI; a future C ABI will wrap serialized input/output with versioned error and ownership conventions. No HTTP service is part of the core; the supplied loopback adapter is a development playground only.
+
+
+## Schema 2 calendar and workforce operations
+
+```sh
+build/rostercore migrate examples/pharmacy.json > migration.json
+build/rostercore inspect examples/pharmacy-evolution.json 2027-05-10
+build/rostercore select examples/pharmacy-evolution.json selector.json 2027-05-10
+build/rostercore solve examples/pharmacy-evolution.json > result.json
+build/rostercore regenerate changed-scenario.json regeneration.json
+```
+
+`migrate` returns MIGRATED with `scenario` and migration metadata; save the inner scenario. `inspect` returns INSPECTED, weekly profile options, holiday annotations, active workforce, resolved attribute values/origins, groups and concrete admissible hours at the requested date. `select` additionally validates a `selector.schema.json` document and returns `workforce.selectedEmployeeIds`. All use the same validators as solve.
+
+Schema 2 adds `attributeDefinitions`, `workPatterns`, `weekProfiles`, `weekConfiguration`, `dutyRequirements` and `temporalRules`. Effective records use `[validFrom,validTo)`; legacy scope start/end remain inclusive. `weekConfiguration` contains manual, recurrences, frequencies and historical choices, plus optional defaultProfileId/automatic. Recurrence boundaries are Mondays; anchors normalize to Mondays. Profiles can activate shared rules and policies. `scope.weekProfileIds` and dayType gate rules/objectives. Selectors support typed `where` predicates; explicit null suppresses an attribute default.
+
+Duty requirements distinguish RESPONSIBILITY (one selected witness covering all required intervals) and PRESENCE (qualified headcount at every interval change point). Levels are explicit selectors with 0 primary and increasing fallback levels. A shared exclusiveGroup requires distinct people. Solver results include verified `coverage` witnesses and primary/substitution annotations. Fallback stages precede desired calendar frequency, stability and fairness; higher fallback levels are eliminated first within each configured priority. See the complete pharmacy examples for concrete declarations.
+
+A regeneration request is `{"from":"2027-05-10","previousScenario":{...},"previousResult":{...},"stabilityPriority":"BEFORE_FAIRNESS"}` (replace placeholders with full valid documents). The previous result must verify against its own scenario/hash. Dates before from are frozen; history and published locks still apply. AFTER_FAIRNESS is also supported. The response contains its effective `scenario` with explicit replanning baseline, chosen weeks, concrete assignments, coverage and `changes` with before/after logical IDs and intervals. Verify the result against that returned scenario. No operation overwrites the input.
+
+Known diagnostics add severity, object IDs, editor section and a suggestion where available; original code/path/message are retained. Validate may return informational/warning diagnostics without making the input invalid. Strict unknown-property/operator checks still apply.

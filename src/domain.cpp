@@ -111,17 +111,26 @@ Scenario::Scenario(Json j) : source(std::move(j)) {
   for (auto &s : source["shifts"])
     shifts.push_back({s["id"], s["label"], s["kind"], s["intervals"]});
   for (auto &g : source["groups"])
-    groups[g["id"]] = g["selector"];
+    groups[g["id"]] = g;
   int first = day(source["calendar"]["start"]),
       last = day(source["calendar"]["end"]);
-  if (last < first || last - first > 365)
+  if (last < first || last - first > 1095)
     throw Error("HORIZON_LIMIT", "/calendar",
-                "Horizon must contain 1–366 days");
+                "Horizon must contain 1–1096 days");
   for (int d = first; d <= last; ++d)
     days.push_back(d);
   for (auto p : source["policies"])
     if (p["active"]) {
       p["objective"]["_policyScope"] = p.value("scope", Json::object());
+      Json profileIds = Json::array();
+      for (auto &profile : source.value("weekProfiles", Json::array()))
+        if (std::find(profile["policyIds"].begin(), profile["policyIds"].end(),
+                      p["id"]) != profile["policyIds"].end())
+          profileIds.push_back(profile["id"]);
+      if (!profileIds.empty()) {
+        p["_profileIds"] = profileIds;
+        p["objective"]["_profileIds"] = profileIds;
+      }
       activePolicies.push_back(p);
     }
   std::sort(activePolicies.begin(), activePolicies.end(),
@@ -132,41 +141,6 @@ Scenario::Scenario(Json j) : source(std::move(j)) {
                                     b["id"].get<std::string>()
                               : pa < pb;
             });
-}
-std::vector<int> Scenario::select(const Json &s,
-                                  std::set<std::string> visiting) const {
-  std::set<int> groupMembers;
-  if (s.contains("groupIds"))
-    for (auto &g : s["groupIds"]) {
-      std::string id = g;
-      if (!groups.contains(id))
-        throw Error("REFERENCE", "/selector/groupIds", "Unknown group: " + id);
-      if (!visiting.insert(id).second)
-        throw Error("GROUP_CYCLE", "/groups", "Cyclic group: " + id);
-      auto members = select(groups.at(id), visiting);
-      groupMembers.insert(members.begin(), members.end());
-      visiting.erase(id);
-    }
-  std::vector<int> out;
-  for (size_t i = 0; i < employees.size(); ++i) {
-    auto &e = employees[i];
-    bool yes = true;
-    if (s.contains("employeeIds"))
-      yes &= std::find(s["employeeIds"].begin(), s["employeeIds"].end(),
-                       e.id) != s["employeeIds"].end();
-    if (s.contains("typeIds"))
-      yes &= std::find(s["typeIds"].begin(), s["typeIds"].end(), e.typeId) !=
-             s["typeIds"].end();
-    if (s.contains("groupIds"))
-      yes &= groupMembers.contains(int(i));
-    if (s.contains("attributes"))
-      for (auto it = s["attributes"].begin(); it != s["attributes"].end(); ++it)
-        yes &= e.attributes.contains(it.key()) &&
-               e.attributes[it.key()] == it.value();
-    if (yes)
-      out.push_back(int(i));
-  }
-  return out;
 }
 bool Scenario::excluded(int d) const {
   auto &c = source["calendar"];
@@ -184,7 +158,7 @@ bool Scenario::excluded(int d) const {
 bool Scenario::absent(int e, int d) const {
   for (auto &a : source["availability"])
     if (applies(a, d)) {
-      auto members = select(a["selector"]);
+      auto members = select(a["selector"], d);
       if (std::find(members.begin(), members.end(), e) != members.end())
         return true;
     }
@@ -193,28 +167,6 @@ bool Scenario::absent(int e, int d) const {
         a["status"] == "APPROVED" && d >= day(a["start"]) && d <= day(a["end"]))
       return true;
   return false;
-}
-std::vector<int> Scenario::allowed(int e, int d) const {
-  if (excluded(d) || absent(e, d))
-    return {};
-  std::vector<int> out;
-  for (size_t s = 0; s < shifts.size(); ++s) {
-    bool yes = true;
-    for (auto &r : source["allowedShifts"])
-      if (applies(r, d)) {
-        auto members = select(r["selector"]);
-        if (std::find(members.begin(), members.end(), e) != members.end())
-          yes &= std::find(r["shiftIds"].begin(), r["shiftIds"].end(),
-                           shifts[s].id) != r["shiftIds"].end();
-      }
-    for (auto &i : shifts[s].intervals)
-      if (i["endDayOffset"] == 1 && i["end"] != "00:00" &&
-          (excluded(d + 1) || absent(e, d + 1)))
-        yes = false;
-    if (yes)
-      out.push_back(int(s));
-  }
-  return out;
 }
 std::vector<Json> Scenario::constraints() const {
   std::vector<Json> out;
@@ -236,13 +188,24 @@ std::vector<Json> Scenario::constraints() const {
       if (references.contains(c["id"].get<std::string>())) {
         auto copy = c;
         copy["_policyScope"] = p.value("scope", Json::object());
+        if (p.contains("_profileIds"))
+          copy["_profileIds"] = p["_profileIds"];
         out.push_back(copy);
       }
     for (auto c : p["constraints"]) {
       c["_policyScope"] = p.value("scope", Json::object());
+      if (p.contains("_profileIds"))
+        c["_profileIds"] = p["_profileIds"];
       out.push_back(c);
     }
   }
+  for (auto &profile : source.value("weekProfiles", Json::array()))
+    for (auto &id : profile["constraintIds"])
+      for (auto c : source["constraints"])
+        if (c["id"] == id) {
+          c["_profileIds"] = Json::array({profile["id"]});
+          out.push_back(c);
+        }
   return out;
 }
 Json response(const std::string &s) {
@@ -253,8 +216,10 @@ Json response(const std::string &s) {
 }
 Json failure(const Error &e) {
   auto r = response("VALIDATION_ERROR");
-  r["diagnostics"].push_back(
-      {{"code", e.code}, {"path", e.path}, {"message", e.what()}});
+  r["diagnostics"].push_back({{"code", e.code},
+                              {"path", e.path},
+                              {"message", e.what()},
+                              {"severity", "ERROR"}});
   return r;
 }
 } // namespace rostercore

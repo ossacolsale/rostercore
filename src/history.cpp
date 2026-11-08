@@ -4,24 +4,34 @@ namespace rostercore {
 std::string objectiveFingerprint(const Json &o) {
   Json definition;
   for (auto key : {"id", "type", "mode", "measure", "selector", "shiftIds",
-                   "participation", "weights", "scope", "_policyScope"})
+                   "participation", "weights", "scope", "_policyScope",
+                   "_profileIds", "fairnessTags"})
     if (o.contains(key))
       definition[key] = o[key];
   return sha256(definition.dump());
 }
 bool targetShift(const Scenario &s, const Json &o, int shift) {
   auto &ids = o["shiftIds"];
-  return std::find(ids.begin(), ids.end(), s.shifts.at(shift).id) != ids.end();
+  if (std::find(ids.begin(), ids.end(), s.shifts.at(shift).id) != ids.end())
+    return true;
+  auto tags = o.value("fairnessTags", Json::array());
+  for (auto &tag : s.source["shifts"]
+                       .at(size_t(shift))
+                       .value("fairnessTags", Json::array()))
+    if (std::find(tags.begin(), tags.end(), tag) != tags.end())
+      return true;
+  return false;
 }
-std::map<int, int64_t> participants(const Scenario &s, const Json &o, int d) {
+std::map<int, int64_t> participants(const Scenario &s, const Json &o, int d,
+                                    const std::string &profileId) {
   std::map<int, int64_t> weights;
-  if (s.excluded(d) || !applies(o, d))
+  if (s.excluded(d) || !s.matches(o, d, profileId))
     return weights;
-  for (int e : s.select(o["selector"])) {
+  for (int e : s.select(o["selector"], d, {}, profileId)) {
     bool eligible = true;
     if (o["participation"] == "AVAILABILITY_WEIGHTED") {
       eligible = false;
-      for (int sh : s.allowed(e, d))
+      for (int sh : s.domain(e, d, profileId))
         if (targetShift(s, o, sh))
           eligible = true;
     }
@@ -32,9 +42,25 @@ std::map<int, int64_t> participants(const Scenario &s, const Json &o, int d) {
   }
   return weights;
 }
+std::vector<int> fairnessMembers(const Scenario &s, const Json &o) {
+  std::set<int> all;
+  for (int d : s.days)
+    for (auto &p : s.weekOptions(d).value("profileIds", Json::array())) {
+      auto members = s.select(o["selector"], d, {}, p);
+      all.insert(members.begin(), members.end());
+    }
+  for (auto &snapshot : s.source["history"]["fairnessSnapshots"])
+    if (snapshot["objectiveId"] == o["id"])
+      for (auto it = snapshot["weights"].begin();
+           it != snapshot["weights"].end(); ++it)
+        for (size_t e = 0; e < s.employees.size(); ++e)
+          if (s.employees[e].id == it.key())
+            all.insert(int(e));
+  return {all.begin(), all.end()};
+}
 Ledger historicalLedger(const Scenario &s, const Json &o) {
   Ledger out;
-  auto selected = s.select(o["selector"]);
+  auto selected = fairnessMembers(s, o);
   std::set<int> members(selected.begin(), selected.end());
   for (int e : selected) {
     out.ideal[e] = {};
@@ -59,7 +85,8 @@ Ledger historicalLedger(const Scenario &s, const Json &o) {
   for (auto &a : s.source["history"]["assignments"]) {
     int e = employeeIndex.at(a["employeeId"]), t = shiftIndex.at(a["shiftId"]),
         d = day(a["date"]);
-    if (members.contains(e) && targetShift(s, o, t) && applies(o, d))
+    if (members.contains(e) && targetShift(s, o, t) &&
+        s.matches(o, d, a.value("weekProfileId", s.profile(d))))
       actual[d].push_back(e);
   }
   for (auto &[d, es] : actual) {
@@ -105,12 +132,12 @@ FairnessData fairness(const Scenario &s, const Json &assignments) {
     auto &o = p["objective"];
     auto ledger = historicalLedger(s, o);
     auto initial = ledger;
-    auto selected = s.select(o["selector"]);
+    auto selected = fairnessMembers(s, o);
     std::set<int> members(selected.begin(), selected.end());
     Json prefixes = Json::array();
     Rational maxDeviation, sumDeviation, finalDeviation;
     for (int d : s.days) {
-      if (s.excluded(d) || !applies(o, d))
+      if (!s.operational(d) || !s.matches(o, d))
         continue;
       auto weights = participants(s, o, d);
       Json w = Json::object();
@@ -123,11 +150,15 @@ FairnessData fairness(const Scenario &s, const Json &assignments) {
                                 {"objectiveId", o["id"]},
                                 {"fingerprint", objectiveFingerprint(o)},
                                 {"weights", w}});
+      if (!s.profile(d).empty())
+        data.snapshots.back()["weekProfileId"] = s.profile(d);
       std::vector<int> actual;
       for (auto &a : assignments)
         if (day(a["date"]) == d) {
           int e = employees.at(a["employeeId"]);
-          if (members.contains(e) && targetShift(s, o, shifts.at(a["shiftId"])))
+          auto daily = s.select(o["selector"], d);
+          if (std::find(daily.begin(), daily.end(), e) != daily.end() &&
+              targetShift(s, o, shifts.at(a["shiftId"])))
             actual.push_back(e);
         }
       if (!actual.empty() && denominator == 0)
@@ -199,6 +230,7 @@ Json consolidate(const Json &scenario, const Json &result,
     throw Error("CONFIGURATION_MISMATCH", "/result",
                 "Result does not belong to this exact configuration");
   Json updated = scenario;
+  resolveResultWeeks(s, result);
   auto f = fairness(s, result["assignments"]);
   for (auto &a : result["assignments"])
     if (day(a["date"]) <= stop)
@@ -206,6 +238,18 @@ Json consolidate(const Json &scenario, const Json &result,
   for (auto &a : f.snapshots)
     if (day(a["date"]) <= stop)
       updated["history"]["fairnessSnapshots"].push_back(a);
+  if (updated.contains("weekConfiguration")) {
+    auto &weeks = updated["weekConfiguration"]["history"];
+    for (int w : s.weeks())
+      if (w <= stop && !s.profile(w).empty()) {
+        bool found = false;
+        for (auto &old : weeks)
+          if (isoMonday(day(old["week"])) == w)
+            found = true;
+        if (!found)
+          weeks.push_back({{"week", date(w)}, {"profileId", s.profile(w)}});
+      }
+  }
   updated["history"]["through"] = through;
   updated["calendar"]["start"] = date(stop + 1);
   if (stop == s.days.back())

@@ -80,7 +80,9 @@ int main(int argc, char **argv) {
     }
     if (command == "help" || command == "--help") {
       std::cout << "RosterCore " << version
-                << "\nCommands: validate|solve|context SCENARIO|-; verify "
+                << "\nCommands: validate|solve|context|migrate SCENARIO|-; "
+                   "inspect SCENARIO [DATE]; select SCENARIO SELECTOR [DATE]; "
+                   "regenerate SCENARIO REQUEST; verify "
                    "SCENARIO RESULT; consolidate SCENARIO RESULT THROUGH; "
                    "import-policy|sync-hr|rebuild-history SCENARIO DOCUMENT "
                    "[--apply] [--mappings FILE]\n";
@@ -93,9 +95,33 @@ int main(int argc, char **argv) {
     if (command == "validate") {
       validate(j);
       out = response("VALID");
+      out["diagnostics"] = configurationDiagnostics(j);
     } else if (command == "solve")
       out = solve(j);
-    else if (command == "context")
+    else if (command == "migrate")
+      out = migrate(j);
+    else if (command == "select") {
+      if (argc < 4)
+        throw Error("ARGUMENTS", "/", "Missing selector document");
+      auto selector = read(argv[3]);
+      validateSchema(selector, "selector");
+      Json probe = j;
+      std::string groupId = "preview:" + sha256(selector.dump()).substr(0, 16);
+      probe["groups"].push_back({{"id", groupId},
+                                 {"label", "Selector preview"},
+                                 {"selector", selector}});
+      validate(probe);
+      std::string at =
+          argc > 4 ? argv[4] : j["calendar"]["start"].get<std::string>();
+      out = inspect(j, at);
+      Scenario s(j);
+      out["workforce"]["selectedEmployeeIds"] = Json::array();
+      for (int e : s.select(selector, day(at)))
+        out["workforce"]["selectedEmployeeIds"].push_back(s.employees[e].id);
+    } else if (command == "inspect") {
+      out = inspect(j, argc > 3 ? argv[3]
+                                : j["calendar"]["start"].get<std::string>());
+    } else if (command == "context")
       out = aiContext(j);
     else if (command == "verify" || command == "consolidate") {
       if (argc < 4)
@@ -109,7 +135,7 @@ int main(int argc, char **argv) {
         out = consolidate(j, result, argv[4]);
       }
     } else if (command == "import-policy" || command == "sync-hr" ||
-               command == "rebuild-history") {
+               command == "rebuild-history" || command == "regenerate") {
       if (argc < 4)
         throw Error("ARGUMENTS", "/", "Missing import document");
       auto document = read(argv[3]);
@@ -126,8 +152,11 @@ int main(int argc, char **argv) {
       }
       out = command == "import-policy"
                 ? importPolicy(j, document, !apply, mappings)
-                : (command == "sync-hr" ? syncHR(j, document, !apply)
-                                        : rebuildHistory(j, document, !apply));
+                : (command == "sync-hr"
+                       ? syncHR(j, document, !apply)
+                       : (command == "regenerate"
+                              ? regenerate(j, document)
+                              : rebuildHistory(j, document, !apply)));
     } else
       throw Error("COMMAND", "/", "Unknown command: " + command);
     std::cout << out.dump(2) << '\n';

@@ -48,6 +48,9 @@ export function Imports({
       label: c.label || c.id,
     })),
     constraintSet: s.constraintSets,
+    attribute: s.attributeDefinitions || [],
+    workPattern: s.workPatterns || [],
+    weekProfile: s.weekProfiles || [],
   };
   const key = JSON.stringify({ scenario: s, document, mappings, kind });
   const act = async (apply: boolean) => {

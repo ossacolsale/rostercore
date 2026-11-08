@@ -26,6 +26,7 @@ void validateSchema(const Json &j, const std::string &name) {
 }
 void validate(const Json &j) {
   validateSchema(j, "scenario");
+  validateEvolution(j);
   auto fail = [](std::string c, std::string p, std::string m) {
     throw Error(c, p, m);
   };
@@ -82,7 +83,9 @@ void validate(const Json &j) {
   for (auto &g : j["groups"])
     selector(g["selector"]);
   for (auto &s : j["shifts"]) {
-    if ((s["kind"] == "OFF") != s["intervals"].empty())
+    if ((s["kind"] == "OFF" && !s["intervals"].empty()) ||
+        (s["kind"] == "WORKING" && s["intervals"].empty() &&
+         s.value("variants", Json::array()).empty()))
       fail("SHIFT_INTERVALS", "/shifts",
            "OFF must have no intervals; WORKING must have intervals");
     std::vector<std::pair<int, int>> intervals;
@@ -208,7 +211,7 @@ void validate(const Json &j) {
            "Objective IDs must be unique across policies");
     selector(o["selector"], draft);
     require(shifts, o["shiftIds"], "/objective/shiftIds", draft);
-    if (o["shiftIds"].empty())
+    if (o["shiftIds"].empty() && o.value("fairnessTags", Json::array()).empty())
       fail("EMPTY_TARGET", "/objective/shiftIds",
            "At least one target shift is required");
     scope(o.value("scope", Json::object()));
@@ -231,7 +234,7 @@ void validate(const Json &j) {
   for (auto &p : s.activePolicies) {
     auto &o = p["objective"];
     auto selected = s.select(o["selector"]);
-    if (selected.empty())
+    if (selected.empty() && fairnessMembers(s, o).empty())
       fail("NO_PARTICIPANTS", "/objective",
            "Active objective selects no participants");
     if (o["participation"] == "CUSTOM_WEIGHTED")

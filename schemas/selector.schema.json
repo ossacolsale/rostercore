@@ -1,0 +1,1644 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rostercore.org/schemas/v1/selector.schema.json",
+  "$ref": "#/definitions/selector",
+  "definitions": {
+    "selector": {
+      "type": "object",
+      "properties": {
+        "employeeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "typeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "groupIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "boolean",
+              "number"
+            ]
+          }
+        },
+        "where": {
+          "$ref": "#/definitions/condition"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "weekdays": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "uniqueItems": true
+        },
+        "excludedDates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        },
+        "weekProfileIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "dayType": {
+          "enum": [
+            "ANY",
+            "HOLIDAY",
+            "NON_HOLIDAY"
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "interval": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+        },
+        "endDayOffset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "startFold": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "endFold": {
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "endDayOffset"
+      ],
+      "additionalProperties": false
+    },
+    "expression": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "COUNT"
+              ]
+            },
+            "selector": {
+              "$ref": "#/definitions/selector"
+            },
+            "shiftId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            },
+            "comparison": {
+              "enum": [
+                "EQ",
+                "GE",
+                "LE"
+              ]
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          },
+          "required": [
+            "op",
+            "selector",
+            "shiftId",
+            "comparison",
+            "count"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "REMAINING"
+              ]
+            },
+            "selector": {
+              "$ref": "#/definitions/selector"
+            },
+            "shiftId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            }
+          },
+          "required": [
+            "op",
+            "selector",
+            "shiftId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "AND",
+                "OR"
+              ]
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/expression"
+              },
+              "minItems": 1,
+              "maxItems": 100
+            }
+          },
+          "required": [
+            "op",
+            "children"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "constraint": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "expression": {
+          "$ref": "#/definitions/expression"
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        }
+      },
+      "required": [
+        "id",
+        "expression"
+      ],
+      "additionalProperties": false
+    },
+    "objective": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "type": {
+          "enum": [
+            "CUMULATIVE_FAIRNESS"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "CONTINUOUS_BALANCED"
+          ]
+        },
+        "measure": {
+          "enum": [
+            "COUNT"
+          ]
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "shiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "participation": {
+          "enum": [
+            "EQUAL",
+            "AVAILABILITY_WEIGHTED",
+            "CUSTOM_WEIGHTED"
+          ]
+        },
+        "weights": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "MAX_ABSOLUTE_PREFIX_DEVIATION",
+              "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+              "FINAL_ABSOLUTE_DEVIATION"
+            ]
+          }
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        },
+        "fairnessTags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "mode",
+        "measure",
+        "selector",
+        "shiftIds",
+        "participation",
+        "metrics",
+        "priority"
+      ],
+      "additionalProperties": false
+    },
+    "dependency": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "kind": {
+          "enum": [
+            "employee",
+            "type",
+            "group",
+            "shift",
+            "constraint",
+            "constraintSet",
+            "attribute",
+            "workPattern",
+            "weekProfile"
+          ]
+        }
+      },
+      "required": [
+        "symbol",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "draft": {
+          "type": "boolean"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/dependency"
+          }
+        },
+        "objective": {
+          "$ref": "#/definitions/objective"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/constraint"
+          }
+        },
+        "sharedConstraintIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "constraintSetIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        },
+        "dutyRequirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/dutyRequirement"
+          }
+        },
+        "temporalRules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/temporalRule"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "revision",
+        "active",
+        "draft",
+        "dependencies",
+        "objective",
+        "constraints",
+        "sharedConstraintIds",
+        "constraintSetIds"
+      ],
+      "additionalProperties": false
+    },
+    "assignment": {
+      "type": "object",
+      "properties": {
+        "employeeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "shiftId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "variantId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "intervals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/interval"
+          }
+        },
+        "weekProfileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        }
+      },
+      "required": [
+        "employeeId",
+        "date",
+        "shiftId"
+      ],
+      "additionalProperties": false
+    },
+    "snapshot": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "objectiveId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "fingerprint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "weights": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          }
+        },
+        "weekProfileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        }
+      },
+      "required": [
+        "date",
+        "objectiveId",
+        "fingerprint",
+        "weights"
+      ],
+      "additionalProperties": false
+    },
+    "hrEvent": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "externalId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "employeeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "operation": {
+          "enum": [
+            "UPSERT",
+            "DELETE"
+          ]
+        },
+        "absenceType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "status": {
+          "enum": [
+            "REQUESTED",
+            "APPROVED",
+            "REJECTED"
+          ]
+        },
+        "start": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "partialIntervals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/interval"
+          }
+        }
+      },
+      "required": [
+        "eventId",
+        "source",
+        "externalId",
+        "employeeId",
+        "revision",
+        "operation",
+        "absenceType",
+        "status",
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "AND",
+                "OR"
+              ]
+            },
+            "children": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "$ref": "#/definitions/condition"
+              }
+            }
+          },
+          "required": [
+            "op",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "NOT"
+              ]
+            },
+            "child": {
+              "$ref": "#/definitions/condition"
+            }
+          },
+          "required": [
+            "op",
+            "child"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "EQ",
+                "NE",
+                "LT",
+                "LE",
+                "GT",
+                "GE"
+              ]
+            },
+            "attributeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            },
+            "value": {
+              "type": [
+                "string",
+                "boolean",
+                "number"
+              ]
+            }
+          },
+          "required": [
+            "op",
+            "attributeId",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "IN",
+                "NOT_IN"
+              ]
+            },
+            "attributeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "boolean",
+                  "number"
+                ]
+              }
+            }
+          },
+          "required": [
+            "op",
+            "attributeId",
+            "values"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "EXISTS",
+                "NOT_EXISTS"
+              ]
+            },
+            "attributeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            }
+          },
+          "required": [
+            "op",
+            "attributeId"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "effective": {
+      "type": "object",
+      "properties": {
+        "validFrom": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "validTo": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "validFrom"
+      ],
+      "additionalProperties": false
+    },
+    "attributeDefinition": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "type": {
+          "enum": [
+            "STRING",
+            "BOOLEAN",
+            "NUMBER",
+            "INTEGER",
+            "ENUM"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "default": {
+          "type": [
+            "string",
+            "number",
+            "boolean"
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "validFrom": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "validTo": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "employeeVersion": {
+      "type": "object",
+      "properties": {
+        "validFrom": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "validTo": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "typeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "workPatternId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "boolean",
+              "number",
+              "null"
+            ]
+          }
+        }
+      },
+      "required": [
+        "validFrom"
+      ],
+      "additionalProperties": false
+    },
+    "workPattern": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "validFrom": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "validTo": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "weekdays": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 7
+                }
+              },
+              "shiftIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9_@.:-]+$"
+                },
+                "uniqueItems": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "shiftIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "shiftIds"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "validFrom",
+              "weekdays",
+              "shiftIds"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "versions"
+      ],
+      "additionalProperties": false
+    },
+    "shiftVariant": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        },
+        "workPatternIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "intervals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/interval"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "priority",
+        "selector",
+        "scope",
+        "intervals"
+      ],
+      "additionalProperties": false
+    },
+    "weekProfile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "shiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "offWeekdays": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          }
+        },
+        "holidayMode": {
+          "enum": [
+            "NORMAL",
+            "OFF"
+          ]
+        },
+        "constraintIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "policyIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "offWeekdays",
+        "holidayMode",
+        "constraintIds",
+        "policyIds"
+      ],
+      "additionalProperties": false
+    },
+    "weekConfiguration": {
+      "type": "object",
+      "properties": {
+        "defaultProfileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "manual": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "week": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "profileId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "overrideRecurrence": {
+                "type": "boolean"
+              },
+              "waiveFrequencyIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9_@.:-]+$"
+                },
+                "uniqueItems": true
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "week",
+              "profileId",
+              "overrideRecurrence",
+              "waiveFrequencyIds",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "recurrences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "anchor": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "sequence": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 104,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9_@.:-]+$"
+                }
+              },
+              "validFrom": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "validTo": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "anchor",
+              "sequence",
+              "validFrom"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "automatic": {
+          "type": "object",
+          "properties": {
+            "profileIds": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              }
+            },
+            "validFrom": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "validTo": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          "required": [
+            "profileIds",
+            "validFrom"
+          ],
+          "additionalProperties": false
+        },
+        "frequencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "profileId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "minGapWeeks": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "maxGapWeeks": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "windowWeeks": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "minCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "maxCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "desiredCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "desiredGapWeeks": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "profileId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "week": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "profileId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              }
+            },
+            "required": [
+              "week",
+              "profileId"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "manual",
+        "recurrences",
+        "frequencies",
+        "history"
+      ],
+      "additionalProperties": false
+    },
+    "closure": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "validFrom": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "validTo": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "administrativeType": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "selector": {
+                "$ref": "#/definitions/selector"
+              },
+              "authorized": {
+                "enum": [
+                  true
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "date",
+              "selector",
+              "authorized",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "validFrom",
+        "validTo",
+        "selector",
+        "reason",
+        "exceptions"
+      ],
+      "additionalProperties": false
+    },
+    "holidaySettings": {
+      "type": "object",
+      "properties": {
+        "country": {
+          "enum": [
+            "IT"
+          ]
+        },
+        "catalogueVersion": {
+          "enum": [
+            "IT-2001-2026.1"
+          ]
+        },
+        "localDates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "holiday": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "date",
+              "label",
+              "holiday"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "country",
+        "catalogueVersion",
+        "localDates"
+      ],
+      "additionalProperties": false
+    },
+    "coverageLevel": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        }
+      },
+      "required": [
+        "selector",
+        "level"
+      ],
+      "additionalProperties": false
+    },
+    "dutyRequirement": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "mode": {
+          "enum": [
+            "RESPONSIBILITY",
+            "PRESENCE"
+          ]
+        },
+        "shiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "levels": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/coverageLevel"
+          }
+        },
+        "comparison": {
+          "enum": [
+            "EQ",
+            "GE",
+            "LE"
+          ]
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "intervals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/interval"
+          }
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        },
+        "preferencePriority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "exclusiveGroup": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "bindAssignments": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "mode",
+        "shiftIds",
+        "levels",
+        "comparison",
+        "count",
+        "intervals",
+        "scope",
+        "preferencePriority"
+      ],
+      "additionalProperties": false
+    },
+    "temporalRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "type": {
+          "enum": [
+            "SUCCESSION",
+            "FORBIDDEN_PAIR",
+            "MIN_REST"
+          ]
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "fromShiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "toShiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "offsetDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 14
+        },
+        "minimumMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "type",
+        "selector",
+        "fromShiftIds",
+        "toShiftIds",
+        "offsetDays",
+        "scope"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

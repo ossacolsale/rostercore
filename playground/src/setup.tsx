@@ -492,6 +492,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <ScopeEditor
+              s={s}
               value={a.scope}
               onChange={(v) =>
                 update((d) => {
@@ -567,6 +568,7 @@ export function Calendar({ s, update }: { s: Scenario; update: Update }) {
               }
             />
             <ScopeEditor
+              s={s}
               value={a.scope}
               onChange={(v) =>
                 update((d) => {

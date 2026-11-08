@@ -1,14 +1,14 @@
 # Architecture and mathematical contract
 
-RosterCore 0.1 uses a stateless C++20 library and JSON CLI. The domain and interpreter do not expose OR-Tools. Structural validation precedes semantic normalization. The CP-SAT adapter compiles the same expressions evaluated independently by the verifier. A loopback-only Node adapter invokes the CLI with argument arrays, never a shell. No data is transmitted to AI/HR services.
+RosterCore 0.2 uses a stateless C++20 library and JSON CLI. The domain and interpreter do not expose OR-Tools. Structural validation precedes semantic normalization. The CP-SAT adapter compiles the same expressions evaluated independently by the verifier. A loopback-only Node adapter invokes the CLI with argument arrays, never a shell. No data is transmitted to AI/HR services.
 
 ## Time
 
-Dates are strict proleptic Gregorian ISO dates, interpreted as local civil dates in the required IANA timezone label. Weekdays are ISO 1–7. Intervals use local wall-clock minutes, an explicit `endDayOffset` (0 or 1) and half-open bounds. No implicit timezone conversion or elapsed-duration calculation occurs. This version optimizes COUNT only. Actual elapsed minutes across DST transitions, partial-day leave and hourly coverage are rejected as unsupported, rather than interpreted as civil-duration guarantees. Multiple disjoint intervals, including overnight intervals, are preserved.
+Dates are strict proleptic Gregorian ISO dates, interpreted as local civil dates in the required IANA timezone label. Weekdays are ISO 1–7. Intervals use local wall-clock minutes, an explicit `endDayOffset` (0 or 1) and half-open bounds. COUNT uses civil dates. MIN_REST converts concrete intervals with offline UTC/Europe/Rome IANA transitions and explicit fold handling; unsupported zones and nonexistent/ambiguous local times fail rather than approximate elapsed duration. See `EVOLUTION.md` for effective dates, weekly precedence, physical coverage and dated-workforce semantics. Multiple disjoint and overnight intervals remain attached to their starting date.
 
 ## Assignment and logic
 
-Every available employee gets exactly one admissible shift on each nonexcluded day. OFF is an explicit shift, never an automatic fallback. ABSENT and EXCLUDED are result cell states, not ordinary shift assignments. Allowed-shift rules combine by intersection. Empty intersections are diagnostic infeasibility. Recurrences, date scopes and ISO week exclusions apply before model compilation.
+Every available employee gets exactly one admissible shift on each nonexcluded day. OFF is an explicit shift, never an automatic fallback. ABSENT, EXCLUDED, CLOSED and INACTIVE are result cell states, not ordinary shift assignments. Allowed-shift rules combine by intersection. Empty intersections are diagnostic infeasibility. Recurrences, date scopes and ISO week exclusions apply before model compilation.
 
 Atoms COUNT compare selected assignments with EQ/GE/LE. AND/OR are fully reified equivalences, including the false direction. REMAINING restricts a selector to its shift plus explicit COUNT shifts on the **same selector** in its conjunctive branch. For unambiguous branch-local interpretation, REMAINING is permitted only as a direct child of AND whose other children are COUNT atoms (or REMAINING); OR may contain these branches and may otherwise nest freely. Mixed-selector or nested-branch REMAINING is rejected. COUNT GE remains GE; clause order has no effect. This conservative grammar avoids an exponential DNF expansion and ambiguous branch inheritance.
 
@@ -26,4 +26,9 @@ Policy CREATE/REPLACE validates a copy of the entire scenario and returns it onl
 
 ## Boundaries and risks
 
-CP-SAT is a proven solver, but finite-horizon fairness is not an infinite-future guarantee. Runtime depends on scenario size. Strict caps protect numeric ranges, input size, dates, AST nodes and search resources. No labor-law compliance is implied. MINUTES, BURDEN_POINTS, EARLIEST_BALANCE, NOT/IMPLIES, hourly coverage and operational partial-day leave are explicit unsupported extensions. Cross-platform CI is configured; only locally executed builds are claimed in the test report.
+CP-SAT is a proven solver, but finite-horizon fairness is not an infinite-future guarantee. Runtime depends on scenario size. Strict caps protect numeric ranges, input size, dates, AST nodes and search resources. No labor-law compliance is implied. MINUTES, BURDEN_POINTS, EARLIEST_BALANCE, constraint-AST NOT/IMPLIES and operational partial-day leave are explicit unsupported extensions. Executed local and native CI evidence is recorded in the test report.
+
+
+## Evolution modules
+
+`calendar.cpp` resolves week classification, migration and offline catalogues. `workforce.cpp` resolves dated employees, predicates, domains, variants and physical spans. `evolution_validation.cpp` validates the additive declarative structures. `compiler_extensions.inc` stays inside the solver Compiler and contains weekly, coverage, temporal and stability CP-SAT variables. `verification.cpp` independently interprets chosen profiles, explicit duty witnesses, frequency counts, temporal rules and regeneration. The existing history interpreter retains dated participation snapshots and actual assignment intervals; new hires receive no earlier quota and departed people remain in replay. No reference-example role names occur in domain behavior.

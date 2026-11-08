@@ -24,6 +24,10 @@ const actions = new Set([
   "import-policy",
   "sync-hr",
   "rebuild-history",
+  "regenerate",
+  "inspect",
+  "select",
+  "migrate",
 ]);
 let running = 0;
 const vite = production
@@ -60,11 +64,19 @@ async function run(body) {
         "import-policy",
         "sync-hr",
         "rebuild-history",
+        "regenerate",
       ].includes(body.action)
     ) {
       const extra = path.join(dir, "document.json");
       await writeFile(extra, JSON.stringify(body.document ?? body.result));
       args.push(extra);
+    }
+    if (body.action === "inspect")
+      args.push(body.onDate || body.scenario.calendar.start);
+    if (body.action === "select") {
+      const selector = path.join(dir, "selector.json");
+      await writeFile(selector, JSON.stringify(body.selector));
+      args.push(selector, body.onDate || body.scenario.calendar.start);
     }
     if (body.action === "consolidate") {
       if (typeof body.through !== "string")
@@ -150,6 +162,28 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://127.0.0.1");
     if (req.method === "GET" && url.pathname === "/api/health")
       return json(res, 200, { status: "ready", engine: executable });
+    if (
+      req.method === "GET" &&
+      ["/api/example-evolution", "/api/example-automatic"].includes(
+        url.pathname,
+      )
+    )
+      return json(
+        res,
+        200,
+        JSON.parse(
+          await readFile(
+            path.join(
+              root,
+              "examples",
+              url.pathname.endsWith("automatic")
+                ? "pharmacy-automatic-weeks.json"
+                : "pharmacy-evolution.json",
+            ),
+            "utf8",
+          ),
+        ),
+      );
     if (req.method === "GET" && url.pathname === "/api/example")
       return json(
         res,

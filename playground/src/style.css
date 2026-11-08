@@ -1165,3 +1165,111 @@ footer span:last-child {
     white-space: normal;
   }
 }
+
+.sidebar nav {
+  overflow-y: auto;
+  min-height: 0;
+}
+.sidebar-bottom {
+  padding-top: 20px;
+}
+.attribute-grid,
+.week-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.week-preview {
+  margin-top: 18px;
+}
+.cycle-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.optional-number {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0;
+  font-size: 11px;
+}
+.optional-number input[type="number"] {
+  width: 95px;
+}
+.catalogue-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.catalogue-select select {
+  flex: 1;
+  min-width: 110px;
+}
+.catalogue-select input[type="search"] {
+  flex-basis: 100%;
+}
+.catalogue-create {
+  padding: 5px 8px;
+  font-size: 10px;
+}
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #11271eb3;
+  display: grid;
+  place-items: center;
+  z-index: 30;
+  padding: 20px;
+}
+.catalogue-dialog {
+  width: min(460px, 100%);
+  box-shadow: 0 15px 80px #0005;
+}
+.reference-link {
+  display: block;
+  margin: 6px 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  font-family: monospace;
+  font-size: 10px;
+}
+.holiday {
+  color: #a46c29;
+  white-space: normal;
+  max-width: 110px;
+}
+.shift-cell small {
+  color: inherit;
+  max-width: 130px;
+  white-space: normal;
+  line-height: 1.5;
+}
+.fallback {
+  background: #fff0dc;
+  border-color: #d7a95b;
+  color: #916122;
+}
+.regeneration {
+  border-left: 3px solid #a4b77c;
+}
+@media (max-width: 850px) {
+  .sidebar nav {
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+  .sidebar-bottom {
+    display: none;
+  }
+  .top-actions {
+    flex-wrap: wrap;
+  }
+  .topbar {
+    height: auto;
+    min-height: 80px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}

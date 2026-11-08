@@ -1,7 +1,10 @@
+import { OperationalResults } from "./operational-results";
+import { isoMonday } from "./evolution-model";
 import { useI18n } from "./i18n";
 import { useState } from "react";
 import {
   type Scenario,
+  type Assignment,
   type Result,
   dates,
   rational,
@@ -9,7 +12,7 @@ import {
   metricNames,
   download,
 } from "./model";
-import { Text, EntityHeader } from "./editors";
+import { Text, EntityHeader, Select } from "./editors";
 export type Run = (
   action: string,
   extra?: Record<string, unknown>,
@@ -42,12 +45,24 @@ export function Results({
   const { t, locale } = useI18n();
   const [through, setThrough] = useState(s.calendar.end),
     [objective, setObjective] = useState(0);
-  const days = dates(s.calendar.start, s.calendar.end),
+  const [view, setView] = useState("horizon"),
+    [focusDate, setFocusDate] = useState(s.calendar.start);
+  const allDays = dates(s.calendar.start, s.calendar.end);
+  const days = allDays.filter(
+      (d) =>
+        view === "horizon" ||
+        (view === "day" && d === focusDate) ||
+        (view === "week" && isoMonday(d) === isoMonday(focusDate)) ||
+        (view === "month" && d.slice(0, 7) === focusDate.slice(0, 7)),
+    ),
     report = r.fairness?.[objective];
   const employee = (id: string) =>
     s.employees.find((e) => e.id === id)?.label || id;
   const assignments = new Map(
     r.assignments?.map((a) => [`${a.employeeId}:${a.date}`, a.shiftId]),
+  );
+  const concrete = new Map(
+    r.assignments?.map((a) => [a.employeeId + ":" + a.date, a]),
   );
   const states = new Map(
     r.calendarStates?.map((a) => [`${a.employeeId}:${a.date}`, a.state]),
@@ -58,14 +73,24 @@ export function Results({
       p.employees.map((e) => Math.abs(rational(e.debt))),
     ) || []),
   );
-  const changed = previous?.assignments
-    ? r.assignments?.filter(
-        (a) =>
-          previous.assignments?.find(
-            (b) => a.employeeId === b.employeeId && a.date === b.date,
-          )?.shiftId !== a.shiftId,
-      ).length
-    : undefined;
+  const signature = (a: Assignment) =>
+    JSON.stringify([a.shiftId, a.intervals ?? null]);
+  const before = new Map(
+    previous?.assignments?.map((a) => [
+      `${a.employeeId}:${a.date}`,
+      signature(a),
+    ]),
+  );
+  const after = new Map(
+    r.assignments?.map((a) => [`${a.employeeId}:${a.date}`, signature(a)]),
+  );
+  const changed =
+    r.changes?.length ??
+    (previous?.assignments
+      ? [...new Set([...before.keys(), ...after.keys()])].filter(
+          (key) => before.get(key) !== after.get(key),
+        ).length
+      : undefined);
   return (
     <>
       <EntityHeader title={t("Schedule & fairness")}>
@@ -113,6 +138,27 @@ export function Results({
                 {t("Export result JSON")}{" "}
               </button>
             </div>
+            <div className="row">
+              <Select
+                label={t("Calendar view")}
+                value={view}
+                options={[
+                  { id: "horizon", label: t("Whole horizon") },
+                  { id: "day", label: t("Day") },
+                  { id: "week", label: t("Week") },
+                  { id: "month", label: t("Month") },
+                ]}
+                onChange={setView}
+              />
+              {view !== "horizon" && (
+                <Text
+                  label={t("Focus date")}
+                  type="date"
+                  value={focusDate}
+                  onChange={setFocusDate}
+                />
+              )}
+            </div>
             <div className="legend">
               {s.shifts.map((sh, i) => (
                 <span key={sh.id}>
@@ -140,6 +186,27 @@ export function Results({
                           month: "2-digit",
                           timeZone: "UTC",
                         })}
+                        <small>
+                          {
+                            s.weekProfiles?.find(
+                              (p) =>
+                                p.id ===
+                                r.calendarDays?.find((c) => c.date === d)
+                                  ?.profileId,
+                            )?.label
+                          }
+                        </small>
+                        {r.calendarDays
+                          ?.find((c) => c.date === d)
+                          ?.holidays.map((h) => (
+                            <small
+                              className="holiday"
+                              key={h.id}
+                              title={h.source}
+                            >
+                              {t(h.label)}
+                            </small>
+                          ))}
                       </th>
                     ))}
                   </tr>
@@ -167,7 +234,7 @@ export function Results({
                                   color: colors[index % colors.length],
                                 }}
                                 title={
-                                  sh.intervals
+                                  (concrete.get(key)?.intervals || sh.intervals)
                                     .map(
                                       (i) =>
                                         `${i.start}–${i.end}${i.endDayOffset ? t(" +1 day") : ""}`,
@@ -176,6 +243,16 @@ export function Results({
                                 }
                               >
                                 {sh.label}
+                                <small>
+                                  {(
+                                    concrete.get(key)?.intervals || sh.intervals
+                                  )
+                                    .map(
+                                      (i) =>
+                                        `${i.start}–${i.end}${i.endDayOffset ? " +1" : ""}`,
+                                    )
+                                    .join(" · ")}
+                                </small>
                               </span>
                             ) : (
                               <span
@@ -186,7 +263,11 @@ export function Results({
                                   ? t("Absent")
                                   : states.get(key) === "EXCLUDED"
                                     ? t("Excluded")
-                                    : "—"}
+                                    : states.get(key) === "CLOSED"
+                                      ? t("Company closed")
+                                      : states.get(key) === "INACTIVE"
+                                        ? t("Not in service")
+                                        : "—"}
                               </span>
                             )}
                           </td>
@@ -418,6 +499,7 @@ export function Results({
           </section>
         </>
       )}
+      <OperationalResults s={s} r={r} />
       <section className="panel">
         <h3>{t("Search evidence")}</h3>
         <div className="table-scroll">
@@ -435,7 +517,13 @@ export function Results({
               {r.phases?.map((p, i) => (
                 <tr key={i}>
                   <td>{p.policyId || "—"}</td>
-                  <td>{t(metricNames[p.metric] || p.metric)}</td>
+                  <td>
+                    {p.metric.startsWith("FALLBACK_LEVEL_")
+                      ? t("Fallback level {level}", {
+                          level: p.metric.slice(15),
+                        })
+                      : t(metricNames[p.metric] || p.metric)}
+                  </td>
                   <td>{t(p.status)}</td>
                   <td>{exact(p.value)}</td>
                   <td>

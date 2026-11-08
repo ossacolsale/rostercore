@@ -1,3 +1,6 @@
+import { PredicateEditor } from "./evolution";
+import { useCatalogue, type CatalogueKind } from "./catalogue-context";
+import { coreAction } from "./api";
 import { useI18n } from "./i18n";
 import { useState, type ReactNode } from "react";
 import {
@@ -51,22 +54,56 @@ export function Select({
   value,
   options,
   onChange,
+  createKind,
 }: {
   label: string;
   value: string;
   options: { id: string; label: string }[];
   onChange: (v: string) => void;
+  createKind?: CatalogueKind;
 }) {
   const { t } = useI18n();
+  const [query, setQuery] = useState("");
+  const create = useCatalogue();
+  const shown = options.filter(
+    (x) =>
+      x.id === value ||
+      !query ||
+      `${x.label} ${x.id}`.toLowerCase().includes(query.toLowerCase()),
+  );
   return (
     <Field label={label}>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((x) => (
-          <option key={x.id} value={x.id}>
-            {x.label}
-          </option>
-        ))}
-      </select>
+      <span className="catalogue-select">
+        {options.length > 8 && (
+          <input
+            aria-label={t("Search {catalogue}", { catalogue: label })}
+            type="search"
+            placeholder={t("Search catalogue…")}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        )}
+        <select
+          aria-label={label}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          {shown.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.label}
+            </option>
+          ))}
+        </select>
+        {createKind && create && (
+          <button
+            type="button"
+            className="catalogue-create"
+            onClick={() => create(createKind)}
+          >
+            {t("Create here")}
+          </button>
+        )}
+      </span>
     </Field>
   );
 }
@@ -75,18 +112,36 @@ export function Multi({
   values,
   options,
   onChange,
+  createKind,
 }: {
   label: string;
   values: string[];
   options: { id: string; label: string }[];
   onChange: (v: string[]) => void;
+  createKind?: CatalogueKind;
 }) {
   const { t } = useI18n();
+  const create = useCatalogue();
+  const [query, setQuery] = useState("");
+  const shown = options.filter(
+    (x) =>
+      !query ||
+      `${x.label} ${x.id}`.toLowerCase().includes(query.toLowerCase()),
+  );
   return (
     <fieldset className="multi">
       <legend>{label}</legend>
-      {options.length ? (
-        options.map((x) => (
+      {options.length > 8 && (
+        <input
+          type="search"
+          aria-label={t("Search {catalogue}", { catalogue: label })}
+          placeholder={t("Search catalogue…")}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      )}{" "}
+      {shown.length ? (
+        shown.map((x) => (
           <label key={x.id}>
             <input
               type="checkbox"
@@ -106,13 +161,20 @@ export function Multi({
       ) : (
         <small>{t("No items yet")}</small>
       )}
+      {createKind && create && (
+        <button type="button" onClick={() => create(createKind)}>
+          {t("Create here")}
+        </button>
+      )}
     </fieldset>
   );
 }
 export function ScopeEditor({
+  s,
   value,
   onChange,
 }: {
+  s?: Scenario;
   value: Scope;
   onChange: (v: Scope) => void;
 }) {
@@ -164,6 +226,33 @@ export function ScopeEditor({
           </label>
         ))}
       </div>
+      {!!s?.weekProfiles?.length && (
+        <Multi
+          label={t("Applicable week profiles (empty means all)")}
+          options={s.weekProfiles}
+          values={value.weekProfileIds || []}
+          onChange={(ids) => {
+            const next = { ...value };
+            if (ids.length) next.weekProfileIds = ids;
+            else delete next.weekProfileIds;
+            onChange(next);
+          }}
+        />
+      )}
+      {s?.calendar.holidays && (
+        <Select
+          label={t("Day classification")}
+          value={value.dayType || "ANY"}
+          options={[
+            { id: "ANY", label: t("All dates") },
+            { id: "HOLIDAY", label: t("Holidays only") },
+            { id: "NON_HOLIDAY", label: t("Non-holidays only") },
+          ]}
+          onChange={(dayType) =>
+            onChange({ ...value, dayType: dayType as Scope["dayType"] })
+          }
+        />
+      )}
       <DateList
         label={t("Dates excluded from this rule")}
         value={value.excludedDates || []}
@@ -183,7 +272,11 @@ export function SelectorEditor({
   onChange: (v: Selector) => void;
   excludeGroup?: string;
 }) {
-  const { t } = useI18n();
+  const { t, diagnostic, localizeError } = useI18n();
+  const createCatalogue = useCatalogue();
+  const [previewDate, setPreviewDate] = useState(s.calendar.start),
+    [previewNames, setPreviewNames] = useState<string[]>(),
+    [previewError, setPreviewError] = useState("");
   const [key, setKey] = useState(""),
     [val, setVal] = useState("");
   const set = (k: "employeeIds" | "typeIds" | "groupIds", v: string[]) => {
@@ -199,7 +292,7 @@ export function SelectorEditor({
         <span className="muted">
           {Object.keys(value).length
             ? Object.entries(value)
-                .filter(([k]) => k !== "attributes")
+                .filter(([, v]) => Array.isArray(v))
                 .map(([, v]) => (v as string[]).join(", "))
                 .join(" · ") || t("By attributes")
             : t("All employees")}
@@ -230,11 +323,97 @@ export function SelectorEditor({
           onChange={(v) => set("employeeIds", v)}
         />
       </div>
+      {!!s.attributeDefinitions?.length && (
+        <>
+          <h4>{t("Typed attribute conditions")}</h4>
+          {value.where ? (
+            <>
+              <PredicateEditor
+                s={s}
+                value={value.where}
+                onChange={(where) => onChange({ ...value, where })}
+              />
+              <button
+                onClick={() => {
+                  const next = { ...value };
+                  delete next.where;
+                  onChange(next);
+                }}
+              >
+                {t("Remove attribute condition")}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                const a = s.attributeDefinitions![0];
+                onChange({
+                  ...value,
+                  where: { op: "EXISTS", attributeId: a.id },
+                });
+              }}
+            >
+              {t("Add attribute condition")}
+            </button>
+          )}
+        </>
+      )}
+      {createCatalogue && (
+        <button onClick={() => createCatalogue("attribute")}>
+          {t("Create reusable attribute here")}
+        </button>
+      )}
+      <div className="row">
+        <Text
+          label={t("Selector preview date")}
+          type="date"
+          value={previewDate}
+          onChange={setPreviewDate}
+        />
+        <button
+          onClick={async () => {
+            try {
+              const r = await coreAction("select", s, {
+                selector: value,
+                onDate: previewDate,
+              });
+              if (r.status === "INSPECTED") {
+                setPreviewNames(
+                  (r.workforce?.selectedEmployeeIds || []).map(
+                    (id) => s.employees.find((e) => e.id === id)?.label || id,
+                  ),
+                );
+                setPreviewError("");
+              } else
+                setPreviewError(
+                  r.diagnostics.map((d) => diagnostic(d)).join(" · "),
+                );
+            } catch (e) {
+              setPreviewError(localizeError((e as Error).message));
+            }
+          }}
+        >
+          {t("Preview matching employees")}
+        </button>
+      </div>
+      {previewNames && (
+        <p className="hint">
+          {t("Matching employees: {count}", { count: previewNames.length })} ·{" "}
+          {previewNames.join(", ")}
+        </p>
+      )}
+      {previewError && <p className="error">{previewError}</p>}
       <AttributeEditor
         value={value.attributes || {}}
         onChange={(attributes) => {
           const next = { ...value };
-          if (Object.keys(attributes).length) next.attributes = attributes;
+          if (Object.keys(attributes).length)
+            next.attributes = Object.fromEntries(
+              Object.entries(attributes).filter(
+                (entry): entry is [string, string | number | boolean] =>
+                  entry[1] !== null,
+              ),
+            );
           else delete next.attributes;
           onChange(next);
         }}
@@ -254,8 +433,8 @@ export function AttributeEditor({
   textValue,
   setText,
 }: {
-  value: Record<string, string | number | boolean>;
-  onChange: (v: Record<string, string | number | boolean>) => void;
+  value: Record<string, string | number | boolean | null>;
+  onChange: (v: Record<string, string | number | boolean | null>) => void;
   keyValue?: string;
   setKey?: (v: string) => void;
   textValue?: string;
@@ -572,6 +751,7 @@ export function ConstraintEditor({
         onChange={(expression) => onChange({ ...value, expression })}
       />
       <ScopeEditor
+        s={s}
         value={value.scope || {}}
         onChange={(scope) => onChange({ ...value, scope })}
       />

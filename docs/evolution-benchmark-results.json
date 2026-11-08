@@ -1,0 +1,341 @@
+{
+  "platform": "Linux-7.2.0-070200-generic-x86_64-with-glibc2.43",
+  "engineVersion": "0.2.0",
+  "backendVersion": "9.15.6755",
+  "results": [
+    {
+      "example": "pharmacy-evolution",
+      "employees": 6,
+      "days": 35,
+      "budgetSeconds": 15,
+      "status": "OPTIMAL",
+      "wallSeconds": 1.7143,
+      "assignments": 163,
+      "verification": "VERIFIED",
+      "substitutions": 1,
+      "weekAssignments": [
+        {
+          "isoWeek": "2027-W18",
+          "origin": "RECURRENCE",
+          "profileId": "special",
+          "week": "2027-05-03"
+        },
+        {
+          "isoWeek": "2027-W19",
+          "origin": "RECURRENCE",
+          "profileId": "regular",
+          "week": "2027-05-10"
+        },
+        {
+          "isoWeek": "2027-W20",
+          "origin": "MANUAL",
+          "profileId": "special",
+          "week": "2027-05-17"
+        },
+        {
+          "isoWeek": "2027-W21",
+          "origin": "RECURRENCE",
+          "profileId": "regular",
+          "week": "2027-05-24"
+        },
+        {
+          "isoWeek": "2027-W22",
+          "origin": "RECURRENCE",
+          "profileId": "special",
+          "week": "2027-05-31"
+        }
+      ],
+      "phases": [
+        {
+          "bestBoundScaled": 1.0,
+          "elapsedSeconds": 0.06234685500000001,
+          "metric": "FALLBACK_LEVEL_1",
+          "policyId": "coverage:0",
+          "scale": 1,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 1,
+            "numerator": 1
+          },
+          "valueScaled": 1
+        },
+        {
+          "bestBoundScaled": 4.0,
+          "elapsedSeconds": 0.058865685,
+          "metric": "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "policyId": "regular-both",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 3,
+            "numerator": 2
+          },
+          "valueScaled": 4
+        },
+        {
+          "bestBoundScaled": 30.0,
+          "elapsedSeconds": 0.030838667000000004,
+          "metric": "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "policyId": "regular-both",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 1,
+            "numerator": 5
+          },
+          "valueScaled": 30
+        },
+        {
+          "bestBoundScaled": 4.0,
+          "elapsedSeconds": 0.029559763000000003,
+          "metric": "FINAL_ABSOLUTE_DEVIATION",
+          "policyId": "regular-both",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 3,
+            "numerator": 2
+          },
+          "valueScaled": 4
+        },
+        {
+          "bestBoundScaled": 12.0,
+          "elapsedSeconds": 0.033040471,
+          "metric": "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "policyId": "regular-evening",
+          "scale": 12,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 1,
+            "numerator": 1
+          },
+          "valueScaled": 12
+        },
+        {
+          "bestBoundScaled": 118.0,
+          "elapsedSeconds": 0.021184454000000002,
+          "metric": "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "policyId": "regular-evening",
+          "scale": 12,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 6,
+            "numerator": 59
+          },
+          "valueScaled": 118
+        },
+        {
+          "bestBoundScaled": 6.0,
+          "elapsedSeconds": 0.022081100000000003,
+          "metric": "FINAL_ABSOLUTE_DEVIATION",
+          "policyId": "regular-evening",
+          "scale": 12,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 2,
+            "numerator": 1
+          },
+          "valueScaled": 6
+        },
+        {
+          "bestBoundScaled": 3.0,
+          "elapsedSeconds": 0.021129825,
+          "metric": "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "policyId": "special-nights",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 2,
+            "numerator": 1
+          },
+          "valueScaled": 3
+        },
+        {
+          "bestBoundScaled": 50.0,
+          "elapsedSeconds": 0.031839839,
+          "metric": "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "policyId": "special-nights",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 3,
+            "numerator": 25
+          },
+          "valueScaled": 50
+        },
+        {
+          "bestBoundScaled": 8.0,
+          "elapsedSeconds": 0.023712612,
+          "metric": "FINAL_ABSOLUTE_DEVIATION",
+          "policyId": "special-nights",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 3,
+            "numerator": 4
+          },
+          "valueScaled": 8
+        },
+        {
+          "bestBoundScaled": 0.0,
+          "elapsedSeconds": 0.026726152000000003,
+          "metric": "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "policyId": "special-weekends",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 1,
+            "numerator": 0
+          },
+          "valueScaled": 0
+        },
+        {
+          "bestBoundScaled": 0.0,
+          "elapsedSeconds": 0.018077310000000003,
+          "metric": "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "policyId": "special-weekends",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 1,
+            "numerator": 0
+          },
+          "valueScaled": 0
+        },
+        {
+          "bestBoundScaled": 0.0,
+          "elapsedSeconds": 0.015577802000000002,
+          "metric": "FINAL_ABSOLUTE_DEVIATION",
+          "policyId": "special-weekends",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 1,
+            "numerator": 0
+          },
+          "valueScaled": 0
+        }
+      ],
+      "diagnostics": []
+    },
+    {
+      "example": "pharmacy-automatic-weeks",
+      "employees": 6,
+      "days": 35,
+      "budgetSeconds": 15,
+      "status": "FEASIBLE",
+      "wallSeconds": 15.8557,
+      "assignments": 163,
+      "verification": "VERIFIED",
+      "substitutions": 0,
+      "weekAssignments": [
+        {
+          "isoWeek": "2027-W18",
+          "origin": "OPTIMIZATION",
+          "profileId": "regular",
+          "week": "2027-05-03"
+        },
+        {
+          "isoWeek": "2027-W19",
+          "origin": "OPTIMIZATION",
+          "profileId": "special",
+          "week": "2027-05-10"
+        },
+        {
+          "isoWeek": "2027-W20",
+          "origin": "OPTIMIZATION",
+          "profileId": "regular",
+          "week": "2027-05-17"
+        },
+        {
+          "isoWeek": "2027-W21",
+          "origin": "OPTIMIZATION",
+          "profileId": "regular",
+          "week": "2027-05-24"
+        },
+        {
+          "isoWeek": "2027-W22",
+          "origin": "OPTIMIZATION",
+          "profileId": "regular",
+          "week": "2027-05-31"
+        }
+      ],
+      "phases": [
+        {
+          "bestBoundScaled": 0.0,
+          "elapsedSeconds": 3.5770107820000003,
+          "metric": "FALLBACK_LEVEL_1",
+          "policyId": "coverage:0",
+          "scale": 1,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 1,
+            "numerator": 0
+          },
+          "valueScaled": 0
+        },
+        {
+          "bestBoundScaled": 0.0,
+          "elapsedSeconds": 1.188784477,
+          "metric": "DESIRED_WEEK_FREQUENCY",
+          "policyId": "calendar",
+          "scale": 1,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 1,
+            "numerator": 0
+          },
+          "valueScaled": 0
+        },
+        {
+          "bestBoundScaled": 4.0,
+          "elapsedSeconds": 2.740151328,
+          "metric": "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "policyId": "regular-both",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 3,
+            "numerator": 2
+          },
+          "valueScaled": 4
+        },
+        {
+          "bestBoundScaled": 96.0,
+          "elapsedSeconds": 2.445432933,
+          "metric": "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "policyId": "regular-both",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 1,
+            "numerator": 16
+          },
+          "valueScaled": 96
+        },
+        {
+          "bestBoundScaled": 8.0,
+          "elapsedSeconds": 2.250807464,
+          "metric": "FINAL_ABSOLUTE_DEVIATION",
+          "policyId": "regular-both",
+          "scale": 6,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 3,
+            "numerator": 4
+          },
+          "valueScaled": 8
+        },
+        {
+          "bestBoundScaled": 0.0,
+          "elapsedSeconds": 0.486589272,
+          "metric": "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "policyId": "regular-evening",
+          "scale": 12,
+          "status": "UNKNOWN"
+        }
+      ],
+      "diagnostics": []
+    }
+  ]
+}

@@ -21,10 +21,10 @@ test("language switches immediately, persists and preserves the scenario", async
   ).toBeVisible();
   for (const [nav, heading] of [
     ["02 Personale e gruppi", "Personale e gruppi"],
-    ["03 Tipologie di turno", "Tipologie di turno"],
-    ["04 Calendario e disponibilità", "Calendario e disponibilità"],
-    ["05 Politiche di pianificazione", "Politiche di pianificazione"],
-    ["06 Importazioni AI e HR", "Importazioni AI e HR"],
+    ["04 Tipologie di turno", "Tipologie di turno"],
+    ["06 Calendario e disponibilità", "Calendario e disponibilità"],
+    ["08 Politiche di pianificazione", "Politiche di pianificazione"],
+    ["09 Importazioni AI e HR", "Importazioni AI e HR"],
   ]) {
     await page.getByRole("button", { name: nav }).click();
     await expect(
@@ -95,7 +95,7 @@ test("Italian errors preserve diagnostic codes and original technical details", 
 }) => {
   await page.goto("/");
   await page.getByLabel(selector).selectOption("it");
-  await page.getByRole("button", { name: "06 Importazioni AI e HR" }).click();
+  await page.getByRole("button", { name: "09 Importazioni AI e HR" }).click();
   await page
     .getByLabel("Documento JSON di politica o eventi HR")
     .fill("{invalid");
@@ -177,19 +177,50 @@ test("mobile language selector remains accessible and Italian defaults can be ed
 
 test("Italian catalogue covers UI keys and preserves interpolation parameters", async () => {
   const ts = await import("typescript");
-  const catalogue = JSON.parse(await readFile(new URL("../src/locales/it.json", import.meta.url), "utf8")) as Record<string,string>;
-  for (const name of ["App", "editors", "setup", "policies", "imports", "results"]) {
-    const text = await readFile(new URL(`../src/${name}.tsx`, import.meta.url), "utf8");
-    const source = ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const catalogue = JSON.parse(
+    await readFile(new URL("../src/locales/it.json", import.meta.url), "utf8"),
+  ) as Record<string, string>;
+  for (const name of [
+    "App",
+    "editors",
+    "setup",
+    "policies",
+    "imports",
+    "results",
+    "evolution",
+    "planning-editors",
+    "operational-results",
+  ]) {
+    const text = await readFile(
+      new URL(`../src/${name}.tsx`, import.meta.url),
+      "utf8",
+    );
+    const source = ts.createSourceFile(
+      name,
+      text,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
+    );
     function visit(node: import("typescript").Node) {
-      if (ts.isCallExpression(node) && node.expression.getText(source) === "t" && node.arguments[0] && ts.isStringLiteral(node.arguments[0])) {
+      if (
+        ts.isCallExpression(node) &&
+        node.expression.getText(source) === "t" &&
+        node.arguments[0] &&
+        ts.isStringLiteral(node.arguments[0])
+      ) {
         const key = node.arguments[0].text;
-        expect(Object.hasOwn(catalogue, key), `Missing Italian UI key: ${key}`).toBe(true);
+        expect(
+          Object.hasOwn(catalogue, key),
+          `Missing Italian UI key: ${key}`,
+        ).toBe(true);
       }
       ts.forEachChild(node, visit);
     }
     visit(source);
   }
-  const parameters = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map(match => match[1]).sort();
-  for (const [english, italian] of Object.entries(catalogue)) expect(parameters(italian), english).toEqual(parameters(english));
+  const parameters = (text: string) =>
+    [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
+  for (const [english, italian] of Object.entries(catalogue))
+    expect(parameters(italian), english).toEqual(parameters(english));
 });

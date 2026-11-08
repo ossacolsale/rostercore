@@ -1,0 +1,23 @@
+# RosterCore 0.2 evolution
+
+Extend the existing JSON domain, CP-SAT compiler, independent verifier and bilingual React playground. Do not create a second solver or industry-specific implementation. Existing schema-1 scenarios remain usable; explicit migration to schema 2 preserves IDs, assignments and history. New configuration is declarative and strictly validated.
+
+## Four phases
+
+1. **Calendars and migration:** repair Windows runtime dependency deployment; introduce reusable week profiles, deterministic recurrence/manual precedence, solver-selected free weeks with hard/desired frequencies, holiday catalogue, closures and schema migration. Build and calendar tests.
+2. **Dated workforce and advanced scheduling:** typed/default attributes and selector predicates, effective workforce/work patterns, logical shift variants, actual coverage and preferred substitutes, transitions/rest, history-aware fairness and explicit regeneration. Build, mathematical tests and pharmacy reference.
+3. **Guided configuration:** reusable catalogue controls, temporal/personnel/contract/profile/variant/coverage editors, contextual validation and previews, undo, result annotations and regeneration, English/Italian resources and AI exchange. UI build and browser checks.
+4. **Integration and distribution:** legacy/new import and HR regression tests, independent verification, end-to-end operational workflow, measured benchmarks, documentation and native CI verification.
+
+## Semantics and implementation boundaries
+
+- ISO weeks are Monday–Sunday across ISO year boundaries. Recurrences are anchored to ISO Monday; changing one manual week never changes the cycle phase. Conflicting recurrences fail validation. A manual recurrence exception needs explicit authorization. Hard frequency windows still apply unless a named rule is explicitly waived for a manual week. Historical week choices lock the whole ISO week, including a partially consolidated week.
+- New effective intervals use `[validFrom, validTo)`. Legacy `scope.start/end` remain inclusive. Attribute defaults are resolved before explicit/base and dated overrides; `false`, zero and empty string remain values, while explicit null suppresses a default. Comparisons require a present, correctly typed value; existence operators distinguish absence. Historical workforce records are retained.
+- Weekly decisions are CP-SAT booleans, jointly optimized with assignments. Profile-conditioned domains, constraints, coverage and objectives are gated by those booleans. Preferred substitutes are minimized lexicographically before fairness. Desired calendar frequencies and stability are explicit objective stages, never implicit relaxations of hard requirements.
+- Logical shift IDs remain public assignment identities. Concrete intervals are resolved by employee/date/profile/work pattern with explicit variant priorities; equal-priority ambiguity is rejected. Fairness tags combine target categories without counting an assignment twice. Physical coverage always checks resolved intervals and qualification selectors, independently of logical labels.
+- Holidays annotate dates; profiles decide operation; corporate closures suppress ordinary assignments independently of individual leave and do not imply administrative vacation deductions. Explicit authorized exceptions can permit work. Night spills into closed/unavailable dates are checked.
+- Cross-day rules include allowed successors, forbidden pairs and minimum elapsed rest. Civil COUNT behavior remains available for all timezone labels. Elapsed-time rules operate only for explicitly supported offline timezone data and reject ambiguous/nonexistent local times unless an explicit fold resolves ambiguity. No civil duration is advertised as exact elapsed time across DST.
+- Fairness retains departed employees' history and gives new employees no retroactive quota. Participation is resolved on each date. Regeneration preserves consolidated history and publication locks, freezes dates before the requested effective date, optionally minimizes future changes and returns an explicit diff.
+- Diagnostics distinguish ERROR, WARNING and INFORMATION, include object/path context and offer navigation/suggestions in the playground. Unknown operators/fields, unresolved references and unsupported temporal semantics remain errors.
+
+The offline Italian public-holiday catalogue is versioned, with a supported date range and source references. Law 151/2025 introduces 4 October from 2026: https://www.gazzettaufficiale.it/eli/id/2025/10/10/25G00153/sg . This is calendar data, not a universal labor-contract rule.

@@ -1,6 +1,6 @@
 # RosterCore AI policy authoring guide
 
-Engine 0.1.0 · JSON Schema version 1 · no AI service is required by RosterCore.
+Engine 0.2.0 · JSON Schema versions 1 and 2 · no AI service is required by RosterCore.
 
 Generate **one complete policy exchange document**, containing both an objective and its hard constraints. Never generate scripts, code, SQL, custom expressions or unknown JSON fields. The authoritative contracts are `schemas/planning-policy.schema.json`, `schemas/scenario.schema.json` and `schemas/operators.json`. The executable core validates all paths, including visual configuration.
 
@@ -8,7 +8,7 @@ Generate **one complete policy exchange document**, containing both an objective
 
 Read the provided `rostercore.ai-context` or scenario. Reuse exact employee/type/group/shift/shared-constraint IDs. IDs never imply industry behavior. Do not invent missing references. Avoid including personal information in labels. Ask the user about genuinely ambiguous requirements before generating a policy.
 
-1. Identify the participant selector. Fields are optional; an empty selector means all employees. IDs within one field are unioned, while employeeIds/typeIds/groupIds/attribute tests intersect. Group selectors may reference other acyclic groups. Attribute tests use scalar equality.
+1. Identify the participant selector. Fields are optional; an empty selector means all employees. IDs within one field are unioned, while employeeIds/typeIds/groupIds/attribute tests intersect. Group selectors may reference other acyclic groups. Legacy attribute tests use scalar equality; typed where predicates also support comparison, membership, existence and AND/OR/NOT.
 2. Identify the shift IDs being balanced as **one category**. Balancing closing and opening separately requires two policies; one objective containing both IDs balances their combined COUNT.
 3. Translate staffing requirements into COUNT atoms with EQ, GE or LE and nonnegative integer count. Use OR for alternative valid branches and AND for simultaneous requirements. They may nest to depth 32 (10,000 AST nodes per scenario).
 4. Use REMAINING only in a flat AND branch with COUNT siblings and exactly matching selector documents. Its allowed shifts are the explicit COUNT shifts in that branch plus its own shift. It does not change GE into EQ. Do not place it directly under OR, at the root, beside nested groups or beside a different selector. Rewrite as unambiguous flat alternatives or explain that the requested form is unsupported.
@@ -19,7 +19,7 @@ Read the provided `rostercore.ai-context` or scenario. Reuse exact employee/type
 
 ## Without a base configuration
 
-Create an **inactive draft**: `draft:true`, `active:false`. Use symbolic dependency IDs beginning with `@`, declaring each in dependencies with kind employee/type/group/shift/constraint/constraintSet. Never claim the draft is runnable. The playground maps symbols to existing entities; users can explicitly create missing entities in visual editors. After resolving every dependency, set draft=false and active=true in the imported document. A dry-run still performs complete validation.
+Create an **inactive draft**: `draft:true`, `active:false`. Use symbolic dependency IDs beginning with `@`, declaring each in dependencies with kind employee/type/group/shift/constraint/constraintSet/attribute/workPattern/weekProfile. Never claim the draft is runnable. The playground maps symbols to existing entities; users can explicitly create missing entities in visual editors. After resolving every dependency, set draft=false and active=true in the imported document. A dry-run still performs complete validation.
 
 ## Complete example
 
@@ -52,7 +52,7 @@ Ideal shares depend on **actual produced target assignments**, not an invented f
 
 ## Refuse or clarify
 
-Explain contradictory staffing counts, unresolved references, cyclic groups, impossible availability, missing custom weights, ambiguous REMAINING branches and unsupported requirements. Do not silently weaken hard rules. NOT, IMPLIES, hourly coverage, elapsed-minute fairness, burden scores, EARLIEST_BALANCE and operational partial-day absence are unsupported. Time intervals are local civil times with explicit midnight offsets; COUNT does not imply elapsed working-hour or DST guarantees. Do not invent labor-law compliance.
+Explain contradictory staffing counts, unresolved references, cyclic groups, impossible availability, missing custom weights, ambiguous REMAINING branches and unsupported requirements. Do not silently weaken hard rules. Constraint-AST NOT, IMPLIES, elapsed-minute fairness, burden scores, EARLIEST_BALANCE and operational partial-day absence are unsupported. Time intervals are local civil times with explicit midnight offsets; COUNT does not imply elapsed working-hour or DST guarantees. Do not invent labor-law compliance.
 
 ## Import workflow
 
@@ -61,3 +61,18 @@ Export context → draft externally → import → map dependencies → preview 
 ## User prompt template
 
 > Using this guide, the JSON Schemas and attached context, produce one complete rostercore.planning-policy document. My participants are [IDs or description], target duties [IDs], staffing requirements [counts and alternatives], applicability [dates/weekdays], participation [equal/availability/custom], metric order [supported metrics] and priority [integer]. Use CREATE for [new ID], or REPLACE for [existing ID, expected revision]. Ask about ambiguity and identify unsupported requests. Return a JSON file suitable for dry-run import. Do not invent references, silently relax constraints, reset historical debt or include executable code.
+
+
+## Calendar, hours and operational duties (schema 2)
+
+Reuse attribute, work-pattern and week-profile IDs from the context. Resolved defaults do not imply contractual rules. Null means explicitly missing; false/zero/empty string remain values. Attribute predicates refer to registered definitions and compare correctly typed values. Employment and dated versions use half-open validity; preserve retained historical records and stable employee IDs.
+
+A logical shift is a fairness identity. Its highest-priority matching variant supplies actual intervals; equal-priority matches are an error and no base fallback is assumed when variants exist. Shared fairnessTags do not imply operational interchangeability.
+
+Policies may include dutyRequirements and temporalRules. Use explicit primary/fallback selector levels for qualified resources, concrete intervals for physical requirements, and exclusiveGroup when duties need distinct people. Prefer declarative coverage over COUNT labels when actual presence matters. Fallback is minimized lexicographically before fairness. Never substitute an arbitrary soft weight for a hard qualification/count or for that priority.
+
+Use scope.weekProfileIds to keep objective quotas within their applicable profiles. Week recurrence/manual/automatic declarations belong to the scenario; a policy references existing profiles instead of silently changing the calendar. Manual recurrence/frequency exceptions need explicit user authorization. The offline holiday catalogue annotates dates; profile operation and company closures are separate declarations.
+
+SUCCESSION and FORBIDDEN_PAIR correlate start dates with explicit offsetDays. MIN_REST uses minimumMinutes of actual elapsed rest with UTC/Europe/Rome data only; ambiguous times require startFold/endFold. Night-to-OFF means no new shift starts on the following calendar day. Where an ordinary allowed-shift rule forbids OFF, allowRequiredRest explicitly admits only a qualifying required-rest exception. Retained history participates across profile and horizon boundaries.
+
+Use examples/pharmacy-evolution.json for the full reference and examples/pharmacy-automatic-weeks.json for solver-selected weeks. Exported AI context includes new catalogues and dated arrangements with filtered referenced attributes; it excludes workforce names and history. The context is an authoring reference, not a replacement scenario. Validate and preview every CREATE/REPLACE document before applying it.

@@ -18,8 +18,11 @@ Json importPolicy(const Json &scenario, const Json &document, bool dryRun,
                     {"group", "groups"},
                     {"shift", "shifts"},
                     {"constraint", "constraints"},
-                    {"constraintSet", "constraintSets"}})
-    for (auto &e : scenario[pair.second])
+                    {"constraintSet", "constraintSets"},
+                    {"attribute", "attributeDefinitions"},
+                    {"workPattern", "workPatterns"},
+                    {"weekProfile", "weekProfiles"}})
+    for (auto &e : scenario.value(pair.second, Json::array()))
       known[pair.first].insert(e["id"]);
   for (auto &dep : policy["dependencies"]) {
     std::string symbol = dep["symbol"], kind = dep["kind"];
@@ -216,7 +219,7 @@ Json syncHR(const Json &scenario, const Json &document, bool dryRun) {
           t = shifts.at(a["shiftId"]);
       bool conflict =
           normalized.shifts[t].kind == "WORKING" && normalized.absent(e, d);
-      for (auto &i : normalized.shifts[t].intervals)
+      for (auto &i : a.value("intervals", normalized.shifts[t].intervals))
         if (i["endDayOffset"] == 1 && i["end"] != "00:00" &&
             normalized.absent(e, d + 1))
           conflict = true;
@@ -249,9 +252,17 @@ Json aiContext(const Json &j) {
                   {"constraintSets", j["constraintSets"]},
                   {"policies", j["policies"]},
                   {"employees", Json::array()}};
+  for (auto key : {"attributeDefinitions", "workPatterns", "weekProfiles",
+                   "weekConfiguration", "dutyRequirements", "temporalRules"})
+    context[key] =
+        j.value(key, std::string(key) == "weekConfiguration" ? Json::object()
+                                                             : Json::array());
+  context["schemaVersion"] = 2;
   std::set<std::string> attributes;
   std::function<void(const Json &)> visit = [&](const Json &v) {
     if (v.is_object()) {
+      if (v.contains("attributeId") && v["attributeId"].is_string())
+        attributes.insert(v["attributeId"].get<std::string>());
       if (v.contains("selector") && v["selector"].contains("attributes"))
         for (auto it = v["selector"]["attributes"].begin();
              it != v["selector"]["attributes"].end(); ++it)
@@ -270,6 +281,24 @@ Json aiContext(const Json &j) {
         attrs[key] = e["attributes"][key];
     context["employees"].push_back(
         {{"id", e["id"]}, {"typeId", e["typeId"]}, {"attributes", attrs}});
+  }
+  for (size_t i = 0; i < j["employees"].size(); ++i) {
+    auto &e = j["employees"][i];
+    for (auto key : {"employment", "workPatternId"})
+      if (e.contains(key))
+        context["employees"][i][key] = e[key];
+    if (e.contains("versions")) {
+      Json versions = e["versions"];
+      for (auto &v : versions)
+        if (v.contains("attributes")) {
+          Json retained = Json::object();
+          for (auto &key : attributes)
+            if (v["attributes"].contains(key))
+              retained[key] = v["attributes"][key];
+          v["attributes"] = retained;
+        }
+      context["employees"][i]["versions"] = versions;
+    }
   }
   context["supported"] = {{"operators", {"COUNT", "AND", "OR", "REMAINING"}},
                           {"objectives", {"CUMULATIVE_FAIRNESS"}},

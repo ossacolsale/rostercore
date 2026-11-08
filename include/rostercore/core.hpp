@@ -8,7 +8,7 @@
 #include <vector>
 namespace rostercore {
 using Json = nlohmann::json;
-inline constexpr auto version = "0.1.0";
+inline constexpr auto version = "0.2.0";
 struct Error : std::runtime_error {
   std::string code, path;
   Error(std::string c, std::string p, std::string m)
@@ -46,9 +46,27 @@ struct Scenario {
   std::vector<int> days;
   std::map<std::string, Json> groups;
   std::vector<Json> activePolicies;
+  std::map<int, std::string> selectedWeeks;
   explicit Scenario(Json);
-  std::vector<int> select(const Json &,
-                          std::set<std::string> visiting = {}) const;
+  std::vector<int> select(const Json &, int onDate = -1,
+                          std::set<std::string> visiting = {},
+                          const std::string &profileId = "") const;
+  Json weekOptions(int) const;
+  std::vector<int> weeks() const;
+  std::string profile(int) const;
+  Json profileDefinition(const std::string &) const;
+  Json holiday(int) const;
+  bool matches(const Json &, int, const std::string &profileId = "") const;
+  bool active(int, int) const;
+  bool closed(int, int) const;
+  bool plannable(int, int) const;
+  bool operational(int) const;
+  Json employeeState(int, int) const;
+  Json resolvedAttributes(int, int) const;
+  Json intervals(int, int, int, const std::string &profileId = "") const;
+  std::vector<int> domain(int, int, const std::string &profileId = "") const;
+  std::vector<Json> duties() const;
+  std::vector<Json> transitions() const;
   bool excluded(int) const;
   bool absent(int employee, int date) const;
   std::vector<int> allowed(int employee, int date) const;
@@ -59,7 +77,34 @@ Json failure(const Error &);
 void validateSchema(const Json &, const std::string &);
 void validate(const Json &);
 Json solve(const Json &);
+Json migrate(const Json &);
+Json inspect(const Json &, const std::string &);
+Json configurationDiagnostics(const Json &);
+Json regenerate(const Json &, const Json &);
+void validateEvolution(const Json &);
+int isoMonday(int);
+bool effective(const Json &, int);
+const Json &catalogues();
+int64_t instant(const std::string &, int, int, int fold = -1);
+std::vector<std::pair<int64_t, int64_t>>
+spans(const Scenario &, int, int, int, const std::string &profileId = "");
+bool temporalCompatible(const Scenario &, int, int, int, int, int,
+                        const std::string & = "", const std::string & = "");
+struct CoverageCandidate {
+  int employee, date, shift, level;
+  std::string profileId;
+  std::vector<std::pair<int64_t, int64_t>> intervals;
+};
+std::vector<CoverageCandidate>
+coverageCandidates(const Scenario &, const Json &, int, const std::string &);
+std::vector<std::pair<int64_t, int64_t>> requirementSpans(const Scenario &,
+                                                          const Json &, int);
+std::vector<int> fairnessMembers(const Scenario &, const Json &);
 Json verify(const Json &, const Json &);
+void resolveResultWeeks(Scenario &, const Json &);
+Json verifyEvolution(const Scenario &, const Json &);
+Json scheduleCoverage(const Scenario &, const Json &,
+                      const Json &choices = Json::array());
 bool evaluate(const Scenario &, const Json &, int,
               const std::map<std::pair<int, int>, int> &);
 Json consolidate(const Json &, const Json &, const std::string &);
@@ -69,7 +114,8 @@ Json importPolicy(const Json &, const Json &, bool dryRun,
 Json syncHR(const Json &, const Json &, bool dryRun);
 Json aiContext(const Json &);
 std::string objectiveFingerprint(const Json &);
-std::map<int, int64_t> participants(const Scenario &, const Json &, int);
+std::map<int, int64_t> participants(const Scenario &, const Json &, int,
+                                    const std::string &profileId = "");
 struct Ledger {
   std::map<int, Rational> ideal;
   std::map<int, int64_t> actual;

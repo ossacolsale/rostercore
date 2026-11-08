@@ -1,4 +1,4 @@
-# Constraint grammar v1
+# Constraint grammar · schema 1/2
 
 ```text
 Selector   := { employeeIds?: ID[], typeIds?: ID[], groupIds?: ID[],
@@ -22,3 +22,6 @@ COUNT includes only selected employees actually assigned the target shift that d
 Allowed-shift restrictions combine by intersection, separately from AST constraints. Selectors union IDs within a field and intersect fields. Explicit empty ID arrays select nobody; an entirely empty selector selects everybody. In the visual editor, clearing a category removes its field (unrestricted category).
 
 Shared constraints are definitions. `baseConstraintIds` activates them globally; active policies can reference them directly or through reusable constraint sets. Policy, objective and rule scopes intersect rather than override one another.
+
+
+Schema 2 extends Selector with `where: Condition` and Scope with `weekProfileIds: ID[]` and `dayType: HOLIDAY | NON_HOLIDAY`. Conditions support typed EQ/NE, IN/NOT_IN, LT/LE/GT/GE, EXISTS/NOT_EXISTS and recursive AND/OR/NOT. Nonexistence differs from false, zero and empty string; NE/NOT_IN still require a present value. Conditions are predicates, not additional constraint-AST operators. Group membership is resolved on each date from retained employment/attribute versions. Operational coverage and cross-day rules have their own declarative contracts; see `EVOLUTION.md`, `API.md` and the schema-2 reference examples.

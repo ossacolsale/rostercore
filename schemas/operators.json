@@ -27,10 +27,33 @@
     "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
     "FINAL_ABSOLUTE_DEVIATION"
   ],
+  "selectorOperators": [
+    "EQ",
+    "NE",
+    "IN",
+    "NOT_IN",
+    "EXISTS",
+    "NOT_EXISTS",
+    "LT",
+    "LE",
+    "GT",
+    "GE",
+    "AND",
+    "OR",
+    "NOT"
+  ],
+  "temporalRules": [
+    "SUCCESSION",
+    "FORBIDDEN_PAIR",
+    "MIN_REST"
+  ],
+  "coverage": [
+    "RESPONSIBILITY",
+    "PRESENCE"
+  ],
   "unsupported": [
-    "NOT",
+    "NOT_CONSTRAINT",
     "IMPLIES",
-    "COVERAGE",
     "MINUTES",
     "BURDEN_POINTS",
     "EARLIEST_BALANCE",

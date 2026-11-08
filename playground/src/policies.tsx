@@ -105,6 +105,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
           <details>
             <summary>{t("Policy scope & draft status")}</summary>
             <ScopeEditor
+              s={s}
               value={p.scope || {}}
               onChange={(v) =>
                 set(i, (p) => {
@@ -220,6 +221,22 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                 ))}
               </div>
             )}
+            {!!s.shifts.some((sh) => sh.fairnessTags?.length) && (
+              <Multi
+                label={t(
+                  "Equivalent fairness categories (assignments count once)",
+                )}
+                options={[
+                  ...new Set(s.shifts.flatMap((sh) => sh.fairnessTags || [])),
+                ].map((id) => ({ id, label: id }))}
+                values={p.objective.fairnessTags || []}
+                onChange={(x) =>
+                  set(i, (p) => {
+                    p.objective.fairnessTags = x;
+                  })
+                }
+              />
+            )}
             <h4>{t("Lexicographic metric order")}</h4>
             {p.objective.metrics.map((m, j) => (
               <div className="metric-row" key={m}>
@@ -270,6 +287,7 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
                 ))}
             </div>
             <ScopeEditor
+              s={s}
               value={p.objective.scope || {}}
               onChange={(v) =>
                 set(i, (p) => {
@@ -335,8 +353,8 @@ export function Policies({ s, update }: { s: Scenario; update: Update }) {
               onClick={() =>
                 download(`${p.id}.policy.json`, {
                   format: "rostercore.planning-policy",
-                  schemaVersion: 1,
-                  engineVersion: "0.1.0",
+                  schemaVersion: s.schemaVersion,
+                  engineVersion: s.schemaVersion === 2 ? "0.2.0" : "0.1.0",
                   operation: "CREATE",
                   policy: { ...p, revision: 1 },
                 })
