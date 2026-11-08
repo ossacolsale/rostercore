@@ -1,0 +1,18 @@
+{
+  "format": "rostercore.hr-events",
+  "schemaVersion": 1,
+  "events": [
+    {
+      "eventId": "hr-leave-1-v1",
+      "source": "sample-hr",
+      "externalId": "leave-1",
+      "employeeId": "e1",
+      "revision": 1,
+      "operation": "UPSERT",
+      "absenceType": "LEAVE",
+      "status": "APPROVED",
+      "start": "2026-01-27",
+      "end": "2026-01-28"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "operators": {
+    "COUNT": {
+      "comparisons": [
+        "EQ",
+        "GE",
+        "LE"
+      ]
+    },
+    "AND": {},
+    "OR": {},
+    "REMAINING": {
+      "placement": "direct child of flat AND branch; identical selector to COUNT siblings"
+    }
+  },
+  "objectives": [
+    "CUMULATIVE_FAIRNESS"
+  ],
+  "participation": [
+    "EQUAL",
+    "AVAILABILITY_WEIGHTED",
+    "CUSTOM_WEIGHTED"
+  ],
+  "metrics": [
+    "MAX_ABSOLUTE_PREFIX_DEVIATION",
+    "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+    "FINAL_ABSOLUTE_DEVIATION"
+  ],
+  "unsupported": [
+    "NOT",
+    "IMPLIES",
+    "COVERAGE",
+    "MINUTES",
+    "BURDEN_POINTS",
+    "EARLIEST_BALANCE",
+    "PARTIAL_DAY_ABSENCE"
+  ]
+}

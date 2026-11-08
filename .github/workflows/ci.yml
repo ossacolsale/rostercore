@@ -1,0 +1,58 @@
+name: Build and test
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  core:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: playground/package-lock.json
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: cpp-${{ runner.os }}-${{ runner.arch }}-ortools-9.15-json-3.12.0-schema-2.4.0-v1
+      - name: Bootstrap dependencies
+        run: python scripts/bootstrap.py --jobs 3
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${{ github.workspace }}/.deps/ortools" -DFETCHCONTENT_SOURCE_DIR_NLOHMANN_JSON="${{ github.workspace }}/.deps/json" -DFETCHCONTENT_SOURCE_DIR_JSON_SCHEMA="${{ github.workspace }}/.deps/json-schema-validator"
+      - name: Build
+        run: cmake --build build --config Release --parallel 3
+      - name: Core tests
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Verify generated contracts
+        shell: bash
+        run: |
+          python scripts/generate_schemas.py
+          git diff --exit-code -- schemas
+      - name: Build playground
+        working-directory: playground
+        run: |
+          npm ci
+          npm run build
+      - name: Install browser
+        if: runner.os == 'Linux'
+        working-directory: playground
+        run: npx playwright install --with-deps chromium
+      - name: API and browser integration tests
+        if: runner.os == 'Linux'
+        working-directory: playground
+        run: |
+          npm run test:server
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure() && runner.os == 'Linux'
+        with:
+          name: browser-test-evidence
+          path: playground/test-results

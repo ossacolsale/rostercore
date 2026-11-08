@@ -1,0 +1,21 @@
+# Implemented scope and limits · 0.1.0
+
+This is an executable first release for local evaluation. The four requested development phases are implemented; acceptance remains with the user. Public JSON contracts may evolve in future schema versions.
+
+Implemented: C++20 library/CLI; CP-SAT; strict schema/semantic validation; generic types/groups/attributes; multi-interval and overnight shifts; exclusions/ranges/ISO weeks; recurring full-day absence and intersecting shift domains; cardinality, nested AND/OR and conservative branch-local REMAINING; cumulative rational COUNT fairness with three participation rules/metrics, multiple priorities and history; independent verification; append-only prefix consolidation; explicit historical-context rebuilding; revision-safe policy import/drafts/mapping; HR events/tombstones/snapshots/protected-work checks; local visual configuration, recursive constraints, import preview/confirmation, schedule/fairness results, publication, comparison and JSON exchange.
+
+Explicit limitations:
+
+- NOT/IMPLIES, hourly presence coverage, MINUTES/BURDEN_POINTS, EARLIEST_BALANCE and operational partial-day leave are rejected. No generic labor-law, minimum-rest or maximum-hours rule is implied. Consecutive work intervals are checked for overlap.
+- REMAINING must be directly inside a flat AND branch with COUNT siblings using identical selectors. Such branches can appear inside arbitrary AND/OR trees. Ambiguous cross-level/mixed-selector forms are rejected rather than expanded exponentially.
+- Time is civil wall-clock time. The timezone label is preserved and its syntax checked; no timezone database lookup, DST conversion or actual elapsed-duration promise is made. COUNT is unaffected by hour-length changes.
+- Fairness uses produced assignment counts. Policies should express exact coverage when a fixed duty volume is required; a minimum-only requirement allows the optimizer to choose any feasible additional volume.
+- Exact rational LCM scaling can reject large/changing denominators or very large historical totals. This is an explicit numeric limit, not rounding. Splitting a horizon may help computational size but does not bypass historical exactness limits.
+- Historical objective changes require original dated workforce contexts. Rebuild cannot infer missing past availability, changed IDs or missing old groups. Retain identifiers used by history and supply compatible dated definitions; historical assignments themselves remain immutable.
+- Time limits may yield FEASIBLE/UNKNOWN, especially at larger scales or with multiple competing objectives. The measured benchmark includes these cases. No arbitrary latency guarantee is made. Model setup and verification are outside CP-SAT's interruptible search.
+- Playground persistence uses browser local storage and explicit JSON exports. It is a local engineering tool, without multi-user authentication, HR-provider connections, automatic background synchronization, database migrations or a public HTTP service. Reloaded scenarios survive; result comparisons are kept only during the current browser session. The UI supports schema depth through recursive editors, but deeply nested rules are most practical in advanced JSON mode.
+- Publishing in the playground protects assignments in the local scenario, without sending messages or calendars to external systems. Hosts own authoritative publication, durable persistence and synchronization.
+- Linux builds, CLI/API/browser tests and install packaging are verified locally. Windows/macOS source builds and tests are configured in CI; their results must be observed after pushing. No unexecuted platform build is claimed to have passed. Source builds of OR-Tools can take substantial time and need network access.
+- Infeasibility assumption sets are sufficient and need not be minimal. The verifier independently checks feasibility and accounting; proof of optimality is provided by CP-SAT's phase statuses.
+
+Future work should follow observed user needs: richer temporal constraints/coverage, better large-instance performance, compact long-term history without losing reconstructibility, partial-day HR semantics, a stable C ABI, richer graphical dependency activation and durable multi-scenario persistence.

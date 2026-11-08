@@ -1,0 +1,81 @@
+{
+  "format": "rostercore.planning-policy",
+  "schemaVersion": 1,
+  "engineVersion": "0.1.0",
+  "operation": "REPLACE",
+  "policy": {
+    "id": "closing-fairness",
+    "label": "Closing fairness, revised",
+    "revision": 2,
+    "active": true,
+    "draft": false,
+    "dependencies": [],
+    "objective": {
+      "id": "closing-count",
+      "label": "Closing duties",
+      "type": "CUMULATIVE_FAIRNESS",
+      "mode": "CONTINUOUS_BALANCED",
+      "measure": "COUNT",
+      "selector": {
+        "typeIds": [
+          "staff"
+        ]
+      },
+      "shiftIds": [
+        "closing"
+      ],
+      "participation": "EQUAL",
+      "metrics": [
+        "MAX_ABSOLUTE_PREFIX_DEVIATION",
+        "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+        "FINAL_ABSOLUTE_DEVIATION"
+      ],
+      "priority": 0
+    },
+    "constraints": [
+      {
+        "id": "daily-coverage",
+        "label": "One closing, at least one regular, rest off",
+        "expression": {
+          "op": "AND",
+          "children": [
+            {
+              "op": "COUNT",
+              "selector": {
+                "typeIds": [
+                  "staff"
+                ]
+              },
+              "shiftId": "closing",
+              "comparison": "EQ",
+              "count": 1
+            },
+            {
+              "op": "COUNT",
+              "selector": {
+                "typeIds": [
+                  "staff"
+                ]
+              },
+              "shiftId": "regular",
+              "comparison": "GE",
+              "count": 1
+            },
+            {
+              "op": "REMAINING",
+              "selector": {
+                "typeIds": [
+                  "staff"
+                ]
+              },
+              "shiftId": "off"
+            }
+          ]
+        }
+      }
+    ],
+    "sharedConstraintIds": [],
+    "constraintSetIds": []
+  },
+  "expectedRevision": 1
+}

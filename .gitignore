@@ -1,0 +1,13 @@
+.deps/
+build/
+node_modules/
+dist/
+playground/test-results/
+playground/playwright-report/
+*.local
+*.log
+.DS_Store
+
+*.tsbuildinfo
+__pycache__/
+*.pyc

@@ -1,0 +1,6 @@
+{
+ "name":"rostercore-playground","version":"0.1.0","private":true,"type":"module",
+ "scripts":{"dev":"node server.mjs","start":"node server.mjs --production","build":"tsc -b && vite build","test:e2e":"playwright test","test:server":"node --test tests/server.test.mjs"},
+ "dependencies":{"react":"19.2.0","react-dom":"19.2.0"},
+ "devDependencies":{"@playwright/test":"1.56.1","@types/node":"22.19.0","@types/react":"19.2.2","@types/react-dom":"19.2.2","@vitejs/plugin-react":"5.1.0","typescript":"5.9.3","vite":"7.2.2"}
+}

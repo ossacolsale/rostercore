@@ -1,0 +1,102 @@
+{
+  "platform": "Linux-7.2.0-070200-generic-x86_64-with-glibc2.43",
+  "python": "3.14.4",
+  "processor": "",
+  "engineVersion": "0.1.0",
+  "backendVersion": "9.15.6755",
+  "budgetSeconds": 8,
+  "workers": 1,
+  "seed": 42,
+  "results": [
+    {
+      "employees": 5,
+      "days": 14,
+      "status": "OPTIMAL",
+      "wallSeconds": 0.4365,
+      "engineSeconds": 0.409801892,
+      "assignments": 70,
+      "phases": [
+        {
+          "bestBoundScaled": 4.0,
+          "elapsedSeconds": 0.18492633800000002,
+          "metric": "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "policyId": "closing-fairness",
+          "scale": 5,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 5,
+            "numerator": 4
+          },
+          "valueScaled": 4
+        },
+        {
+          "bestBoundScaled": 120.0,
+          "elapsedSeconds": 0.14541072700000002,
+          "metric": "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "policyId": "closing-fairness",
+          "scale": 5,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 1,
+            "numerator": 24
+          },
+          "valueScaled": 120
+        },
+        {
+          "bestBoundScaled": 8.0,
+          "elapsedSeconds": 0.064646571,
+          "metric": "FINAL_ABSOLUTE_DEVIATION",
+          "policyId": "closing-fairness",
+          "scale": 5,
+          "status": "OPTIMAL",
+          "value": {
+            "denominator": 5,
+            "numerator": 8
+          },
+          "valueScaled": 8
+        }
+      ]
+    },
+    {
+      "employees": 15,
+      "days": 28,
+      "status": "FEASIBLE",
+      "wallSeconds": 8.0696,
+      "engineSeconds": 8.038956082,
+      "assignments": 420,
+      "phases": [
+        {
+          "bestBoundScaled": 12.0,
+          "elapsedSeconds": 8.001860569,
+          "metric": "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "policyId": "closing-fairness",
+          "scale": 15,
+          "status": "FEASIBLE",
+          "value": {
+            "denominator": 5,
+            "numerator": 11
+          },
+          "valueScaled": 33
+        }
+      ]
+    },
+    {
+      "employees": 40,
+      "days": 56,
+      "status": "UNKNOWN",
+      "wallSeconds": 8.3842,
+      "engineSeconds": 8.329358517,
+      "assignments": 0,
+      "phases": [
+        {
+          "bestBoundScaled": 0.0,
+          "elapsedSeconds": 8.197901496,
+          "metric": "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "policyId": "closing-fairness",
+          "scale": 40,
+          "status": "UNKNOWN"
+        }
+      ]
+    }
+  ]
+}

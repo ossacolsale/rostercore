@@ -1,0 +1,442 @@
+import { useState } from "react";
+import {
+  type Scenario,
+  type Result,
+  dates,
+  rational,
+  exact,
+  metricNames,
+  download,
+} from "./model";
+import { Text, EntityHeader } from "./editors";
+export type Run = (
+  action: string,
+  extra?: Record<string, unknown>,
+) => Promise<Result | undefined>;
+const colors = [
+  "#20766a",
+  "#cf7952",
+  "#647ec1",
+  "#a879ad",
+  "#b19b36",
+  "#53738a",
+  "#c56c83",
+  "#79a362",
+];
+export function Results({
+  s,
+  r,
+  previous,
+  stale,
+  run,
+  publish,
+}: {
+  s: Scenario;
+  r: Result;
+  previous?: Result;
+  stale: boolean;
+  run: Run;
+  publish: () => void;
+}) {
+  const [through, setThrough] = useState(s.calendar.end),
+    [objective, setObjective] = useState(0);
+  const days = dates(s.calendar.start, s.calendar.end),
+    report = r.fairness?.[objective];
+  const employee = (id: string) =>
+    s.employees.find((e) => e.id === id)?.label || id;
+  const assignments = new Map(
+    r.assignments?.map((a) => [`${a.employeeId}:${a.date}`, a.shiftId]),
+  );
+  const states = new Map(
+    r.calendarStates?.map((a) => [`${a.employeeId}:${a.date}`, a.state]),
+  );
+  const peak = Math.max(
+    1,
+    ...(report?.prefixes.flatMap((p) =>
+      p.employees.map((e) => Math.abs(rational(e.debt))),
+    ) || []),
+  );
+  const changed = previous?.assignments
+    ? r.assignments?.filter(
+        (a) =>
+          previous.assignments?.find(
+            (b) => a.employeeId === b.employeeId && a.date === b.date,
+          )?.shiftId !== a.shiftId,
+      ).length
+    : undefined;
+  return (
+    <>
+      <EntityHeader title="Schedule & fairness">
+        <span className={`status ${r.status.toLowerCase()}`}>{r.status}</span>
+      </EntityHeader>
+      {stale && (
+        <div className="notice">
+          Configuration changed since this solve. Results below use the saved
+          solve context. Generate again before publishing or consolidating.
+        </div>
+      )}
+      <div className="stats">
+        <div>
+          <span>Assignments</span>
+          <strong>{r.assignments?.length || 0}</strong>
+        </div>
+        <div>
+          <span>Solve time</span>
+          <strong>
+            {r.metadata?.elapsedSeconds.toFixed(3) || "—"}
+            <small> s</small>
+          </strong>
+        </div>
+        <div>
+          <span>Fairness objectives</span>
+          <strong>{r.fairness?.length || 0}</strong>
+        </div>
+        <div>
+          <span>Changed from previous run</span>
+          <strong>{changed ?? "—"}</strong>
+        </div>
+      </div>
+      {r.assignments && (
+        <>
+          <section className="panel">
+            <div className="section-head">
+              <h3>Assignment calendar</h3>
+              <button onClick={() => download("rostercore-result.json", r)}>
+                Export result JSON
+              </button>
+            </div>
+            <div className="legend">
+              {s.shifts.map((sh, i) => (
+                <span key={sh.id}>
+                  <i style={{ background: colors[i % colors.length] }} />
+                  {sh.label}
+                </span>
+              ))}
+              <span>— Absent / excluded</span>
+            </div>
+            <div className="table-scroll">
+              <table className="roster">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    {days.map((d) => (
+                      <th key={d}>
+                        <small>
+                          {new Date(d + "T12:00:00Z").toLocaleDateString(
+                            "en-GB",
+                            { weekday: "short", timeZone: "UTC" },
+                          )}
+                        </small>
+                        {d.slice(5)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {s.employees.map((e) => (
+                    <tr key={e.id}>
+                      <th>
+                        {e.label}
+                        <small>{e.id}</small>
+                      </th>
+                      {days.map((d) => {
+                        const key = `${e.id}:${d}`,
+                          sh = s.shifts.find(
+                            (x) => x.id === assignments.get(key),
+                          ),
+                          index = s.shifts.findIndex((x) => x.id === sh?.id);
+                        return (
+                          <td key={d}>
+                            {sh ? (
+                              <span
+                                className={`shift-cell ${sh.kind === "OFF" ? "rest" : ""}`}
+                                style={{
+                                  borderColor: colors[index % colors.length],
+                                  color: colors[index % colors.length],
+                                }}
+                                title={
+                                  sh.intervals
+                                    .map(
+                                      (i) =>
+                                        `${i.start}–${i.end}${i.endDayOffset ? " +1 day" : ""}`,
+                                    )
+                                    .join(", ") || "Scheduled rest"
+                                }
+                              >
+                                {sh.label}
+                              </span>
+                            ) : (
+                              <span
+                                className="empty-cell"
+                                title={states.get(key) || "No assignment"}
+                              >
+                                {states.get(key) === "ABSENT"
+                                  ? "Absent"
+                                  : states.get(key) === "EXCLUDED"
+                                    ? "Excluded"
+                                    : "—"}
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  {s.shifts.map((sh) => (
+                    <tr key={sh.id}>
+                      <th>{sh.label} coverage</th>
+                      {days.map((d) => (
+                        <td key={d}>
+                          {r.assignments?.filter(
+                            (a) => a.date === d && a.shiftId === sh.id,
+                          ).length || 0}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tfoot>
+              </table>
+            </div>
+          </section>
+          {!!r.fairness?.length && (
+            <section className="panel">
+              <div className="section-head">
+                <h3>Continuous fairness</h3>
+                <select
+                  aria-label="Displayed fairness objective"
+                  value={objective}
+                  onChange={(e) => setObjective(Number(e.target.value))}
+                >
+                  {r.fairness.map((f, i) => (
+                    <option value={i} key={f.objectiveId}>
+                      {f.policyId}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="hint">
+                Debt = cumulative ideal quota − cumulative actual assignments. A
+                positive debt means the employee has received fewer duties than
+                their ideal share.
+              </p>
+              {report && (
+                <>
+                  <div className="stats compact">
+                    {Object.entries(report.metrics).map(([metric, v]) => (
+                      <div key={metric}>
+                        <span>{metricNames[metric] || metric}</span>
+                        <strong title={exact(v)}>
+                          {rational(v).toFixed(3)}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="chart">
+                    <svg
+                      viewBox="0 0 900 250"
+                      role="img"
+                      aria-label="Fairness debt trajectory"
+                    >
+                      <line
+                        x1="45"
+                        y1="120"
+                        x2="875"
+                        y2="120"
+                        stroke="#bdcbc6"
+                        strokeDasharray="4 5"
+                      />
+                      <text x="5" y="25">
+                        +{peak.toFixed(1)}
+                      </text>
+                      <text x="22" y="124">
+                        0
+                      </text>
+                      <text x="5" y="225">
+                        −{peak.toFixed(1)}
+                      </text>
+                      {report.employees.map((e, index) => {
+                        const points = report.prefixes
+                          .map(
+                            (p, i) =>
+                              `${45 + (i * 830) / Math.max(1, report.prefixes.length - 1)},${120 - (rational(p.employees.find((x) => x.employeeId === e.employeeId)?.debt) * 100) / peak}`,
+                          )
+                          .join(" ");
+                        return (
+                          <polyline
+                            key={e.employeeId}
+                            points={points}
+                            fill="none"
+                            stroke={colors[index % colors.length]}
+                            strokeWidth="2.5"
+                          >
+                            <title>{employee(e.employeeId)}</title>
+                          </polyline>
+                        );
+                      })}
+                      <text x="45" y="246">
+                        {report.prefixes[0]?.date}
+                      </text>
+                      <text x="800" y="246">
+                        {report.prefixes.at(-1)?.date}
+                      </text>
+                    </svg>
+                  </div>
+                  <div className="legend">
+                    {report.employees.map((e, i) => (
+                      <span key={e.employeeId}>
+                        <i style={{ background: colors[i % colors.length] }} />
+                        {employee(e.employeeId)}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Employee</th>
+                          <th>Historical actual</th>
+                          <th>Historical debt</th>
+                          <th>Cumulative ideal</th>
+                          <th>Cumulative actual</th>
+                          <th>Residual debt</th>
+                          <th>Previous debt</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {report.employees.map((e) => (
+                          <tr key={e.employeeId}>
+                            <th>{employee(e.employeeId)}</th>
+                            <td>{e.initialActual}</td>
+                            <td>{exact(e.initialDebt)}</td>
+                            <td>{exact(e.ideal)}</td>
+                            <td>{e.actual}</td>
+                            <td>
+                              <span
+                                className={
+                                  rational(e.debt) > 0 ? "positive" : "muted"
+                                }
+                              >
+                                {exact(e.debt)}
+                              </span>
+                            </td>
+                            <td>
+                              {exact(
+                                previous?.fairness
+                                  ?.find(
+                                    (f) => f.objectiveId === report.objectiveId,
+                                  )
+                                  ?.employees.find(
+                                    (x) => x.employeeId === e.employeeId,
+                                  )?.debt,
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <details>
+                    <summary>Daily quota and debt details</summary>
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Employee</th>
+                            <th>Ideal</th>
+                            <th>Actual</th>
+                            <th>Debt</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {report.prefixes.flatMap((p) =>
+                            p.employees.map((e) => (
+                              <tr key={p.date + e.employeeId}>
+                                <td>{p.date}</td>
+                                <td>{employee(e.employeeId)}</td>
+                                <td>{exact(e.ideal)}</td>
+                                <td>{e.actual}</td>
+                                <td>{exact(e.debt)}</td>
+                              </tr>
+                            )),
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                </>
+              )}
+            </section>
+          )}
+          <section className="panel">
+            <h3>Verify, publish & roll forward</h3>
+            <p className="hint">
+              Publishing protects these assignments from silent changes.
+              Consolidating appends the selected prefix to history and advances
+              the planning start date. Export your scenario to keep a portable
+              backup.
+            </p>
+            <div className="row">
+              <button
+                disabled={stale}
+                onClick={() => run("verify", { result: r })}
+              >
+                Verify independently
+              </button>
+              <button disabled={stale} onClick={publish}>
+                Publish assignments locally
+              </button>
+              <Text
+                label="Consolidate through"
+                type="date"
+                value={through}
+                onChange={setThrough}
+              />
+              <button
+                disabled={stale}
+                onClick={() => run("consolidate", { result: r, through })}
+              >
+                Consolidate prefix
+              </button>
+            </div>
+          </section>
+        </>
+      )}
+      <section className="panel">
+        <h3>Search evidence</h3>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Policy</th>
+                <th>Metric</th>
+                <th>Status</th>
+                <th>Value</th>
+                <th>Best bound / scale</th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.phases?.map((p, i) => (
+                <tr key={i}>
+                  <td>{p.policyId || "—"}</td>
+                  <td>{metricNames[p.metric] || p.metric}</td>
+                  <td>{p.status}</td>
+                  <td>{exact(p.value)}</td>
+                  <td>
+                    {p.bestBoundScaled ?? "—"} / {p.scale ?? "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <details>
+          <summary>Reproducibility metadata</summary>
+          <pre>{JSON.stringify(r.metadata, null, 2)}</pre>
+        </details>
+      </section>
+    </>
+  );
+}

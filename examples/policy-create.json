@@ -1,0 +1,54 @@
+{
+  "format": "rostercore.planning-policy",
+  "schemaVersion": 1,
+  "engineVersion": "0.1.0",
+  "operation": "CREATE",
+  "policy": {
+    "id": "regular-fairness",
+    "label": "Regular duty fairness",
+    "revision": 1,
+    "active": true,
+    "draft": false,
+    "dependencies": [],
+    "objective": {
+      "id": "regular-count",
+      "label": "Closing duties",
+      "type": "CUMULATIVE_FAIRNESS",
+      "mode": "CONTINUOUS_BALANCED",
+      "measure": "COUNT",
+      "selector": {
+        "typeIds": [
+          "staff"
+        ]
+      },
+      "shiftIds": [
+        "regular"
+      ],
+      "participation": "EQUAL",
+      "metrics": [
+        "MAX_ABSOLUTE_PREFIX_DEVIATION",
+        "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+        "FINAL_ABSOLUTE_DEVIATION"
+      ],
+      "priority": 1
+    },
+    "constraints": [
+      {
+        "id": "regular-minimum",
+        "expression": {
+          "op": "COUNT",
+          "selector": {
+            "typeIds": [
+              "staff"
+            ]
+          },
+          "shiftId": "regular",
+          "comparison": "GE",
+          "count": 1
+        }
+      }
+    ],
+    "sharedConstraintIds": [],
+    "constraintSetIds": []
+  }
+}

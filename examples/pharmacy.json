@@ -1,0 +1,202 @@
+{
+  "format": "rostercore.scenario",
+  "schemaVersion": 1,
+  "id": "pharmacy-demo",
+  "label": "Pharmacy reference \u00b7 closing rotation",
+  "revision": 1,
+  "employeeTypes": [
+    {
+      "id": "staff",
+      "label": "Qualified staff"
+    }
+  ],
+  "employees": [
+    {
+      "id": "e1",
+      "label": "Alex",
+      "typeId": "staff",
+      "attributes": {}
+    },
+    {
+      "id": "e2",
+      "label": "Blair",
+      "typeId": "staff",
+      "attributes": {}
+    },
+    {
+      "id": "e3",
+      "label": "Casey",
+      "typeId": "staff",
+      "attributes": {}
+    },
+    {
+      "id": "e4",
+      "label": "Drew",
+      "typeId": "staff",
+      "attributes": {}
+    },
+    {
+      "id": "e5",
+      "label": "Ellis",
+      "typeId": "staff",
+      "attributes": {}
+    }
+  ],
+  "groups": [
+    {
+      "id": "team",
+      "label": "Closing team",
+      "selector": {
+        "typeIds": [
+          "staff"
+        ]
+      }
+    }
+  ],
+  "shifts": [
+    {
+      "id": "regular",
+      "label": "Regular",
+      "kind": "WORKING",
+      "intervals": [
+        {
+          "start": "08:30",
+          "end": "13:00",
+          "endDayOffset": 0
+        },
+        {
+          "start": "16:30",
+          "end": "20:00",
+          "endDayOffset": 0
+        }
+      ]
+    },
+    {
+      "id": "closing",
+      "label": "Closing",
+      "kind": "WORKING",
+      "intervals": [
+        {
+          "start": "09:30",
+          "end": "13:30",
+          "endDayOffset": 0
+        },
+        {
+          "start": "16:30",
+          "end": "20:30",
+          "endDayOffset": 0
+        }
+      ]
+    },
+    {
+      "id": "off",
+      "label": "Rest",
+      "kind": "OFF",
+      "intervals": []
+    }
+  ],
+  "calendar": {
+    "start": "2026-01-26",
+    "end": "2026-02-08",
+    "timezone": "Europe/Rome",
+    "excludedDates": [],
+    "excludedRanges": [],
+    "excludedIsoWeeks": []
+  },
+  "availability": [],
+  "allowedShifts": [],
+  "constraints": [],
+  "baseConstraintIds": [],
+  "constraintSets": [],
+  "policies": [
+    {
+      "id": "closing-fairness",
+      "label": "Continuous closing fairness",
+      "revision": 1,
+      "active": true,
+      "draft": false,
+      "dependencies": [],
+      "objective": {
+        "id": "closing-count",
+        "label": "Closing duties",
+        "type": "CUMULATIVE_FAIRNESS",
+        "mode": "CONTINUOUS_BALANCED",
+        "measure": "COUNT",
+        "selector": {
+          "typeIds": [
+            "staff"
+          ]
+        },
+        "shiftIds": [
+          "closing"
+        ],
+        "participation": "EQUAL",
+        "metrics": [
+          "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "FINAL_ABSOLUTE_DEVIATION"
+        ],
+        "priority": 0
+      },
+      "constraints": [
+        {
+          "id": "daily-coverage",
+          "label": "One closing, at least one regular, rest off",
+          "expression": {
+            "op": "AND",
+            "children": [
+              {
+                "op": "COUNT",
+                "selector": {
+                  "typeIds": [
+                    "staff"
+                  ]
+                },
+                "shiftId": "closing",
+                "comparison": "EQ",
+                "count": 1
+              },
+              {
+                "op": "COUNT",
+                "selector": {
+                  "typeIds": [
+                    "staff"
+                  ]
+                },
+                "shiftId": "regular",
+                "comparison": "GE",
+                "count": 1
+              },
+              {
+                "op": "REMAINING",
+                "selector": {
+                  "typeIds": [
+                    "staff"
+                  ]
+                },
+                "shiftId": "off"
+              }
+            ]
+          }
+        }
+      ],
+      "sharedConstraintIds": [],
+      "constraintSetIds": []
+    }
+  ],
+  "history": {
+    "assignments": [],
+    "fairnessSnapshots": []
+  },
+  "publishedAssignments": [],
+  "hrState": {
+    "events": [],
+    "snapshotRevisions": {}
+  },
+  "search": {
+    "maxTimeSeconds": 20,
+    "seed": 42,
+    "workers": 1,
+    "deterministic": true
+  }
+}

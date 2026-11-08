@@ -1,0 +1,44 @@
+{
+  "format": "rostercore.planning-policy",
+  "schemaVersion": 1,
+  "engineVersion": "0.1.0",
+  "operation": "CREATE",
+  "policy": {
+    "id": "draft-policy",
+    "label": "Draft duty rotation",
+    "revision": 1,
+    "active": false,
+    "draft": true,
+    "dependencies": [
+      {
+        "symbol": "@duty",
+        "kind": "shift"
+      }
+    ],
+    "objective": {
+      "id": "draft-objective",
+      "label": "Closing duties",
+      "type": "CUMULATIVE_FAIRNESS",
+      "mode": "CONTINUOUS_BALANCED",
+      "measure": "MINUTES",
+      "selector": {
+        "typeIds": [
+          "staff"
+        ]
+      },
+      "shiftIds": [
+        "@duty"
+      ],
+      "participation": "EQUAL",
+      "metrics": [
+        "MAX_ABSOLUTE_PREFIX_DEVIATION",
+        "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+        "FINAL_ABSOLUTE_DEVIATION"
+      ],
+      "priority": 0
+    },
+    "constraints": [],
+    "sharedConstraintIds": [],
+    "constraintSetIds": []
+  }
+}

@@ -1,0 +1,618 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rostercore.org/schemas/v1/planning-policy.schema.json",
+  "type": "object",
+  "properties": {
+    "format": {
+      "enum": [
+        "rostercore.planning-policy"
+      ]
+    },
+    "schemaVersion": {
+      "enum": [
+        1
+      ]
+    },
+    "engineVersion": {
+      "enum": [
+        "0.1.0"
+      ]
+    },
+    "operation": {
+      "enum": [
+        "CREATE",
+        "REPLACE"
+      ]
+    },
+    "expectedRevision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+    },
+    "policy": {
+      "$ref": "#/definitions/policy"
+    }
+  },
+  "required": [
+    "format",
+    "schemaVersion",
+    "engineVersion",
+    "operation",
+    "policy"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "selector": {
+      "type": "object",
+      "properties": {
+        "employeeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "typeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "groupIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "boolean",
+              "number"
+            ]
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "weekdays": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "uniqueItems": true
+        },
+        "excludedDates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "interval": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+        },
+        "endDayOffset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "endDayOffset"
+      ],
+      "additionalProperties": false
+    },
+    "expression": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "COUNT"
+              ]
+            },
+            "selector": {
+              "$ref": "#/definitions/selector"
+            },
+            "shiftId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            },
+            "comparison": {
+              "enum": [
+                "EQ",
+                "GE",
+                "LE"
+              ]
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          },
+          "required": [
+            "op",
+            "selector",
+            "shiftId",
+            "comparison",
+            "count"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "REMAINING"
+              ]
+            },
+            "selector": {
+              "$ref": "#/definitions/selector"
+            },
+            "shiftId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            }
+          },
+          "required": [
+            "op",
+            "selector",
+            "shiftId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "AND",
+                "OR"
+              ]
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/expression"
+              },
+              "minItems": 1,
+              "maxItems": 100
+            }
+          },
+          "required": [
+            "op",
+            "children"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "constraint": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "expression": {
+          "$ref": "#/definitions/expression"
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        }
+      },
+      "required": [
+        "id",
+        "expression"
+      ],
+      "additionalProperties": false
+    },
+    "objective": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "type": {
+          "enum": [
+            "CUMULATIVE_FAIRNESS"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "CONTINUOUS_BALANCED"
+          ]
+        },
+        "measure": {
+          "enum": [
+            "COUNT"
+          ]
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "shiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "participation": {
+          "enum": [
+            "EQUAL",
+            "AVAILABILITY_WEIGHTED",
+            "CUSTOM_WEIGHTED"
+          ]
+        },
+        "weights": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "MAX_ABSOLUTE_PREFIX_DEVIATION",
+              "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+              "FINAL_ABSOLUTE_DEVIATION"
+            ]
+          }
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "mode",
+        "measure",
+        "selector",
+        "shiftIds",
+        "participation",
+        "metrics",
+        "priority"
+      ],
+      "additionalProperties": false
+    },
+    "dependency": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "kind": {
+          "enum": [
+            "employee",
+            "type",
+            "group",
+            "shift",
+            "constraint",
+            "constraintSet"
+          ]
+        }
+      },
+      "required": [
+        "symbol",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "draft": {
+          "type": "boolean"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/dependency"
+          }
+        },
+        "objective": {
+          "$ref": "#/definitions/objective"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/constraint"
+          }
+        },
+        "sharedConstraintIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "constraintSetIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "revision",
+        "active",
+        "draft",
+        "dependencies",
+        "objective",
+        "constraints",
+        "sharedConstraintIds",
+        "constraintSetIds"
+      ],
+      "additionalProperties": false
+    },
+    "assignment": {
+      "type": "object",
+      "properties": {
+        "employeeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "shiftId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        }
+      },
+      "required": [
+        "employeeId",
+        "date",
+        "shiftId"
+      ],
+      "additionalProperties": false
+    },
+    "snapshot": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "objectiveId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "fingerprint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "weights": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          }
+        }
+      },
+      "required": [
+        "date",
+        "objectiveId",
+        "fingerprint",
+        "weights"
+      ],
+      "additionalProperties": false
+    },
+    "hrEvent": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "externalId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "employeeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "operation": {
+          "enum": [
+            "UPSERT",
+            "DELETE"
+          ]
+        },
+        "absenceType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "status": {
+          "enum": [
+            "REQUESTED",
+            "APPROVED",
+            "REJECTED"
+          ]
+        },
+        "start": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "partialIntervals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/interval"
+          }
+        }
+      },
+      "required": [
+        "eventId",
+        "source",
+        "externalId",
+        "employeeId",
+        "revision",
+        "operation",
+        "absenceType",
+        "status",
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
