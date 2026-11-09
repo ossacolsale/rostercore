@@ -13,6 +13,8 @@ The complete final browser run passed **29/29 tests in approximately 1.6 minutes
 
 Detailed acceptance mapping and reproduction commands are in `EXPORT_USABILITY.md`; supported time zones, font glyph limits, manual ICS import semantics and privacy/recovery distinctions are in `LIMITATIONS.md`.
 
+Release implementation commit `9eab532` passed the complete **Linux, Windows and macOS** matrix: [GitHub Actions run 42638451161](https://github.com/ossacolsale/rostercore/actions/runs/42638451161). All three platforms passed native tests, contract reproduction and frontend builds; Linux additionally passed the independent export parsers, both adapter modes and all 29 browser tests. The local production panel was restarted at `http://127.0.0.1:4317`; its native 0.5.0 context and local font endpoint were smoke-checked.
+
 ## Previous 0.4.0 release evidence
 
 
