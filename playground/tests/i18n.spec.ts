@@ -230,6 +230,11 @@ test("Italian catalogue covers UI keys and preserves interpolation parameters", 
     "notifications",
     "configuration-guide",
     "pattern-assignments",
+    "calendar-workspace",
+    "calendar-changes",
+    "calendar-view",
+    "export-dialog",
+    "work-completion",
   ]) {
     const text = await readFile(
       new URL(`../src/${name}.tsx`, import.meta.url),

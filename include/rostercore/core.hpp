@@ -8,7 +8,7 @@
 #include <vector>
 namespace rostercore {
 using Json = nlohmann::json;
-inline constexpr auto version = "0.4.0";
+inline constexpr auto version = "0.5.0";
 struct Error : std::runtime_error {
   std::string code, path;
   Error(std::string c, std::string p, std::string m)
@@ -86,6 +86,8 @@ Json configurationDiagnostics(const Json &);
 Json regenerate(const Json &, const Json &);
 Json importScenario(const Json &, const Json &, bool dryRun);
 Json applyChangeSet(const Json &, const Json &, bool dryRun);
+Json calendarView(const Json &, const Json &);
+std::string calendarViewCsv(const Json &);
 Json archiveOperation(const Json &, const Json &);
 std::string integrityHash(const Json &);
 std::string configurationHash(const Json &);

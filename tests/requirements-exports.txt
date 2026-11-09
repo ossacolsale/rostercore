@@ -1,0 +1,3 @@
+# Independent parsers used only by the generated-file acceptance tests.
+pypdf==7.0.0
+icalendar==7.3.0

@@ -334,6 +334,7 @@ const server = http.createServer(async (req, res) => {
       ".html": "text/html; charset=utf-8",
       ".js": "text/javascript",
       ".css": "text/css",
+      ".ttf": "font/ttf",
       ".svg": "image/svg+xml",
       ".json": "application/json",
     };

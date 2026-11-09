@@ -427,5 +427,16 @@ export function planningSignature(s: Scenario, result?: Result) {
     if (!(copy as unknown as Record<string, unknown>)[key])
       (copy as unknown as Record<string, unknown>)[key] = [];
   copy.calendar.closures ??= [];
-  return JSON.stringify(copy);
+  // Native responses sort object keys; a serialization-order change is not a planning change.
+  const stable = (value: unknown): unknown =>
+    Array.isArray(value)
+      ? value.map(stable)
+      : value && typeof value === "object"
+        ? Object.fromEntries(
+            Object.entries(value)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([key, item]) => [key, stable(item)]),
+          )
+        : value;
+  return JSON.stringify(stable(copy));
 }

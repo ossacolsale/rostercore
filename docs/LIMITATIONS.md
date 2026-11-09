@@ -1,4 +1,4 @@
-# Implemented scope and limits · 0.4.0
+# Implemented scope and limits · 0.5.0
 
 RosterCore is runnable for local evaluation. Schema-1 scenarios remain accepted; explicit migration adds schema-4 catalogues while preserving IDs and history. See `EVOLUTION.md` for the evolution contract and `TEST_REPORT.md` for executed evidence.
 
@@ -22,3 +22,10 @@ Automatic rules do not imply a mandatory arrangement: no match preserves unrestr
 0.4 adds default question-oriented simple mode, typed complete configuration/change-set exchange, canonical contextual archives/backups, reviewed lifecycle/history rebuilding, combined burden categories and explicit hard/soft calendar or actual-normal-work spacing. Archive hashes detect mismatched contents and are not authentication or real-world attendance evidence. Confirm only work that actually occurred. Rebuilding quotas needs original dated contexts; archived contexts cannot invent missing definitions or historical eligibility. Legacy tagged snapshots lack resolved-target membership evidence and require explicit review/rebuild when categories change. Hard-rule configuration previews establish structural consistency; generation still determines global feasibility.
 
 The bounded spacing penalty evaluates all close pairs, not an unbounded maximize-distance objective. A calendar gap is date distance; a normal-work gap counts only actual intervening configured normal WORKING assignments. Spacing pair compilation is capped at two million pairs per rule and 100 rules. Search improvement restarts with hints and may retain the existing verified schedule; it does not resume CP-SAT's internal state. User acceptance remains necessary for operational policy, contract and labor-law choices.
+
+## Calendar files
+
+- PDF uses bundled DejaVu Sans at readable fixed sizes and paginates/bands oversized grids. Glyphs absent from that font cause an explicit error; CSV/ICS remain Unicode alternatives. Very large selections can produce many pages; preview reports the actual count. Export runs locally with no cloud dependency.
+- ICS uses true UTC instants produced by the existing native UTC/Europe-Rome resolver, including explicit DST folds and overnight end dates. Other or unresolved zones fail ICS export; civil-time PDF/CSV remain available. Manual import is not synchronization, does not guarantee calendar-app deletion of missing events, and cannot turn a filtered export into an authoritative history source.
+- Default absence labels are generic. Explicitly authorized detailed exports use only existing approved HR absence types; no missing reason is inferred. The archive JSON/backup intentionally includes complete recovery data and is not a privacy-filtered sharing format.
+- Quick contract changes target configured enumeration attributes; other attribute types and arbitrary compound rules remain available through Advanced mode or reviewed typed AI changes. Standard-hour changes create future dated variants; native hard-rule and protected-history guards remain mandatory.

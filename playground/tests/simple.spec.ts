@@ -294,7 +294,9 @@ test("configure a ten-person pharmacy-like team, responsibility coverage and com
   await expect(
     current(page).getByRole("heading", { name: "Assignment calendar" }),
   ).toBeVisible({ timeout: 45000 });
-  await expect(current(page).locator(".archive-list article")).toHaveCount(1);
+  await expect(current(page).locator(".archive-list article")).toHaveCount(1, {
+    timeout: 45000,
+  });
   const data = await page.evaluate(
     () => JSON.parse(localStorage.getItem("rostercore.archives.v1")!)[0],
   );
@@ -337,6 +339,9 @@ test("saved calendars survive reload and full backup restore without duplicate h
   });
   await page.reload();
   await current(page)
+    .getByText("Saved calendars and recovery", { exact: true })
+    .click();
+  await current(page)
     .getByRole("button", { name: "Open calendar", exact: true })
     .click();
   await expect(
@@ -355,7 +360,8 @@ test("saved calendars survive reload and full backup restore without duplicate h
   await expect(card.locator(".badge").first()).toHaveText("PUBLISHED");
   await card
     .getByLabel("Actually worked through", { exact: true })
-    .fill("2026-11-13");
+    .fill("2026-11-09");
+  await card.getByLabel("I confirm these shifts were actually worked").check();
   await card.getByRole("button", { name: "Confirm completed work" }).click();
   await page
     .getByRole("dialog")
@@ -375,6 +381,9 @@ test("saved calendars survive reload and full backup restore without duplicate h
   const ctx = await browser.newContext({ baseURL: "http://127.0.0.1:4318" });
   const fresh = await ctx.newPage();
   await fresh.goto("/");
+  await current(fresh)
+    .getByText("Saved calendars and recovery", { exact: true })
+    .click();
   await current(fresh)
     .getByLabel("Import a calendar or backup", { exact: true })
     .setInputFiles({
@@ -405,6 +414,9 @@ test("AI package minimizes personal data and typed updates require explicit prev
   page,
 }) => {
   await page.goto("/");
+  await current(page)
+    .getByRole("button", { name: "Ask AI for help", exact: true })
+    .click();
   const event = page.waitForEvent("download");
   await current(page)
     .getByRole("button", { name: "Prepare configuration for AI" })
@@ -423,6 +435,7 @@ test("AI package minimizes personal data and typed updates require explicit prev
     new URL("../../AI_EXAMPLES/02-anna-part-time.json", import.meta.url),
     "utf8",
   );
+  await current(page).getByText("Paste a JSON answer", { exact: true }).click();
   await current(page)
     .getByLabel("Complete scenario or scenario change-set JSON", {
       exact: true,

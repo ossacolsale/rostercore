@@ -417,15 +417,26 @@ Json regenerate(const Json &scenario, const Json &request) {
         "Regeneration requires from, previousScenario and previousResult");
   for (auto it = request.begin(); it != request.end(); ++it)
     if (it.key() != "from" && it.key() != "previousScenario" &&
-        it.key() != "previousResult" && it.key() != "stabilityPriority")
+        it.key() != "previousResult" && it.key() != "stabilityPriority" &&
+        it.key() != "previousScenarioEncoding")
       throw Error("SCHEMA", "/", "Unknown regeneration property: " + it.key());
   auto previous = request["previousResult"];
-  auto checked = verify(request["previousScenario"], previous);
+  auto previousScenario = request["previousScenario"];
+  if (request.contains("previousScenarioEncoding")) {
+    auto original =
+        Json::parse(request["previousScenarioEncoding"].get<std::string>());
+    if (integrityHash(original) != integrityHash(previousScenario))
+      throw Error(
+          "CONFIGURATION_MISMATCH", "/previousScenarioEncoding",
+          "Original encoded scenario differs from its readable context");
+    previousScenario = original;
+  }
+  auto checked = verify(previousScenario, previous);
   if (checked["status"] != "VERIFIED")
     return checked;
   if (previous.value("metadata", Json::object())
           .value("configurationHash", "") !=
-      configurationHash(request["previousScenario"]))
+      configurationHash(previousScenario))
     throw Error("CONFIGURATION_MISMATCH", "/previousResult",
                 "Previous result does not match its supplied scenario");
   int from = day(request["from"]);

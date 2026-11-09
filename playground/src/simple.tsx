@@ -1,3 +1,4 @@
+import { CalendarWorkspace } from "./calendar-workspace";
 import { AIConfiguration } from "./ai-configuration";
 import { useState, type ComponentProps } from "react";
 import {
@@ -192,8 +193,10 @@ export function SimplePanel({
   archives,
   publish,
   compare,
+  validated = false,
 }: {
   s: Scenario;
+  validated?: boolean;
   update: Update;
   replace: (s: Scenario) => void;
   solved?: { scenario: Scenario; result: Result; archiveId?: string };
@@ -235,13 +238,15 @@ export function SimplePanel({
     <div className="simple-workspace">
       <div className="simple-heading">
         <div>
-          <span className="pill">{t("SIMPLE SETUP")}</span>
+          {step < 5 && <span className="pill">{t("SIMPLE SETUP")}</span>}
           <h1>{s.label}</h1>
-          <p>
-            {t(
-              "Answer six everyday questions. The calendar uses the same rules and solver as advanced mode.",
-            )}
-          </p>
+          {step < 5 && (
+            <p>
+              {t(
+                "Answer six everyday questions. The calendar uses the same rules and solver as advanced mode.",
+              )}
+            </p>
+          )}
         </div>
         <button onClick={() => setRestart(true)}>
           {t("Start a new scenario")}
@@ -699,45 +704,32 @@ export function SimplePanel({
       {step === 4 && <Distribution s={s} edit={edit} review={review} />}
       {step === 5 && (
         <>
-          <section className="panel">
-            <h2>{t(questions[5])}</h2>
-            <p>
-              {t(
-                "Configure your team and coverage, then generate a calendar. Save, publish, revise and confirm actual work below.",
-              )}
-            </p>
-            <div className="row">
-              <button
-                className="primary"
-                disabled={busy}
-                onClick={() => run("solve")}
-              >
-                {t("Generate schedule")}
-              </button>
-              <button onClick={() => download(`${s.id}.scenario.json`, s)}>
-                {t("Export current scenario")}
-              </button>
-            </div>
-          </section>
-          {solved && (
-            <Results
-              s={solved.scenario}
-              r={solved.result}
-              previous={previous}
-              stale={stale}
-              run={run}
-              publish={publish}
-            />
-          )}
-          <AIConfiguration s={s} run={run} busy={busy} />
-          <ScheduleLibrary
-            s={s}
+          <CalendarWorkspace
+            s={solved?.scenario ?? s}
+            r={solved?.result}
+            currentScenario={s}
+            archive={archives.find((a) => a.id === solved?.archiveId)}
             archives={archives}
-            activeId={solved?.archiveId}
+            previous={previous}
+            stale={stale}
+            busy={busy}
             run={run}
-            comparisonScenarioId={solved?.scenario.id}
-            onCompare={compare}
+            publish={publish}
+            simple
+            validated={validated}
+            onConfigure={() => setStep(0)}
           />
+          <details className="saved-calendars">
+            <summary>{t("Saved calendars and recovery")}</summary>
+            <ScheduleLibrary
+              s={s}
+              archives={archives}
+              activeId={solved?.archiveId}
+              run={run}
+              comparisonScenarioId={solved?.scenario.id}
+              onCompare={compare}
+            />
+          </details>
         </>
       )}
       {step < 5 && (

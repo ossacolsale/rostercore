@@ -7,7 +7,7 @@ RosterCore generates workforce schedules from declarative rules using a C++20 en
 Designed for integration into desktop applications and backend services, RosterCore aims to remain independent of any specific industry. Pharmacies are the initial reference use case, but the model is intended for healthcare, retail, hospitality, manufacturing, and other shift-based workplaces.
 
 > [!IMPORTANT]
-> **Version 0.4.0 — ready for local evaluation.** The native CLI and visual playground run real optimization and verify returned assignments. This is an initial release with explicit limits, not a certified HR system. See [implemented scope and limitations](docs/LIMITATIONS.md).
+> **Version 0.5.0 — ready for local evaluation.** The native CLI and visual playground run real optimization and verify returned assignments. This is an initial release with explicit limits, not a certified HR system. See [implemented scope and limitations](docs/LIMITATIONS.md).
 
 The web panel opens in **Simple** mode: people → opening days → hours → required coverage → fair distribution → calendar. Switch to **Advanced** at any time without converting your data. English and Italian are available from the language selector. Generated calendars are saved with their exact context; publish future plans, explicitly confirm completed prefixes, export portable backups and create revisions without replacing the original calendar.
 
@@ -38,6 +38,16 @@ RosterCore implements **continuous, history-aware fairness**: it will optimize f
 - **Transparent results:** solver status, validation errors, fairness metrics, and reproducibility metadata.
 
 See [public contracts and commands](docs/API.md), [architecture and semantics](docs/ARCHITECTURE.md), and [test evidence](docs/TEST_REPORT.md).
+
+## Daily calendar and exports
+
+Simple mode opens on the calendar: generate, modify planning, export and publish. Optional duty counts and diagnostics stay closed until needed; Advanced mode retains complete fairness metrics, search evidence and controls. The language and Simple mode / Advanced mode selectors share the header.
+
+**Export calendar** is available on the current calendar and every saved archive. Choose people, dated roles/groups, an inclusive period, working shifts and independent availability/rest/holiday filters. Hide normal work explicitly without changing assignments. PDF offers A4/A3, compact or actual-hour cells, weekly/monthly grids or person lists, repeated headings and a matching pagination preview. ICS offers collective or private personal files (ZIP for several people), with separate events for split intervals. CSV uses the same native view. Full JSON always saves the complete original canonical archive, including people outside the current filter.
+
+**Modify planning** supports reviewed absence, closure, future-hour, colleague, contract and pattern changes, followed by future regeneration. A protected published period requires an explicit revision proposal. Publication protects plans; **Record work performed** separately requires a past/current actual-work prefix and confirmation. Saved calendars and recovery contains portable backup/import and historical continuity tools.
+
+**Ask AI for help** prepares a local, scoped request to copy or download for an assistant of your choice. Import its typed answer, read the human description and explicitly confirm it. No external AI service is called. See [export semantics and limitations](docs/EXPORT_USABILITY.md).
 
 ## How the model fits together
 

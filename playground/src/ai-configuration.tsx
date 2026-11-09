@@ -1,145 +1,236 @@
 import { useState } from "react";
 import { type Scenario, type Result, download } from "./model";
-import { type Run } from "./results";
+import type { Run } from "./results";
+import type { ScheduleArchive } from "./archives";
 import { ReviewDialog } from "./pattern-assignments";
 import { useI18n } from "./i18n";
-import { notifyError,notifyResult } from "./notifications";
+import { notifyError, notifyResult } from "./notifications";
 import { coreAction } from "./api";
+import { summarizeChanges } from "./change-summary";
+import {
+  type ChangeSet,
+  type ChangeReview,
+  reviewChange,
+  applyReviewedChange,
+  proposedCalendar,
+} from "./change-review";
+export type AIScope = {
+  start: string;
+  end: string;
+  employeeIds: string[];
+  shiftIds: string[];
+  diagnostics: string[];
+};
 export function AIConfiguration({
   s,
   run,
   busy,
+  scope,
+  archives = [],
 }: {
   s: Scenario;
   run: Run;
   busy: boolean;
+  scope?: AIScope;
+  archives?: ScheduleArchive[];
 }) {
-  const { t } = useI18n();
+  const { t, diagnostic } = useI18n();
   const [text, setText] = useState(""),
+    [request, setRequest] = useState(""),
     [include, setInclude] = useState(false),
     [authorize, setAuthorize] = useState(false),
+    [working, setWorking] = useState(false),
+    [error, setError] = useState<Result>(),
     [pending, setPending] = useState<{
       action: string;
-      document: unknown;
+      document: Record<string, unknown>;
       result: Result;
       signature: string;
+      review?: ChangeReview;
     }>();
-  const parse = () => {
-    if (new Blob([text]).size > 8 * 1024 * 1024)
-      throw new Error("Input exceeds 8 MiB");
-    return JSON.parse(text);
+  const selected = scope ?? {
+    start: s.calendar.start,
+    end: s.calendar.end,
+    employeeIds: [],
+    shiftIds: [],
+    diagnostics: [],
   };
-  const preview = async () => {
+  const official = proposedCalendar(s, archives, selected.start);
+  const preview = async (proposal = false) => {
+    setWorking(true);
+    setError(undefined);
     try {
-      const d = parse();
-      let action = "change-set",
-        document = d;
-      if (d.format === "rostercore.scenario") {
-        action = "import-scenario";
-        document = {
+      if (new Blob([text]).size > 8 * 1024 * 1024)
+        throw new Error("Input exceeds 8 MiB");
+      const d = JSON.parse(text);
+      if (d.format === "rostercore.scenario-change-set") {
+        const document = {
+          ...d,
+          allowHardRuleChanges: authorize && d.allowHardRuleChanges === true,
+        } as ChangeSet;
+        const review = await reviewChange(
+          s,
+          document,
+          archives,
+          proposal && official
+            ? { archiveId: official.id, from: selected.start }
+            : undefined,
+        );
+        if (review.result.status === "PREVIEW")
+          setPending({
+            action: "change-set",
+            document: review.document,
+            result: review.result,
+            review,
+            signature: JSON.stringify(s),
+          });
+        else {
+          setError(review.result);
+          notifyResult(review.result, "change-set");
+        }
+      } else if (d.format === "rostercore.scenario") {
+        const document = {
           candidate: d,
           expectedRevision: s.revision,
           mode: d.id === s.id ? "REPLACE_CURRENT" : "NEW_SCENARIO",
           allowHardRuleChanges: authorize,
         };
-      } else if (d.format === "rostercore.scenario-change-set") {
-        document = {
-          ...d,
-          allowHardRuleChanges: authorize && d.allowHardRuleChanges === true,
-        };
+        const result = await run("import-scenario", { document, apply: false });
+        if (result?.status === "PREVIEW")
+          setPending({
+            action: "import-scenario",
+            document,
+            result,
+            signature: JSON.stringify(s),
+          });
       } else
         throw new Error(
           "Choose a complete scenario or a typed scenario-change-set. Use the calendar library for archives and backups.",
         );
-      const result = await run(action, { document, apply: false });
-      if (result?.status === "PREVIEW")
-        setPending({ action, document, result, signature: JSON.stringify(s) });
     } catch (e) {
       notifyError((e as Error).message);
+    } finally {
+      setWorking(false);
     }
   };
-  const resources = async () => {
+  const resources = async (copy = false) => {
+    setWorking(true);
     try {
-      const context = await coreAction("context", s, {}, { silent: true });
-      if (context.status !== "CONTEXT"){notifyResult(context,"context");return;}
+      const result = await coreAction("context", s, {}, { silent: true });
+      if (result.status !== "CONTEXT") {
+        notifyResult(result, "context");
+        return;
+      }
       const response = await fetch("/api/ai-resources");
       if (!response.ok) throw new Error("Cannot load AI authoring resources");
       const resources = await response.json();
-      download(`${s.id}.ai-package.json`, {
+      const context = structuredClone(result.context) as Record<
+        string,
+        unknown
+      >;
+      if (selected.employeeIds.length && Array.isArray(context.employees))
+        context.employees = context.employees.filter((e: { id: string }) =>
+          selected.employeeIds.includes(e.id),
+        );
+      const packet = {
+        ...resources,
         format: "rostercore.ai-package",
         schemaVersion: 1,
-        engineVersion: resources.engineVersion,
         createdAt: new Date().toISOString(),
+        request,
+        scope: selected,
         instructions:
-          "Return either a complete rostercore.scenario (new distinct scenario ID) or a typed rostercore.scenario-change-set using the exact scenarioId and expectedRevision. Do not execute or invent operators. Use explicit referenceDate and effective dates. Preserve unspecified employee fields and protected history. Do not publish or confirm work. Changes are validated and explicitly confirmed locally.",
-        ...resources,
-        context: context.context,
+          "Return a typed rostercore.scenario-change-set for the exact scenarioId, expectedRevision and entity hashes, or a complete new scenario with a distinct ID. Apply only the requested change within the selected scope. Preserve protected work and unspecified fields. Never publish or confirm work. The user validates, previews and explicitly confirms changes locally.",
+        context,
         ...(include ? { scenario: s } : {}),
         personalDataIncluded: include,
         privacy:
-          "Default context omits employee display names, leave records, actual assignments and unused attributes. Review custom labels and business information before sharing.",
-      });
+          "Default context omits names, leave records, actual assignments and full history. Review business labels and your own request before sharing. Personal data is included only when explicitly selected.",
+      };
+      if (copy)
+        await navigator.clipboard.writeText(JSON.stringify(packet, null, 2));
+      else download(`${s.id}.ai-package.json`, packet);
     } catch (e) {
       notifyError((e as Error).message);
+    } finally {
+      setWorking(false);
     }
   };
   const after = (pending?.result.preview as { scenario?: Scenario } | undefined)
-    ?.scenario as Scenario | undefined;
-  const collections = [
-    "employeeTypes",
-    "attributeDefinitions",
-    "groups",
-    "constraints",
-    "constraintSets",
-    "employees",
-    "shifts",
-    "workPatterns",
-    "workPatternAssignmentRules",
-    "weekProfiles",
-    "dutyRequirements",
-    "allowedShifts",
-    "policies",
-    "temporalRules",
-    "spacingRules",
-    "availability",
-  ] as const;
+    ?.scenario;
+  const descriptions =
+    pending?.action === "change-set"
+      ? summarizeChanges(pending.document, s, t)
+      : after
+        ? [
+            t("Load configuration for {name}", { name: after.label }),
+            ...(
+              [
+                "employees",
+                "shifts",
+                "workPatterns",
+                "dutyRequirements",
+                "availability",
+                "policies",
+              ] as const
+            )
+              .filter((k) => JSON.stringify(s[k]) !== JSON.stringify(after[k]))
+              .map((k) =>
+                t("{section}: {before} before, {after} after", {
+                  section: t(k),
+                  before: s[k]?.length ?? 0,
+                  after: after[k]?.length ?? 0,
+                }),
+              ),
+          ]
+        : [];
   return (
     <section className="panel ai-configuration">
       <h2>{t("Create or update configuration with AI")}</h2>
       <p>
         {t(
-          "AI is optional. Export the supported model and guides, ask your own assistant for a JSON document, then review its changes here. Nothing is applied automatically.",
+          "AI is optional. Describe the change, prepare a package for your own assistant, then import and review its answer. Nothing is sent or applied automatically.",
         )}
       </p>
+      <label className="field">
+        <span>{t("What would you like to change?")}</span>
+        <textarea
+          rows={3}
+          value={request}
+          onChange={(e) => setRequest(e.target.value)}
+          placeholder={t("Describe the planning change in your own words")}
+        />
+      </label>
+      <p>
+        {selected.start} - {selected.end}
+        {selected.employeeIds.length
+          ? " · " +
+            selected.employeeIds
+              .map((id) => s.employees.find((e) => e.id === id)?.label ?? id)
+              .join(", ")
+          : ""}
+      </p>
       <div className="row">
-        <button disabled={busy} onClick={resources}>
+        <button disabled={busy || working} onClick={() => resources()}>
           {t("Prepare configuration for AI")}
         </button>
-        <label>
-          <input
-            type="checkbox"
-            checked={include}
-            onChange={(e) => setInclude(e.target.checked)}
-          />
-          {t("Include the full current scenario and personal data")}
-        </label>
+        <button disabled={busy || working} onClick={() => resources(true)}>
+          {t("Copy AI package")}
+        </button>
       </div>
+      <label>
+        <input
+          type="checkbox"
+          checked={include}
+          onChange={(e) => setInclude(e.target.checked)}
+        />
+        {t("Include the full current scenario and personal data")}
+      </label>
       <p className="hint">
         {t(
           "The default package omits employee names, leave records, actual assignments and unused attributes. Review custom labels before sharing.",
         )}
       </p>
-      <label className="field">
-        <span>{t("Complete scenario or scenario change-set JSON")}</span>
-        <textarea
-          rows={7}
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setPending(undefined);
-          }}
-        />
-      </label>
       <label className="button">
         {t("Choose a configuration file")}
         <input
@@ -158,37 +249,83 @@ export function AIConfiguration({
           }}
         />
       </label>
-      <div className="row">
-        <label>
-          <input
-            type="checkbox"
-            checked={authorize}
+      <details>
+        <summary>{t("Paste a JSON answer")}</summary>
+        <label className="field">
+          <span>{t("Complete scenario or scenario change-set JSON")}</span>
+          <textarea
+            rows={7}
+            value={text}
             onChange={(e) => {
-              setAuthorize(e.target.checked);
+              setText(e.target.value);
               setPending(undefined);
             }}
           />
-          {t(
-            "Explicitly authorize changes to calendar, definitions and hard rules",
-          )}
         </label>
-        <button disabled={busy || !text.trim()} onClick={preview}>
-          {t("Validate and preview configuration")}
-        </button>
-      </div>
+      </details>
+      <label>
+        <input
+          type="checkbox"
+          checked={authorize}
+          onChange={(e) => {
+            setAuthorize(e.target.checked);
+            setPending(undefined);
+          }}
+        />
+        {t(
+          "Explicitly authorize changes to calendar, definitions and hard rules",
+        )}
+      </label>
+      <button
+        disabled={busy || working || !text.trim()}
+        onClick={() => preview()}
+      >
+        {t("Validate and preview configuration")}
+      </button>
+      {error && (
+        <div role="alert">
+          {error.diagnostics.map((d, i) => (
+            <p key={i}>{diagnostic(d)}</p>
+          ))}
+          {official &&
+            error.diagnostics.some((d) =>
+              ["PROTECTED_ASSIGNMENT", "CLOSURE_PROTECTED_CONFLICT"].includes(
+                d.code,
+              ),
+            ) && (
+              <button onClick={() => preview(true)}>
+                {t("Preview as a revision proposal")}
+              </button>
+            )}
+        </div>
+      )}
       {pending && (
         <ReviewDialog
           title={t("Review configuration changes")}
           onCancel={() => setPending(undefined)}
           disabled={busy || pending.signature !== JSON.stringify(s)}
           onConfirm={async () => {
-            const r = await run(pending.action, {
-              document: pending.document,
-              apply: true,
-            });
+            const r = pending.review
+              ? await applyReviewedChange(pending.review, s, archives, run)
+              : await run(pending.action, {
+                  document: pending.document,
+                  apply: true,
+                });
             if (r?.status === "IMPORTED") setPending(undefined);
           }}
         >
+          <ul className="change-summary">
+            {descriptions.map((d, i) => (
+              <li key={i}>{d}</li>
+            ))}
+          </ul>
+          {pending.review?.proposal && (
+            <p className="notice">
+              {t(
+                "This creates a future revision proposal. The original publication remains official until its replacement is explicitly published.",
+              )}
+            </p>
+          )}
           <p>
             {t(
               "Review these differences before applying. Confirmed actual history and official assignments are protected; a conflicting published period requires a revision proposal first.",
@@ -202,106 +339,7 @@ export function AIConfiguration({
               )}
             </p>
           )}
-          {after && (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>{t("Configuration")}</th>
-                    <th>{t("Before")}</th>
-                    <th>{t("After")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {collections
-                    .filter(
-                      (k) => JSON.stringify(s[k]) !== JSON.stringify(after[k]),
-                    )
-                    .map((k) => (
-                      <tr key={k}>
-                        <td>{t(k)}</td>
-                        <td>{s[k]?.length ?? 0}</td>
-                        <td>{after[k]?.length ?? 0}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {after &&
-            collections.flatMap((k) =>
-              (s[k] ?? [])
-                .filter(
-                  (entity) =>
-                    !(after[k] as { id: string }[] | undefined)?.some(
-                      (x) => x.id === entity.id,
-                    ),
-                )
-                .map((entity) => (
-                  <p className="warning" key={"removed:" + k + entity.id}>
-                    {t("Removed")}: {t(k)} ·{" "}
-                    {"label" in entity ? String(entity.label) : entity.id}
-                  </p>
-                )),
-            )}
-          {after &&
-            (
-              [
-                "calendar",
-                "weekConfiguration",
-                "search",
-                "baseConstraintIds",
-                "dutyBindingMode",
-              ] as const
-            )
-              .filter((k) => JSON.stringify(s[k]) !== JSON.stringify(after[k]))
-              .map((k) => (
-                <details key={k}>
-                  <summary>{t(k)}</summary>
-                  <div className="change-diff">
-                    <pre>{JSON.stringify(s[k], null, 2)}</pre>
-                    <pre>{JSON.stringify(after[k], null, 2)}</pre>
-                  </div>
-                </details>
-              ))}
-          {after &&
-            collections.flatMap((k) =>
-              (after[k] ?? [])
-                .filter(
-                  (entity) =>
-                    JSON.stringify(
-                      (s[k] as { id: string }[] | undefined)?.find(
-                        (x) => x.id === entity.id,
-                      ),
-                    ) !== JSON.stringify(entity),
-                )
-                .map((entity) => (
-                  <details key={k + entity.id}>
-                    <summary>
-                      {t(k)}:{" "}
-                      {"label" in entity ? String(entity.label) : entity.id}
-                    </summary>
-                    <div className="change-diff">
-                      <pre>
-                        {JSON.stringify(
-                          (s[k] as { id: string }[] | undefined)?.find(
-                            (x) => x.id === entity.id,
-                          ) ?? null,
-                          null,
-                          2,
-                        )}
-                      </pre>
-                      <pre>{JSON.stringify(entity, null, 2)}</pre>
-                    </div>
-                  </details>
-                )),
-            )}
-          <p>
-            {t(
-              "After applying, regenerate the affected future dates. Existing calendars remain saved in the library.",
-            )}
-          </p>
-          <details className="advanced-only">
+          <details>
             <summary>{t("Technical preview")}</summary>
             <pre>
               {JSON.stringify(
@@ -313,6 +351,7 @@ export function AIConfiguration({
                 2,
               )}
             </pre>
+            <pre>{JSON.stringify(pending.document, null, 2)}</pre>
           </details>
         </ReviewDialog>
       )}

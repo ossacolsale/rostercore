@@ -8,8 +8,14 @@ Original RosterCore code is Apache-2.0; see the root LICENSE. Dependencies retai
 | nlohmann/json | 3.12.0 | MIT | Public JSON |
 | pboettch/json-schema-validator | 2.4.0 | MIT | JSON Schema draft-07 validation |
 | React / React DOM | 19.2.0 | MIT | Local UI |
-| Vite | 7.2.2 | MIT | UI tooling |
+| Vite | 7.3.7 | MIT | UI tooling |
 | TypeScript | 5.9.3 | Apache-2.0 | UI compilation |
+| pdf-lib | 1.17.1 | MIT | Offline PDF creation |
+| @pdf-lib/fontkit | 1.1.1 | MIT | Embedded Unicode font metrics/subsetting |
+| fflate | 0.8.3 | MIT | Personal calendar ZIP files |
+| DejaVu Sans | 2.37 | Bitstream Vera / public-domain DejaVu changes | Local export and preview fonts; full notice in `playground/public/fonts/DejaVu-LICENSE.txt` |
+| pypdf | 7.0.0 | BSD-3-Clause | Independent PDF acceptance tests only |
+| icalendar | 7.3.0 | BSD-2-Clause | Independent iCalendar acceptance tests only |
 | Playwright | 1.56.1 | Apache-2.0 | Browser tests |
 
 OR-Tools prebuilt distributions include additional libraries (Abseil, protobuf, RE2, compression and optimization libraries). Preserve their supplied licenses when packaging them. `scripts/bootstrap.py --source` disables optional SCIP/COIN-OR/HiGHS; CP-SAT remains the required backend. This project does not relicense third-party code.

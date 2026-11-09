@@ -89,6 +89,11 @@ function scheduleDismissal(n: Notice) {
     );
 }
 export function notifyMessage(message: string, kind: Kind = "SUCCESS") {
+  if (
+    kind === "SUCCESS" &&
+    localStorage.getItem("rostercore.mode.v1") !== "ADVANCED"
+  )
+    return;
   enqueue({ message, kind, key: kind + ":" + message });
 }
 export function notifyError(raw: string) {
@@ -134,6 +139,11 @@ export function notifyResult(result: Result, operation?: string) {
         : ["INSPECTED", "CONTEXT", "PREVIEW"].includes(result.status)
           ? "INFORMATION"
           : "SUCCESS";
+  if (
+    (kind === "SUCCESS" || kind === "INFORMATION") &&
+    localStorage.getItem("rostercore.mode.v1") !== "ADVANCED"
+  )
+    return;
   enqueue({
     kind,
     result,

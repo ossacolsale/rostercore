@@ -1,19 +1,18 @@
+import { CalendarWorkspace } from "./calendar-workspace";
+import type { ScheduleArchive } from "./archives";
 import { Quality } from "./quality";
 import { OperationalResults } from "./operational-results";
-import { isoMonday } from "./evolution-model";
 import { useI18n } from "./i18n";
 import { useState } from "react";
 import {
   type Scenario,
   type Assignment,
   type Result,
-  dates,
   rational,
   exact,
   metricNames,
-  download,
 } from "./model";
-import { Text, EntityHeader, Select } from "./editors";
+import { Text, EntityHeader } from "./editors";
 export type Run = (
   action: string,
   extra?: Record<string, unknown>,
@@ -28,7 +27,7 @@ const colors = [
   "#c56c83",
   "#79a362",
 ];
-export function Results({
+function ResultsDiagnostics({
   s,
   r,
   previous,
@@ -46,28 +45,9 @@ export function Results({
   const { t, locale } = useI18n();
   const [through, setThrough] = useState(s.calendar.end),
     [objective, setObjective] = useState(0);
-  const [view, setView] = useState("horizon"),
-    [focusDate, setFocusDate] = useState(s.calendar.start);
-  const allDays = dates(s.calendar.start, s.calendar.end);
-  const days = allDays.filter(
-      (d) =>
-        view === "horizon" ||
-        (view === "day" && d === focusDate) ||
-        (view === "week" && isoMonday(d) === isoMonday(focusDate)) ||
-        (view === "month" && d.slice(0, 7) === focusDate.slice(0, 7)),
-    ),
-    report = r.fairness?.[objective];
+  const report = r.fairness?.[objective];
   const employee = (id: string) =>
     s.employees.find((e) => e.id === id)?.label || id;
-  const assignments = new Map(
-    r.assignments?.map((a) => [`${a.employeeId}:${a.date}`, a.shiftId]),
-  );
-  const concrete = new Map(
-    r.assignments?.map((a) => [a.employeeId + ":" + a.date, a]),
-  );
-  const states = new Map(
-    r.calendarStates?.map((a) => [`${a.employeeId}:${a.date}`, a.state]),
-  );
   const peak = Math.max(
     1,
     ...(report?.prefixes.flatMap((p) =>
@@ -133,168 +113,6 @@ export function Results({
       </div>
       {r.assignments && (
         <>
-          <section className="panel">
-            <div className="section-head">
-              <h3>{t("Assignment calendar")}</h3>
-              <button onClick={() => download("rostercore-result.json", r)}>
-                {t("Export result JSON")}{" "}
-              </button>
-            </div>
-            <div className="row">
-              <Select
-                label={t("Calendar view")}
-                value={view}
-                options={[
-                  { id: "horizon", label: t("Whole horizon") },
-                  { id: "day", label: t("Day") },
-                  { id: "week", label: t("Week") },
-                  { id: "month", label: t("Month") },
-                ]}
-                onChange={setView}
-              />
-              {view !== "horizon" && (
-                <Text
-                  label={t("Focus date")}
-                  type="date"
-                  value={focusDate}
-                  onChange={setFocusDate}
-                />
-              )}
-            </div>
-            <div className="legend">
-              {s.shifts.map((sh, i) => (
-                <span key={sh.id}>
-                  <i style={{ background: colors[i % colors.length] }} />
-                  {sh.label}
-                </span>
-              ))}
-              <span>{t("— Absent / excluded")}</span>
-            </div>
-            <div className="table-scroll">
-              <table className="roster">
-                <thead>
-                  <tr>
-                    <th>{t("Employee")}</th>
-                    {days.map((d) => (
-                      <th key={d}>
-                        <small>
-                          {new Date(d + "T12:00:00Z").toLocaleDateString(
-                            locale,
-                            { weekday: "short", timeZone: "UTC" },
-                          )}
-                        </small>
-                        {new Date(d + "T12:00:00Z").toLocaleDateString(locale, {
-                          day: "2-digit",
-                          month: "2-digit",
-                          timeZone: "UTC",
-                        })}
-                        <small>
-                          {
-                            s.weekProfiles?.find(
-                              (p) =>
-                                p.id ===
-                                r.calendarDays?.find((c) => c.date === d)
-                                  ?.profileId,
-                            )?.label
-                          }
-                        </small>
-                        {r.calendarDays
-                          ?.find((c) => c.date === d)
-                          ?.holidays.map((h) => (
-                            <small
-                              className="holiday"
-                              key={h.id}
-                              title={h.source}
-                            >
-                              {t(h.label)}
-                            </small>
-                          ))}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {s.employees.map((e) => (
-                    <tr key={e.id}>
-                      <th>
-                        {e.label}
-                        <small>{e.id}</small>
-                      </th>
-                      {days.map((d) => {
-                        const key = `${e.id}:${d}`,
-                          sh = s.shifts.find(
-                            (x) => x.id === assignments.get(key),
-                          ),
-                          index = s.shifts.findIndex((x) => x.id === sh?.id);
-                        return (
-                          <td key={d}>
-                            {sh ? (
-                              <span
-                                className={`shift-cell ${sh.kind === "OFF" ? "rest" : ""}`}
-                                style={{
-                                  borderColor: colors[index % colors.length],
-                                  color: colors[index % colors.length],
-                                }}
-                                title={
-                                  (concrete.get(key)?.intervals || sh.intervals)
-                                    .map(
-                                      (i) =>
-                                        `${i.start}–${i.end}${i.endDayOffset ? t(" +1 day") : ""}`,
-                                    )
-                                    .join(", ") || t("Scheduled rest")
-                                }
-                              >
-                                {sh.label}
-                                <small>
-                                  {(
-                                    concrete.get(key)?.intervals || sh.intervals
-                                  )
-                                    .map(
-                                      (i) =>
-                                        `${i.start}–${i.end}${i.endDayOffset ? " +1" : ""}`,
-                                    )
-                                    .join(" · ")}
-                                </small>
-                              </span>
-                            ) : (
-                              <span
-                                className="empty-cell"
-                                title={t(states.get(key) || "No assignment")}
-                              >
-                                {states.get(key) === "ABSENT"
-                                  ? t("Absent")
-                                  : states.get(key) === "EXCLUDED"
-                                    ? t("Excluded")
-                                    : states.get(key) === "CLOSED"
-                                      ? t("Company closed")
-                                      : states.get(key) === "INACTIVE"
-                                        ? t("Not in service")
-                                        : "—"}
-                              </span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  {s.shifts.map((sh) => (
-                    <tr key={sh.id}>
-                      <th>{t("{shift} coverage", { shift: sh.label })}</th>
-                      {days.map((d) => (
-                        <td key={d}>
-                          {r.assignments?.filter(
-                            (a) => a.date === d && a.shiftId === sh.id,
-                          ).length || 0}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tfoot>
-              </table>
-            </div>
-          </section>
           {!!r.fairness?.length && (
             <section className="panel">
               <div className="section-head">
@@ -541,6 +359,29 @@ export function Results({
           <pre>{JSON.stringify(r.metadata, null, 2)}</pre>
         </details>
       </section>
+    </>
+  );
+}
+
+export function Results(props: {
+  s: Scenario;
+  r: Result;
+  previous?: Result;
+  stale: boolean;
+  run: Run;
+  publish: () => void;
+  archive?: ScheduleArchive;
+  archives: ScheduleArchive[];
+  currentScenario: Scenario;
+  busy: boolean;
+  simple?: boolean;
+  validated?: boolean;
+  onConfigure?: () => void;
+}) {
+  return (
+    <>
+      <CalendarWorkspace {...props} />
+      {!props.simple && <ResultsDiagnostics {...props} />}
     </>
   );
 }

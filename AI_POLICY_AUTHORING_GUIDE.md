@@ -1,6 +1,6 @@
 # RosterCore AI policy authoring guide
 
-Engine 0.4.0 · JSON Schema versions 1, 2, 3 and 4 · no AI service is required by RosterCore.
+Engine 0.5.0 · JSON Schema versions 1, 2, 3 and 4 · no AI service is required by RosterCore.
 
 Generate **one complete policy exchange document**, containing both an objective and its hard constraints. Never generate scripts, code, SQL, custom expressions or unknown JSON fields. The authoritative contracts are `schemas/planning-policy.schema.json`, `schemas/scenario.schema.json` and `schemas/operators.json`. The executable core validates all paths, including visual configuration.
 

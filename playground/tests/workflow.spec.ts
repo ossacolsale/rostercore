@@ -94,7 +94,7 @@ test("HR import reaches core and shows absence in a generated schedule", async (
     page
       .locator(".roster tbody tr")
       .first()
-      .getByText("Absent", { exact: true }),
+      .getByRole("button", {name:/Unavailable/}),
   ).toHaveCount(2);
 });
 test("foreign origins and arbitrary engine commands are rejected", async ({

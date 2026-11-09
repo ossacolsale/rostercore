@@ -1,3 +1,5 @@
+import { ExportDialog } from "./calendar-export-dialog";
+import { calendarToday } from "./work-completion";
 import { useState } from "react";
 import { type Scenario, type Result, download } from "./model";
 import { useI18n } from "./i18n";
@@ -14,6 +16,9 @@ export type ScheduleArchive = {
   configurationHash: string;
   state: "DRAFT" | "PUBLISHED" | "COMPLETED" | "SUPERSEDED";
   period: { start: string; end: string };
+  scenarioEncoding: string;
+  events: { state: string; at: string; completedThrough?: string }[];
+  publishedLocks: import("./model").Assignment[];
   scenario: Scenario;
   result: Result;
   createdAt: string;
@@ -54,7 +59,8 @@ export function ScheduleLibrary({
       preview: Record<string, unknown>;
     }>(),
     [incoming, setIncoming] = useState<unknown>(),
-    [mode, setMode] = useState("REFERENCE");
+    [mode, setMode] = useState("REFERENCE"),
+    [actualConfirmed, setActualConfirmed] = useState(false);
   const request = (data: ArchiveRequest, dryRun: boolean) => ({
     ...data,
     archives,
@@ -63,6 +69,22 @@ export function ScheduleLibrary({
     at: new Date().toISOString(),
   });
   const review = async (data: ArchiveRequest) => {
+    const incomingArchive = data.archive as ScheduleArchive | undefined;
+    const through =
+      data.operation === "COMPLETE"
+        ? String(data.through)
+        : data.mode === "COMPLETE"
+          ? incomingArchive?.completedThrough
+          : undefined;
+    if (
+      (data.operation === "COMPLETE" || data.mode === "COMPLETE") &&
+      (!through || through > calendarToday(s.calendar.timezone))
+    ) {
+      notifyError(
+        "Future work cannot be confirmed as completed. Choose a date on or before today.",
+      );
+      return;
+    }
     const document = request(data, true);
     const r = await run("archives", { document });
     if (r?.status === "PREVIEW")
@@ -179,18 +201,21 @@ export function ScheduleLibrary({
                   },
                   {
                     id: "PUBLISH",
-                    label: t("Activate official publication locks"),
+                    label: t("Continue a published plan"),
                   },
                   {
                     id: "COMPLETE",
-                    label: t("Restore explicitly completed work into history"),
+                    label: t("Resume from work already completed"),
                   },
                   {
                     id: "RESTORE_CONTEXT",
-                    label: t("Restore the original scenario context"),
+                    label: t("Recover the original configuration"),
                   },
                 ]}
-                onChange={setMode}
+                onChange={(v) => {
+                  setMode(v);
+                  setActualConfirmed(false);
+                }}
               />
               <p className="hint">
                 {t(
@@ -211,8 +236,24 @@ export function ScheduleLibrary({
               )}
             </p>
           )}
+          {mode === "COMPLETE" &&
+            incomingFormat === "rostercore.schedule-archive" && (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={actualConfirmed}
+                  onChange={(e) => setActualConfirmed(e.target.checked)}
+                />
+                {t("I confirm these shifts were actually worked")}
+              </label>
+            )}
           <div className="row">
             <button
+              disabled={
+                incomingFormat === "rostercore.schedule-archive" &&
+                mode === "COMPLETE" &&
+                !actualConfirmed
+              }
               onClick={() => {
                 if (incomingFormat === "rostercore.workspace-backup")
                   review({ operation: "RESTORE", backup: incoming });
@@ -276,6 +317,10 @@ export function ScheduleLibrary({
         >
           <p>
             {t("Operation")}: {t(String(pending.preview.operation))}
+          </p>
+          <p>
+            {t("Revision")}: {String(pending.preview.beforeRevision)} →{" "}
+            {String(pending.preview.afterRevision)}
           </p>
           <p>
             {t("History assignments")}:{" "}
@@ -351,7 +396,14 @@ function ArchiveCard({
   canCompare: boolean;
 }) {
   const { t } = useI18n();
-  const [through, setThrough] = useState(a.completedThrough ?? a.period.end),
+  const [exporting, setExporting] = useState(false),
+    [actualConfirmed, setActualConfirmed] = useState(false);
+  const [through, setThrough] = useState(
+      a.completedThrough ??
+        (calendarToday(s.calendar.timezone) < a.period.end
+          ? calendarToday(s.calendar.timezone)
+          : a.period.end),
+    ),
     [from, setFrom] = useState(
       s.calendar.start > a.period.start ? s.calendar.start : a.period.start,
     );
@@ -368,17 +420,8 @@ function ArchiveCard({
         <button onClick={() => onRead({ operation: "OPEN", id: a.id })}>
           {t("Open calendar")}
         </button>
-        <button onClick={() => download(`${a.id}.schedule.json`, a)}>
-          {t("Export calendar with context")}
-        </button>
-        <button
-          onClick={async () => {
-            const r = await onRead({ operation: "CSV", id: a.id });
-            if (r?.csv)
-              textDownload(`${a.id}.csv`, r.csv, "text/csv;charset=utf-8");
-          }}
-        >
-          {t("Export readable CSV")}
+        <button onClick={() => setExporting(true)}>
+          {t("Export calendar")}
         </button>
         <button
           disabled={!canCompare}
@@ -409,7 +452,16 @@ function ArchiveCard({
               value={through}
               onChange={setThrough}
             />
+            <label>
+              <input
+                type="checkbox"
+                checked={actualConfirmed}
+                onChange={(e) => setActualConfirmed(e.target.checked)}
+              />
+              {t("I confirm these shifts were actually worked")}
+            </label>
             <button
+              disabled={!actualConfirmed}
               onClick={() =>
                 onReview({ operation: "COMPLETE", id: a.id, through })
               }
@@ -436,6 +488,9 @@ function ArchiveCard({
             </div>
           )}
         </details>
+      )}
+      {exporting && (
+        <ExportDialog archive={a} onClose={() => setExporting(false)} />
       )}
       <details className="advanced-only">
         <summary>{t("Stable references and provenance")}</summary>

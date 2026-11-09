@@ -182,6 +182,9 @@
           "minLength": 1,
           "maxLength": 256,
           "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "options": {
+          "$ref": "#/definitions/calendarViewOptions"
         }
       },
       "required": [
@@ -189,6 +192,52 @@
         "archives",
         "dryRun",
         "id"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "archives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/scheduleArchive"
+          }
+        },
+        "dryRun": {
+          "type": "boolean"
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "operation": {
+          "enum": [
+            "VIEW"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "options": {
+          "$ref": "#/definitions/calendarViewOptions"
+        }
+      },
+      "required": [
+        "operation",
+        "archives",
+        "dryRun",
+        "id",
+        "options"
       ],
       "additionalProperties": false
     },
@@ -5177,6 +5226,130 @@
         "archives",
         "createdAt",
         "integrityHash"
+      ],
+      "additionalProperties": false
+    },
+    "calendarViewOptions": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "employeeSelection": {
+          "type": "object",
+          "properties": {
+            "all": {
+              "type": "boolean"
+            },
+            "employeeIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "uniqueItems": true
+            },
+            "typeIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "uniqueItems": true
+            },
+            "groupIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "all",
+            "employeeIds",
+            "typeIds",
+            "groupIds"
+          ],
+          "additionalProperties": false
+        },
+        "shiftSelection": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "enum": [
+                "ALL",
+                "WORKING",
+                "SPECIAL",
+                "MANUAL"
+              ]
+            },
+            "shiftIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "uniqueItems": true
+            },
+            "normalShiftIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "uniqueItems": true
+            },
+            "hideNormal": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "mode",
+            "shiftIds",
+            "normalShiftIds",
+            "hideNormal"
+          ],
+          "additionalProperties": false
+        },
+        "showAbsences": {
+          "type": "boolean"
+        },
+        "showRest": {
+          "type": "boolean"
+        },
+        "showClosuresAndHolidays": {
+          "type": "boolean"
+        },
+        "includeAbsenceReasons": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "employeeSelection",
+        "shiftSelection",
+        "showAbsences",
+        "showRest",
+        "showClosuresAndHolidays",
+        "includeAbsenceReasons"
       ],
       "additionalProperties": false
     },

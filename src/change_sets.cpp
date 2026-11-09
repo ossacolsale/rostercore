@@ -117,7 +117,11 @@ void protectedCells(const Json &before, const Json &after) {
     bool lostProfile = a.contains("weekProfileId") &&
                        std::find(profiles.begin(), profiles.end(),
                                  a["weekProfileId"]) == profiles.end();
-    if (lostDomain || lostProfile || oldHours != newHours ||
+    auto concrete = [](const Json &v) {
+      return v.is_null() ? Json(nullptr)
+                         : Json{{"id", v["id"]}, {"intervals", v["intervals"]}};
+    };
+    if (lostDomain || lostProfile || concrete(oldHours) != concrete(newHours) ||
         old.employeeState(oldE.at(eid), d)["typeId"] !=
             next.employeeState(newE.at(eid), d)["typeId"] ||
         old.resolvedAttributes(oldE.at(eid), d) !=

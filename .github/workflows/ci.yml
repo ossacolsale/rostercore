@@ -56,6 +56,13 @@ jobs:
         run: |
           npm ci
           npm run build
+      - name: Install independent export parsers
+        if: runner.os == 'Linux'
+        run: python -m pip install -r tests/requirements-exports.txt
+      - name: Verify generated calendar files
+        if: runner.os == 'Linux'
+        working-directory: playground
+        run: npm run test:exports
       - name: Install browser
         if: runner.os == 'Linux'
         working-directory: playground

@@ -43,3 +43,14 @@ No industry behavior is embedded in the engine. The full five-week reference rea
 | 4 — Complete optional AI exchange | Strict typed change-set transactions/preconditions/receipts, complete-scenario preview/import, dated partial personnel updates, explicit hard-rule authorization, protected work and optional minimized AI package. Guides/capabilities and seven generated executable examples. | Native rollback/conflict/dated-field/history/HR/regeneration tests, real browser AI preview and protected recovery workflows. |
 
 The current contract is `RELIABILITY_REDESIGN.md`. Final executed totals/platform outcomes are recorded in `TEST_REPORT.md`; user operational acceptance remains separate.
+
+## 0.5 calendar exports and quiet operation — four phases
+
+| Phase | Delivered behavior | Verification |
+| --- | --- | --- |
+| 1 — Shared export model | Native read-only VIEW and filtered CSV, strict options, dated people/group/role filters and actual intervals; unchanged canonical archive recovery. | Fourteen new native projection/privacy/lifecycle/guard regressions. |
+| 2 — Real portable files | Offline embedded-font A4/A3 PDF, matching pagination preview, compact/complete/week/month/person layouts; split-interval UTC ICS and private personal ZIPs. | Eight real PDFs parsed independently, 104-page long-name layout rendered; independent iCalendar parsing including DST/folds/overnight/lifecycle/UID and privacy. |
+| 3 — Quiet daily work | Calendar-first default, one operational state, exceptions, optional counts/diagnostics, reviewed quick changes and proposals, explicit actual-work confirmation, goal-oriented recovery and bilingual mode selector. | Native regression suite, ordinary-user/HR/expert browser paths, phone/reflow and actual-prefix checks. |
+| 4 — Contextual AI and release | Local natural-language request/package export/copy, scoped IDs, minimized data, human-readable typed-update review, retained Advanced diagnostics, version/docs/licenses and CI parser coverage. | Reproducible contracts, npm lock/install/audit, frontend/API/file/browser checks; final release matrix recorded in TEST_REPORT.md. |
+
+The current export/operation contract is `EXPORT_USABILITY.md`; the overriding addendum replaces dashboard/KPI requests with progressive optional evidence. Original solver and historical-accounting contracts remain unchanged.

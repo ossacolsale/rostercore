@@ -15,3 +15,5 @@ Adapted from [AgentForge Universal AGENTS.md](https://github.com/ossacolsale/Age
 - Before handoff, check the diff and run the relevant integration checks once. Report verified outcomes, how to try the product and material limitations concisely. The user's final review complements automated checks.
 
 - For 0.4 work, preserve contextual archives and receipt revisions; publication never means work completed. New simple controls must edit the same native scenario, with explicit reviewed imports and no hidden relaxation of coverage, eligibility or history. Keep the schema-derived AI capabilities/examples synchronized with the typed operation catalogue.
+
+- For calendar exports and daily UX, follow `docs/EXPORT_USABILITY.md`: the quiet-interface addendum overrides dashboard/KPI suggestions. Use the shared native read-only view for filters and actual intervals; filtered files never replace canonical archives. Preserve separate publication/completion semantics and expose technical evidence on request.

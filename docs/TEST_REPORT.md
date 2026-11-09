@@ -1,4 +1,20 @@
-# Validation report · 0.4.0
+# Validation report · 0.5.0
+
+Local environment: Ubuntu x86-64, GCC 15.2, CMake 4.2, Python 3.14, Node.js 22, OR-Tools 9.15.6755 and installed Chrome through Playwright 1.56.1. These are executed checks, separate from user operational acceptance.
+
+- Release configuration/build passed without compiler warnings. **Ten CTest targets passed in 69.89 seconds**, including core invariants/startup and **166 Python cases**: the existing 152 plus 14 export/protected-change regressions. The strengthened dated-role/group and future-hour projection cases also passed afterward.
+- `npm ci`, strict TypeScript and production build passed. Runtime dependency audit reported **zero vulnerabilities**. PDF libraries load on opening export; the main application bundle is approximately 154 kB gzip, with the larger font/PDF export code in a separate lazy chunk.
+- Both development and production API integration tests passed against the actual CLI, including loopback Host/Origin guards and SPA behavior.
+- Independent generated-file tests passed using pinned **pypdf 7.0.0** and **icalendar 7.3.0**. Eight PDF files cover compact single-person, complete multi-person, A4/A3, week/month/person layouts, actual dated variants and completed prefixes. A 75-person/31-day long-name/holiday stress PDF spans 104 pages at fixed readable font sizes. Preview page counts, real page dimensions/text/numbering and layout bounds are checked. Rendered normal, personal and stress first/middle/final pages were inspected with Poppler.
+- ICS is parsed independently for UTC instants, fall-back duration/fold selection, overnight end dates, split intervals/sibling links, all-day rest/absence, stable revision UIDs/sequences, lifecycle, authorized existing reasons, default privacy and personal ZIP contents. CRLF, UTF-8 folding, escaping and safe duplicate filenames are also checked.
+- Generated schemas, capabilities and AI examples reproduce exactly. Canonical archive format/schema versions remain unchanged; filtered projections are explicitly non-authoritative. Git whitespace checks passed.
+
+The complete final browser run passed **29/29 tests in approximately 1.6 minutes**, including ordinary-user exports, reviewed HR proposal/regeneration/publication, advanced evidence, backup recovery and explicit actual-work confirmation. Full regression found and corrected JSON-key-order false staleness, redundant hidden advanced previews competing for native slots, and a solve-completion navigation race. No optimization priority or hard-rule validation was relaxed.
+
+Detailed acceptance mapping and reproduction commands are in `EXPORT_USABILITY.md`; supported time zones, font glyph limits, manual ICS import semantics and privacy/recovery distinctions are in `LIMITATIONS.md`.
+
+## Previous 0.4.0 release evidence
+
 
 Environment: Ubuntu x86-64, GCC 15.2, CMake 4.2, Python 3.14, Node.js 22, OR-Tools 9.15.6755 and installed Chrome through Playwright 1.56.1. The following are executed results, not inferred product acceptance.
 

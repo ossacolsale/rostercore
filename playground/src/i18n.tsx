@@ -30,6 +30,9 @@ export function translate(
 }
 
 const diagnosticSummaries: Record<string, string> = {
+  EXPORT_PERIOD: "Le date di esportazione devono rientrare nel periodo del calendario salvato.",
+  EXPORT_NORMAL: "Seleziona esplicitamente i turni lavorativi normali da nascondere. I riposi non possono essere classificati come lavoro normale.",
+  EXPORT_TIME: "La fascia esportata deve avere una durata effettiva positiva. Verifica gli orari al cambio dell’ora.",
   ARCHIVE_CONTEXT_REQUIRED:
     "Manca il contesto originale di idoneità per una parte dello storico. Importa i contesti datati originali: le quote non possono essere ricostruite per ipotesi.",
   ARCHIVE_INTEGRITY:

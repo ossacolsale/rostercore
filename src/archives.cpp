@@ -404,8 +404,8 @@ Json archiveOperation(const Json &scenario, const Json &request) {
   const std::string operation = request["operation"],
                     at = request.value("at", "unspecified");
   bool dry = request["dryRun"];
-  bool read =
-      operation == "OPEN" || operation == "CSV" || operation == "BACKUP";
+  bool read = operation == "OPEN" || operation == "CSV" ||
+              operation == "VIEW" || operation == "BACKUP";
   if (!read)
     ensure(request.contains("expectedRevision") &&
                request["expectedRevision"] == scenario["revision"],
@@ -584,9 +584,16 @@ Json archiveOperation(const Json &scenario, const Json &request) {
                                {"result", a["result"]},
                                {"archiveId", a["id"]},
                                {"scenarioEncoding", a["scenarioEncoding"]}};
+  } else if (operation == "VIEW") {
+    out["status"] = "EXPORTED";
+    out["document"] = calendarView(find(request["id"]), request["options"]);
   } else if (operation == "CSV") {
     out["status"] = "EXPORTED";
-    out["csv"] = csv(find(request["id"]));
+    if (request.contains("options")) {
+      out["document"] = calendarView(find(request["id"]), request["options"]);
+      out["csv"] = calendarViewCsv(out["document"]);
+    } else
+      out["csv"] = csv(find(request["id"]));
   } else if (operation == "BACKUP") {
     Json backup = {{"format", "rostercore.workspace-backup"},
                    {"schemaVersion", 1},
