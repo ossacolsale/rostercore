@@ -49,7 +49,8 @@ jobs:
         shell: bash
         run: |
           python scripts/generate_schemas.py
-          git diff --exit-code -- schemas
+          python scripts/create_ai_examples.py
+          git diff --exit-code -- schemas AI_EXAMPLES AI_CAPABILITIES.json
       - name: Build playground
         working-directory: playground
         run: |

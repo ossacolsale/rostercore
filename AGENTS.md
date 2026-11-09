@@ -1,6 +1,6 @@
 # RosterCore — agent operating contract
 
-Adapted from [AgentForge Universal AGENTS.md](https://github.com/ossacolsale/AgentForge-Universal-AGENTS.md). This file governs work; requirements live in `docs/SPECIFICATION.md` and the evolution contract `docs/EVOLUTION.md` and `docs/UX_ASSIGNMENTS.md`.
+Adapted from [AgentForge Universal AGENTS.md](https://github.com/ossacolsale/AgentForge-Universal-AGENTS.md). This file governs work; requirements live in `docs/SPECIFICATION.md` and the evolution contracts `docs/EVOLUTION.md`, `docs/UX_ASSIGNMENTS.md` and the current `docs/RELIABILITY_REDESIGN.md`.
 
 - Inspect Git and relevant code before editing; preserve unrelated user changes. Read only documents needed for the task. `docs/ARCHITECTURE.md` defines semantics and `docs/PROGRESS.md` records the four implementation phases.
 - Deliver the smallest **complete** useful change. Prefer development progress and runnable features over polishing every intermediate step. Conserve tokens: avoid repeated audits, verbose logs, speculative abstractions and redundant documentation. The user performs final product acceptance and can request refinements.
@@ -13,3 +13,5 @@ Adapted from [AgentForge Universal AGENTS.md](https://github.com/ossacolsale/Age
 - Use C++20/CMake for the library and CLI; React/TypeScript/Vite plus a local Node process adapter for the playground. Keep solver-specific types inside `src/solver.cpp`.
 - Build: `cmake --preset dev && cmake --build --preset dev`. Test: `ctest --preset dev`. Playground: `cd playground && npm ci && npm run build`; `npm run dev` starts the local UI and adapter. See README for dependency bootstrap.
 - Before handoff, check the diff and run the relevant integration checks once. Report verified outcomes, how to try the product and material limitations concisely. The user's final review complements automated checks.
+
+- For 0.4 work, preserve contextual archives and receipt revisions; publication never means work completed. New simple controls must edit the same native scenario, with explicit reviewed imports and no hidden relaxation of coverage, eligibility or history. Keep the schema-derived AI capabilities/examples synchronized with the typed operation catalogue.

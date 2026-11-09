@@ -1,0 +1,4784 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rostercore.org/schemas/v1/scenario-change-set.schema.json",
+  "$ref": "#/definitions/scenarioChangeSet",
+  "definitions": {
+    "selector": {
+      "type": "object",
+      "properties": {
+        "employeeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "typeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "groupIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "boolean",
+              "number"
+            ]
+          }
+        },
+        "where": {
+          "$ref": "#/definitions/condition"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "weekdays": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "uniqueItems": true
+        },
+        "excludedDates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        },
+        "weekProfileIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "dayType": {
+          "enum": [
+            "ANY",
+            "HOLIDAY",
+            "NON_HOLIDAY"
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "interval": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+        },
+        "endDayOffset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "startFold": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "endFold": {
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "endDayOffset"
+      ],
+      "additionalProperties": false
+    },
+    "expression": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "COUNT"
+              ]
+            },
+            "selector": {
+              "$ref": "#/definitions/selector"
+            },
+            "shiftId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            },
+            "comparison": {
+              "enum": [
+                "EQ",
+                "GE",
+                "LE"
+              ]
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          },
+          "required": [
+            "op",
+            "selector",
+            "shiftId",
+            "comparison",
+            "count"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "REMAINING"
+              ]
+            },
+            "selector": {
+              "$ref": "#/definitions/selector"
+            },
+            "shiftId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            }
+          },
+          "required": [
+            "op",
+            "selector",
+            "shiftId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "AND",
+                "OR"
+              ]
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/expression"
+              },
+              "minItems": 1,
+              "maxItems": 100
+            }
+          },
+          "required": [
+            "op",
+            "children"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "constraint": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "expression": {
+          "$ref": "#/definitions/expression"
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        }
+      },
+      "required": [
+        "id",
+        "expression"
+      ],
+      "additionalProperties": false
+    },
+    "objective": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "type": {
+          "enum": [
+            "CUMULATIVE_FAIRNESS"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "CONTINUOUS_BALANCED"
+          ]
+        },
+        "measure": {
+          "enum": [
+            "COUNT"
+          ]
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "shiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "participation": {
+          "enum": [
+            "EQUAL",
+            "AVAILABILITY_WEIGHTED",
+            "CUSTOM_WEIGHTED"
+          ]
+        },
+        "weights": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "MAX_ABSOLUTE_PREFIX_DEVIATION",
+              "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+              "FINAL_ABSOLUTE_DEVIATION"
+            ]
+          }
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        },
+        "fairnessTags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "mode",
+        "measure",
+        "selector",
+        "shiftIds",
+        "participation",
+        "metrics",
+        "priority"
+      ],
+      "additionalProperties": false
+    },
+    "dependency": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "kind": {
+          "enum": [
+            "employee",
+            "type",
+            "group",
+            "shift",
+            "constraint",
+            "constraintSet",
+            "attribute",
+            "workPattern",
+            "weekProfile"
+          ]
+        }
+      },
+      "required": [
+        "symbol",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "draft": {
+          "type": "boolean"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/dependency"
+          }
+        },
+        "objective": {
+          "$ref": "#/definitions/objective"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/constraint"
+          }
+        },
+        "sharedConstraintIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "constraintSetIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        },
+        "dutyRequirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/dutyRequirement"
+          }
+        },
+        "temporalRules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/temporalRule"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "revision",
+        "active",
+        "draft",
+        "dependencies",
+        "objective",
+        "constraints",
+        "sharedConstraintIds",
+        "constraintSetIds"
+      ],
+      "additionalProperties": false
+    },
+    "assignment": {
+      "type": "object",
+      "properties": {
+        "employeeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "shiftId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "variantId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "intervals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/interval"
+          }
+        },
+        "weekProfileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        }
+      },
+      "required": [
+        "employeeId",
+        "date",
+        "shiftId"
+      ],
+      "additionalProperties": false
+    },
+    "snapshot": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "objectiveId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "fingerprint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "weights": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          }
+        },
+        "weekProfileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "targetShiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "date",
+        "objectiveId",
+        "fingerprint",
+        "weights"
+      ],
+      "additionalProperties": false
+    },
+    "hrEvent": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "externalId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "employeeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "operation": {
+          "enum": [
+            "UPSERT",
+            "DELETE"
+          ]
+        },
+        "absenceType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "status": {
+          "enum": [
+            "REQUESTED",
+            "APPROVED",
+            "REJECTED"
+          ]
+        },
+        "start": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "partialIntervals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/interval"
+          }
+        }
+      },
+      "required": [
+        "eventId",
+        "source",
+        "externalId",
+        "employeeId",
+        "revision",
+        "operation",
+        "absenceType",
+        "status",
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "AND",
+                "OR"
+              ]
+            },
+            "children": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "$ref": "#/definitions/condition"
+              }
+            }
+          },
+          "required": [
+            "op",
+            "children"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "NOT"
+              ]
+            },
+            "child": {
+              "$ref": "#/definitions/condition"
+            }
+          },
+          "required": [
+            "op",
+            "child"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "EQ",
+                "NE",
+                "LT",
+                "LE",
+                "GT",
+                "GE"
+              ]
+            },
+            "attributeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            },
+            "value": {
+              "type": [
+                "string",
+                "boolean",
+                "number"
+              ]
+            }
+          },
+          "required": [
+            "op",
+            "attributeId",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "IN",
+                "NOT_IN"
+              ]
+            },
+            "attributeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "boolean",
+                  "number"
+                ]
+              }
+            }
+          },
+          "required": [
+            "op",
+            "attributeId",
+            "values"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "enum": [
+                "EXISTS",
+                "NOT_EXISTS"
+              ]
+            },
+            "attributeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            }
+          },
+          "required": [
+            "op",
+            "attributeId"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "effective": {
+      "type": "object",
+      "properties": {
+        "validFrom": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "validTo": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "validFrom"
+      ],
+      "additionalProperties": false
+    },
+    "attributeDefinition": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "type": {
+          "enum": [
+            "STRING",
+            "BOOLEAN",
+            "NUMBER",
+            "INTEGER",
+            "ENUM"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "default": {
+          "type": [
+            "string",
+            "number",
+            "boolean"
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "validFrom": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "validTo": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "employeeVersion": {
+      "type": "object",
+      "properties": {
+        "validFrom": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "validTo": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "typeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "workPatternId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "boolean",
+              "number",
+              "null"
+            ]
+          }
+        }
+      },
+      "required": [
+        "validFrom"
+      ],
+      "additionalProperties": false
+    },
+    "workPatternAssignmentRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "workPatternId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "validFrom": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "validTo": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "enabled",
+        "selector",
+        "workPatternId",
+        "priority",
+        "validFrom"
+      ],
+      "additionalProperties": false
+    },
+    "workPattern": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "validFrom": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "validTo": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "weekdays": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 7
+                }
+              },
+              "shiftIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9_@.:-]+$"
+                },
+                "uniqueItems": true
+              },
+              "exceptions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "shiftIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "shiftIds"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "weekdayShifts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "weekday": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 7
+                    },
+                    "shiftIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "weekday",
+                    "shiftIds"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "validFrom",
+              "weekdays",
+              "shiftIds"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "versions"
+      ],
+      "additionalProperties": false
+    },
+    "shiftVariant": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        },
+        "workPatternIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "intervals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/interval"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "priority",
+        "selector",
+        "scope",
+        "intervals"
+      ],
+      "additionalProperties": false
+    },
+    "weekProfile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "shiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "offWeekdays": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          }
+        },
+        "holidayMode": {
+          "enum": [
+            "NORMAL",
+            "OFF"
+          ]
+        },
+        "constraintIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "policyIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "offWeekdays",
+        "holidayMode",
+        "constraintIds",
+        "policyIds"
+      ],
+      "additionalProperties": false
+    },
+    "weekConfiguration": {
+      "type": "object",
+      "properties": {
+        "defaultProfileId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "manual": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "week": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "profileId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "overrideRecurrence": {
+                "type": "boolean"
+              },
+              "waiveFrequencyIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9_@.:-]+$"
+                },
+                "uniqueItems": true
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "week",
+              "profileId",
+              "overrideRecurrence",
+              "waiveFrequencyIds",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "recurrences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "anchor": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "sequence": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 104,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9_@.:-]+$"
+                }
+              },
+              "validFrom": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "validTo": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "anchor",
+              "sequence",
+              "validFrom"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "automatic": {
+          "type": "object",
+          "properties": {
+            "profileIds": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              }
+            },
+            "validFrom": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "validTo": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          "required": [
+            "profileIds",
+            "validFrom"
+          ],
+          "additionalProperties": false
+        },
+        "frequencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "profileId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "minGapWeeks": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "maxGapWeeks": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "windowWeeks": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "minCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "maxCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "desiredCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "desiredGapWeeks": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "profileId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "week": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "profileId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              }
+            },
+            "required": [
+              "week",
+              "profileId"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "manual",
+        "recurrences",
+        "frequencies",
+        "history"
+      ],
+      "additionalProperties": false
+    },
+    "closure": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "validFrom": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "validTo": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "administrativeType": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "selector": {
+                "$ref": "#/definitions/selector"
+              },
+              "authorized": {
+                "enum": [
+                  true
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "date",
+              "selector",
+              "authorized",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "validFrom",
+        "validTo",
+        "selector",
+        "reason",
+        "exceptions"
+      ],
+      "additionalProperties": false
+    },
+    "holidaySettings": {
+      "type": "object",
+      "properties": {
+        "country": {
+          "enum": [
+            "IT"
+          ]
+        },
+        "catalogueVersion": {
+          "enum": [
+            "IT-2001-2026.1"
+          ]
+        },
+        "localDates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "holiday": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "date",
+              "label",
+              "holiday"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "country",
+        "catalogueVersion",
+        "localDates"
+      ],
+      "additionalProperties": false
+    },
+    "coverageLevel": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        }
+      },
+      "required": [
+        "selector",
+        "level"
+      ],
+      "additionalProperties": false
+    },
+    "dutyRequirement": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "mode": {
+          "enum": [
+            "RESPONSIBILITY",
+            "PRESENCE"
+          ]
+        },
+        "shiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "levels": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/coverageLevel"
+          }
+        },
+        "comparison": {
+          "enum": [
+            "EQ",
+            "GE",
+            "LE"
+          ]
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "intervals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/interval"
+          }
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        },
+        "preferencePriority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "exclusiveGroup": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "bindAssignments": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "mode",
+        "shiftIds",
+        "levels",
+        "comparison",
+        "count",
+        "intervals",
+        "scope",
+        "preferencePriority"
+      ],
+      "additionalProperties": false
+    },
+    "temporalRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "type": {
+          "enum": [
+            "SUCCESSION",
+            "FORBIDDEN_PAIR",
+            "MIN_REST"
+          ]
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "fromShiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "toShiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "offsetDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 14
+        },
+        "minimumMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "type",
+        "selector",
+        "fromShiftIds",
+        "toShiftIds",
+        "offsetDays",
+        "scope"
+      ],
+      "additionalProperties": false
+    },
+    "archiveState": {
+      "enum": [
+        "DRAFT",
+        "PUBLISHED",
+        "COMPLETED",
+        "SUPERSEDED"
+      ]
+    },
+    "spacingRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "selector": {
+          "$ref": "#/definitions/selector"
+        },
+        "shiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "fairnessTags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "scope": {
+          "$ref": "#/definitions/scope"
+        },
+        "mode": {
+          "enum": [
+            "HARD",
+            "SOFT"
+          ]
+        },
+        "unit": {
+          "enum": [
+            "CALENDAR",
+            "NORMAL_WORK_DAYS"
+          ]
+        },
+        "minimumGap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "normalShiftIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "penalty": {
+          "enum": [
+            "CLOSE_PAIRS",
+            "GAP_DEFICIT"
+          ]
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "selector",
+        "shiftIds",
+        "scope",
+        "mode",
+        "unit",
+        "minimumGap",
+        "normalShiftIds",
+        "penalty",
+        "priority"
+      ],
+      "additionalProperties": false
+    },
+    "scenarioChangeSet": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "enum": [
+            "rostercore.scenario-change-set"
+          ]
+        },
+        "schemaVersion": {
+          "enum": [
+            1
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "scenarioId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "expectedConfigurationHash": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "allowHardRuleChanges": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "referenceDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 200,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_EMPLOYEE_TYPE"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "maxLength": 256
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_EMPLOYEE_TYPE"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "maxLength": 256
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_EMPLOYEE_TYPE"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_ATTRIBUTE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/attributeDefinition"
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_ATTRIBUTE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/attributeDefinition"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_ATTRIBUTE"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_GROUP"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "selector": {
+                        "$ref": "#/definitions/selector"
+                      },
+                      "scope": {
+                        "$ref": "#/definitions/scope"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "selector"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_GROUP"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "selector": {
+                        "$ref": "#/definitions/selector"
+                      },
+                      "scope": {
+                        "$ref": "#/definitions/scope"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "selector"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_GROUP"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_SHIFT"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "kind": {
+                        "enum": [
+                          "WORKING",
+                          "OFF"
+                        ]
+                      },
+                      "intervals": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/definitions/interval"
+                        }
+                      },
+                      "variants": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/definitions/shiftVariant"
+                        }
+                      },
+                      "fairnessTags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9_@.:-]+$"
+                        },
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "kind",
+                      "intervals"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_SHIFT"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "kind": {
+                        "enum": [
+                          "WORKING",
+                          "OFF"
+                        ]
+                      },
+                      "intervals": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/definitions/interval"
+                        }
+                      },
+                      "variants": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/definitions/shiftVariant"
+                        }
+                      },
+                      "fairnessTags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9_@.:-]+$"
+                        },
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "kind",
+                      "intervals"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_SHIFT"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_WORK_PATTERN"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/workPattern"
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_WORK_PATTERN"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/workPattern"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_WORK_PATTERN"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_PATTERN_RULE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/workPatternAssignmentRule"
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_PATTERN_RULE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/workPatternAssignmentRule"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_PATTERN_RULE"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_WEEK_PROFILE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/weekProfile"
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_WEEK_PROFILE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/weekProfile"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_WEEK_PROFILE"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_AVAILABILITY"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "selector": {
+                        "$ref": "#/definitions/selector"
+                      },
+                      "scope": {
+                        "$ref": "#/definitions/scope"
+                      },
+                      "state": {
+                        "enum": [
+                          "ABSENT"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "selector",
+                      "scope",
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_AVAILABILITY"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "selector": {
+                        "$ref": "#/definitions/selector"
+                      },
+                      "scope": {
+                        "$ref": "#/definitions/scope"
+                      },
+                      "state": {
+                        "enum": [
+                          "ABSENT"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "selector",
+                      "scope",
+                      "state"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_AVAILABILITY"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_ALLOWED_SHIFTS"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "selector": {
+                        "$ref": "#/definitions/selector"
+                      },
+                      "shiftIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9_@.:-]+$"
+                        },
+                        "uniqueItems": true
+                      },
+                      "scope": {
+                        "$ref": "#/definitions/scope"
+                      },
+                      "allowRequiredRest": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "selector",
+                      "shiftIds",
+                      "scope"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_ALLOWED_SHIFTS"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "selector": {
+                        "$ref": "#/definitions/selector"
+                      },
+                      "shiftIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9_@.:-]+$"
+                        },
+                        "uniqueItems": true
+                      },
+                      "scope": {
+                        "$ref": "#/definitions/scope"
+                      },
+                      "allowRequiredRest": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "selector",
+                      "shiftIds",
+                      "scope"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_ALLOWED_SHIFTS"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_CONSTRAINT"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/constraint"
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_CONSTRAINT"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/constraint"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_CONSTRAINT"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_CONSTRAINT_SET"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "constraintIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9_@.:-]+$"
+                        },
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "constraintIds"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_CONSTRAINT_SET"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "constraintIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9_@.:-]+$"
+                        },
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "constraintIds"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_CONSTRAINT_SET"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_POLICY"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/policy"
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_POLICY"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/policy"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_POLICY"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_COVERAGE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/dutyRequirement"
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_COVERAGE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/dutyRequirement"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_COVERAGE"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_TEMPORAL_RULE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/temporalRule"
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_TEMPORAL_RULE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/temporalRule"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_TEMPORAL_RULE"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_SPACING_RULE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/spacingRule"
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "REPLACE_SPACING_RULE"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/spacingRule"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "value",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "DELETE_SPACING_RULE"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "expectedEntityHash": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "id",
+                  "expectedEntityHash"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "CREATE_EMPLOYEE"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "typeId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "attributes": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": [
+                            "string",
+                            "boolean",
+                            "number",
+                            "null"
+                          ]
+                        }
+                      },
+                      "employment": {
+                        "$ref": "#/definitions/effective"
+                      },
+                      "versions": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/definitions/employeeVersion"
+                        }
+                      },
+                      "workPatternId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "typeId",
+                      "attributes"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "UPDATE_EMPLOYEE"
+                    ]
+                  },
+                  "employeeId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "effectiveFrom": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "patch": {
+                    "type": "object",
+                    "properties": {
+                      "typeId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9_@.:-]+$"
+                      },
+                      "workPatternId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256,
+                            "pattern": "^[A-Za-z0-9_@.:-]+$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "attributes": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": [
+                            "string",
+                            "boolean",
+                            "number",
+                            "null"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false,
+                    "minProperties": 1
+                  }
+                },
+                "required": [
+                  "op",
+                  "employeeId",
+                  "effectiveFrom",
+                  "patch"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "RENAME_EMPLOYEE"
+                    ]
+                  },
+                  "employeeId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "op",
+                  "employeeId",
+                  "label"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "END_EMPLOYMENT"
+                    ]
+                  },
+                  "employeeId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9_@.:-]+$"
+                  },
+                  "effectiveFrom": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  }
+                },
+                "required": [
+                  "op",
+                  "employeeId",
+                  "effectiveFrom"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "SET_WEEK_CONFIGURATION"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "#/definitions/weekConfiguration"
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "SET_CALENDAR"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "end": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "timezone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      "excludedDates": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        }
+                      },
+                      "excludedRanges": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/definitions/range"
+                        }
+                      },
+                      "excludedIsoWeeks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-W\\d{2}$"
+                        }
+                      },
+                      "holidays": {
+                        "$ref": "#/definitions/holidaySettings"
+                      },
+                      "closures": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/definitions/closure"
+                        }
+                      }
+                    },
+                    "required": [
+                      "start",
+                      "end",
+                      "timezone",
+                      "excludedDates",
+                      "excludedRanges",
+                      "excludedIsoWeeks"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "SET_BASE_CONSTRAINTS"
+                    ]
+                  },
+                  "value": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "pattern": "^[A-Za-z0-9_@.:-]+$"
+                    },
+                    "uniqueItems": true
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "SET_SEARCH"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "maxTimeSeconds": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 600
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "workers": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 32
+                      },
+                      "deterministic": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "maxTimeSeconds",
+                      "seed",
+                      "workers",
+                      "deterministic"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "SET_CLOSURES"
+                    ]
+                  },
+                  "value": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/closure"
+                    }
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "enum": [
+                      "SYNC_HR"
+                    ]
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "format": {
+                        "enum": [
+                          "rostercore.hr-events"
+                        ]
+                      },
+                      "schemaVersion": {
+                        "enum": [
+                          4
+                        ]
+                      },
+                      "events": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/definitions/hrEvent"
+                        }
+                      },
+                      "snapshot": {
+                        "type": "object",
+                        "properties": {
+                          "source": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256,
+                            "pattern": "^[A-Za-z0-9_@.:-]+$"
+                          },
+                          "revision": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1000000
+                          }
+                        },
+                        "required": [
+                          "source",
+                          "revision"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "format",
+                      "schemaVersion",
+                      "events"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "format",
+        "schemaVersion",
+        "id",
+        "scenarioId",
+        "expectedRevision",
+        "allowHardRuleChanges",
+        "operations"
+      ],
+      "additionalProperties": false
+    },
+    "scenarioContext": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "enum": [
+            "rostercore.scenario"
+          ]
+        },
+        "schemaVersion": {
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "employeeTypes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "id",
+              "label"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "employees": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "typeId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "attributes": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "boolean",
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "employment": {
+                "$ref": "#/definitions/effective"
+              },
+              "versions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/employeeVersion"
+                }
+              },
+              "workPatternId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "typeId",
+              "attributes"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "selector": {
+                "$ref": "#/definitions/selector"
+              },
+              "scope": {
+                "$ref": "#/definitions/scope"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "selector"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "shifts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "kind": {
+                "enum": [
+                  "WORKING",
+                  "OFF"
+                ]
+              },
+              "intervals": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/interval"
+                }
+              },
+              "variants": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/shiftVariant"
+                }
+              },
+              "fairnessTags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9_@.:-]+$"
+                },
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "kind",
+              "intervals"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "calendar": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "end": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "timezone": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "excludedDates": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              }
+            },
+            "excludedRanges": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/range"
+              }
+            },
+            "excludedIsoWeeks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^\\d{4}-W\\d{2}$"
+              }
+            },
+            "holidays": {
+              "$ref": "#/definitions/holidaySettings"
+            },
+            "closures": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/closure"
+              }
+            }
+          },
+          "required": [
+            "start",
+            "end",
+            "timezone",
+            "excludedDates",
+            "excludedRanges",
+            "excludedIsoWeeks"
+          ],
+          "additionalProperties": false
+        },
+        "availability": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "selector": {
+                "$ref": "#/definitions/selector"
+              },
+              "scope": {
+                "$ref": "#/definitions/scope"
+              },
+              "state": {
+                "enum": [
+                  "ABSENT"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "selector",
+              "scope",
+              "state"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "allowedShifts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "selector": {
+                "$ref": "#/definitions/selector"
+              },
+              "shiftIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9_@.:-]+$"
+                },
+                "uniqueItems": true
+              },
+              "scope": {
+                "$ref": "#/definitions/scope"
+              },
+              "allowRequiredRest": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "selector",
+              "shiftIds",
+              "scope"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/constraint"
+          }
+        },
+        "baseConstraintIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_@.:-]+$"
+          },
+          "uniqueItems": true
+        },
+        "constraintSets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "constraintIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9_@.:-]+$"
+                },
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "constraintIds"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "policies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/policy"
+          }
+        },
+        "history": {
+          "type": "object",
+          "properties": {
+            "assignments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/assignment"
+              }
+            },
+            "fairnessSnapshots": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/snapshot"
+              }
+            },
+            "through": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          "required": [
+            "assignments",
+            "fairnessSnapshots"
+          ],
+          "additionalProperties": false
+        },
+        "publishedAssignments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/assignment"
+          }
+        },
+        "hrState": {
+          "type": "object",
+          "properties": {
+            "events": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/hrEvent"
+              }
+            },
+            "snapshotRevisions": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            }
+          },
+          "required": [
+            "events",
+            "snapshotRevisions"
+          ],
+          "additionalProperties": false
+        },
+        "search": {
+          "type": "object",
+          "properties": {
+            "maxTimeSeconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 600
+            },
+            "seed": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "workers": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "deterministic": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "maxTimeSeconds",
+            "seed",
+            "workers",
+            "deterministic"
+          ],
+          "additionalProperties": false
+        },
+        "attributeDefinitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/attributeDefinition"
+          }
+        },
+        "workPatterns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/workPattern"
+          }
+        },
+        "workPatternAssignmentRules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/workPatternAssignmentRule"
+          }
+        },
+        "weekProfiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/weekProfile"
+          }
+        },
+        "weekConfiguration": {
+          "$ref": "#/definitions/weekConfiguration"
+        },
+        "dutyRequirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/dutyRequirement"
+          }
+        },
+        "temporalRules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/temporalRule"
+          }
+        },
+        "replanning": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "baseline": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/assignment"
+              }
+            },
+            "stabilityPriority": {
+              "enum": [
+                "BEFORE_FAIRNESS",
+                "AFTER_FAIRNESS"
+              ]
+            }
+          },
+          "required": [
+            "from",
+            "baseline",
+            "stabilityPriority"
+          ],
+          "additionalProperties": false
+        },
+        "archiveState": {
+          "type": "object",
+          "properties": {
+            "publishedIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "uniqueItems": true
+            },
+            "completedIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "publishedIds",
+            "completedIds"
+          ],
+          "additionalProperties": false
+        },
+        "proposal": {
+          "type": "object",
+          "properties": {
+            "supersedesId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9_@.:-]+$"
+            },
+            "from": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          "required": [
+            "supersedesId",
+            "from"
+          ],
+          "additionalProperties": false
+        },
+        "dutyBindingMode": {
+          "enum": [
+            "ACTIVE_SCOPE",
+            "GLOBAL"
+          ]
+        },
+        "spacingRules": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/definitions/spacingRule"
+          }
+        },
+        "appliedChangeSets": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9_@.:-]+$"
+              },
+              "hash": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "hash",
+              "revision"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "format",
+        "schemaVersion",
+        "id",
+        "label",
+        "revision",
+        "employeeTypes",
+        "employees",
+        "groups",
+        "shifts",
+        "calendar",
+        "availability",
+        "allowedShifts",
+        "constraints",
+        "baseConstraintIds",
+        "constraintSets",
+        "policies",
+        "history",
+        "publishedAssignments",
+        "hrState",
+        "search"
+      ],
+      "additionalProperties": false
+    },
+    "archivedResult": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "enum": [
+            "rostercore.result"
+          ]
+        },
+        "schemaVersion": {
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "status": {
+          "enum": [
+            "VALIDATION_ERROR",
+            "MODEL_INVALID",
+            "INFEASIBLE",
+            "FEASIBLE",
+            "OPTIMAL",
+            "UNKNOWN",
+            "VALID",
+            "VERIFIED",
+            "IMPORTED",
+            "PREVIEW",
+            "CONSOLIDATED",
+            "CONTEXT",
+            "MIGRATED",
+            "INSPECTED",
+            "QUALITY_VERIFIED",
+            "QUALITY_UNKNOWN",
+            "QUALITY_IMPROVABLE",
+            "ARCHIVED",
+            "PUBLISHED",
+            "OPENED",
+            "EXPORTED",
+            "RESTORED"
+          ]
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "path": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "severity": {
+                "enum": [
+                  "ERROR",
+                  "WARNING",
+                  "INFORMATION"
+                ]
+              },
+              "objectIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9_@.:-]+$"
+                },
+                "uniqueItems": true
+              },
+              "suggestion": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "section": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "assignments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/assignment"
+          }
+        },
+        "calendarStates": {
+          "type": "array"
+        },
+        "fairness": {
+          "type": "array"
+        },
+        "phases": {
+          "type": "array"
+        },
+        "scenario": {
+          "type": "object"
+        },
+        "preview": {
+          "type": "object"
+        },
+        "context": {
+          "type": "object"
+        },
+        "weekAssignments": {
+          "type": "array"
+        },
+        "calendarDays": {
+          "type": "array"
+        },
+        "coverage": {
+          "type": "array"
+        },
+        "changes": {
+          "type": "array"
+        },
+        "workforce": {
+          "type": "object"
+        },
+        "migration": {
+          "type": "object"
+        },
+        "quality": {
+          "type": "object"
+        },
+        "workload": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "format",
+        "schemaVersion",
+        "status",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    },
+    "scheduleArchive": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "enum": [
+            "rostercore.schedule-archive"
+          ]
+        },
+        "schemaVersion": {
+          "enum": [
+            1
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "scenarioId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "scenarioRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "configurationHash": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "engineVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "solverVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "period": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "end": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "additionalProperties": false
+        },
+        "state": {
+          "$ref": "#/definitions/archiveState"
+        },
+        "createdAt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "scenario": {
+          "$ref": "#/definitions/scenarioContext"
+        },
+        "scenarioEncoding": {
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/definitions/archivedResult"
+        },
+        "publishedLocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/assignment"
+          }
+        },
+        "completedThrough": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "supersedesId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_@.:-]+$"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "$ref": "#/definitions/archiveState"
+              },
+              "at": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "completedThrough": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              }
+            },
+            "required": [
+              "state",
+              "at"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "integrityHash": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "format",
+        "schemaVersion",
+        "id",
+        "revision",
+        "scenarioId",
+        "scenarioRevision",
+        "configurationHash",
+        "engineVersion",
+        "solverVersion",
+        "period",
+        "state",
+        "createdAt",
+        "source",
+        "scenario",
+        "scenarioEncoding",
+        "result",
+        "publishedLocks",
+        "events",
+        "integrityHash"
+      ],
+      "additionalProperties": false
+    },
+    "workspaceBackup": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "enum": [
+            "rostercore.workspace-backup"
+          ]
+        },
+        "schemaVersion": {
+          "enum": [
+            1
+          ]
+        },
+        "scenario": {
+          "$ref": "#/definitions/scenarioContext"
+        },
+        "archives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/scheduleArchive"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "integrityHash": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "format",
+        "schemaVersion",
+        "scenario",
+        "archives",
+        "createdAt",
+        "integrityHash"
+      ],
+      "additionalProperties": false
+    },
+    "scenarioImportRequest": {
+      "type": "object",
+      "properties": {
+        "candidate": {
+          "$ref": "#/definitions/scenarioContext"
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "mode": {
+          "enum": [
+            "NEW_SCENARIO",
+            "REPLACE_CURRENT"
+          ]
+        },
+        "allowHardRuleChanges": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "candidate",
+        "expectedRevision",
+        "mode",
+        "allowHardRuleChanges"
+      ],
+      "additionalProperties": false
+    },
+    "improvementRequest": {
+      "type": "object",
+      "properties": {
+        "previousScenarioEncoding": {
+          "type": "string"
+        },
+        "previousScenario": {
+          "$ref": "#/definitions/scenarioContext"
+        },
+        "previousResult": {
+          "$ref": "#/definitions/archivedResult"
+        },
+        "maxTimeSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600
+        }
+      },
+      "required": [
+        "previousScenario",
+        "previousResult",
+        "maxTimeSeconds"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

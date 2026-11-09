@@ -1,0 +1,22 @@
+{
+  "format": "rostercore.scenario-change-set",
+  "schemaVersion": 1,
+  "id": "02-anna-part-time",
+  "scenarioId": "ai-five-person-business",
+  "expectedRevision": 1,
+  "allowHardRuleChanges": false,
+  "description": "From 1 March 2027 Anna changes to part time.",
+  "referenceDate": "2026-11-09",
+  "operations": [
+    {
+      "op": "UPDATE_EMPLOYEE",
+      "employeeId": "anna",
+      "effectiveFrom": "2027-03-01",
+      "patch": {
+        "attributes": {
+          "contract": "PART_TIME"
+        }
+      }
+    }
+  ]
+}

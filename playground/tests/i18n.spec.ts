@@ -1,4 +1,9 @@
 import { test, expect } from "@playwright/test";
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("rostercore.mode.v1", "ADVANCED"),
+  );
+});
 import { readFile } from "node:fs/promises";
 
 const selector = "Language / Lingua";
@@ -83,7 +88,9 @@ test("Italian results keep the same assignments without another solve", async ({
   await expect(page.locator(".roster thead")).toContainText("lun");
   expect(await page.locator(".shift-cell").allTextContents()).toEqual(shifts);
   expect(solves).toBe(1);
-  await page.getByRole("button", { name: "Verifica indipendente" }).click();
+  await page
+    .getByRole("button", { name: "Verifica indipendente", exact: true })
+    .click();
   await expect(
     page.locator(".notification").filter({ hasText: "Verificato" }).last(),
   ).toBeVisible();
@@ -208,6 +215,10 @@ test("Italian catalogue covers UI keys and preserves interpolation parameters", 
   ) as Record<string, string>;
   for (const name of [
     "App",
+    "simple",
+    "archives",
+    "quality",
+    "ai-configuration",
     "editors",
     "setup",
     "policies",

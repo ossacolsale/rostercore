@@ -7,7 +7,11 @@ RosterCore generates workforce schedules from declarative rules using a C++20 en
 Designed for integration into desktop applications and backend services, RosterCore aims to remain independent of any specific industry. Pharmacies are the initial reference use case, but the model is intended for healthcare, retail, hospitality, manufacturing, and other shift-based workplaces.
 
 > [!IMPORTANT]
-> **Version 0.3.0 — ready for local evaluation.** The native CLI and visual playground run real optimization and verify returned assignments. This is an initial release with explicit limits, not a certified HR system. See [implemented scope and limitations](docs/LIMITATIONS.md).
+> **Version 0.4.0 — ready for local evaluation.** The native CLI and visual playground run real optimization and verify returned assignments. This is an initial release with explicit limits, not a certified HR system. See [implemented scope and limitations](docs/LIMITATIONS.md).
+
+The web panel opens in **Simple** mode: people → opening days → hours → required coverage → fair distribution → calendar. Switch to **Advanced** at any time without converting your data. English and Italian are available from the language selector. Generated calendars are saved with their exact context; publish future plans, explicitly confirm completed prefixes, export portable backups and create revisions without replacing the original calendar.
+
+For optional AI configuration, use **Prepare configuration for AI**, then import either a complete scenario or a typed change set with a reviewed preview. Start with [complete scenario authoring](AI_SCENARIO_AUTHORING_GUIDE.md), [safe partial updates](AI_SCENARIO_UPDATE_GUIDE.md), [capabilities](AI_CAPABILITIES.json) and [seven executable examples](AI_EXAMPLES/). The [0.4 contract](docs/RELIABILITY_REDESIGN.md) records reliability findings, archive semantics and spacing units.
 
 ## Why RosterCore?
 

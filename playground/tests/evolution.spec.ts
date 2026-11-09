@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+test.beforeEach(async({page})=>{await page.addInitScript(()=>localStorage.setItem("rostercore.mode.v1","ADVANCED"));});
 
 test("dated pharmacy workflow previews hours, imports leave and regenerates with an explicit substitute", async ({
   page,

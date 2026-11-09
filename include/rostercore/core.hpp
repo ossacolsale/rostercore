@@ -8,7 +8,7 @@
 #include <vector>
 namespace rostercore {
 using Json = nlohmann::json;
-inline constexpr auto version = "0.3.0";
+inline constexpr auto version = "0.4.0";
 struct Error : std::runtime_error {
   std::string code, path;
   Error(std::string c, std::string p, std::string m)
@@ -78,11 +78,17 @@ Json failure(const Error &);
 void validateSchema(const Json &, const std::string &);
 void validate(const Json &);
 Json solve(const Json &);
+Json improve(const Json &, const Json &);
 Json migrate(const Json &);
 Json inspect(const Json &, const std::string &);
 Json previewWorkPatterns(const Json &, const std::string &);
 Json configurationDiagnostics(const Json &);
 Json regenerate(const Json &, const Json &);
+Json importScenario(const Json &, const Json &, bool dryRun);
+Json applyChangeSet(const Json &, const Json &, bool dryRun);
+Json archiveOperation(const Json &, const Json &);
+std::string integrityHash(const Json &);
+std::string configurationHash(const Json &);
 void validateEvolution(const Json &, bool workforceOnly = false);
 int isoMonday(int);
 bool effective(const Json &, int);
@@ -103,6 +109,15 @@ std::vector<std::pair<int64_t, int64_t>> requirementSpans(const Scenario &,
                                                           const Json &, int);
 std::vector<int> fairnessMembers(const Scenario &, const Json &);
 Json verify(const Json &, const Json &);
+Json verifyQuality(const Json &, const Json &, double budget = 15);
+struct SpacingPair {
+  int employee, first, second;
+  std::string profile;
+};
+std::vector<SpacingPair> spacingPairs(const Scenario &, const Json &);
+Json knownAssignments(const Scenario &);
+Json workloadReport(const Scenario &, const Json &);
+Json fallbackAccounting(const Scenario &, const Json &);
 void resolveResultWeeks(Scenario &, const Json &);
 Json verifyEvolution(const Scenario &, const Json &);
 Json scheduleCoverage(const Scenario &, const Json &,

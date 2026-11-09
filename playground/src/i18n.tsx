@@ -30,6 +30,59 @@ export function translate(
 }
 
 const diagnosticSummaries: Record<string, string> = {
+  ARCHIVE_CONTEXT_REQUIRED:
+    "Manca il contesto originale di idoneità per una parte dello storico. Importa i contesti datati originali: le quote non possono essere ricostruite per ipotesi.",
+  ARCHIVE_INTEGRITY:
+    "L’impronta di integrità non coincide con il contenuto del calendario o del backup. Importazione annullata.",
+  ARCHIVE_CONTEXT:
+    "Il contesto originale del calendario non coincide con lo scenario incorporato.",
+  ARCHIVE_IDENTITY:
+    "L’identità o la revisione dell’archivio è in conflitto con un calendario esistente.",
+  ARCHIVE_SCENARIO:
+    "Il calendario appartiene a un altro scenario. Ripristina esplicitamente il contesto originale oppure un backup completo.",
+  ARCHIVE_PERIOD:
+    "La data richiesta non rientra nel periodo valido del calendario.",
+  ARCHIVE_STATE:
+    "L’operazione non è consentita nello stato corrente del calendario.",
+  ARCHIVE_REFERENCE:
+    "Manca un calendario o un identificatore stabile necessario. Ripristina il contesto originale.",
+  ARCHIVE_REVISION:
+    "La revisione deve riferirsi alla pubblicazione ufficiale attiva e conservare il calendario originale.",
+  ARCHIVE_OVERLAP:
+    "I turni importati sono in conflitto con una pubblicazione ufficiale. Crea prima una proposta di revisione.",
+  ARCHIVE_HISTORY_CONFLICT:
+    "Il lavoro completato importato è in conflitto con lo storico effettivo. Lo storico non è stato sovrascritto.",
+  ARCHIVE_INVALID:
+    "Il calendario archiviato non supera la verifica indipendente dei vincoli.",
+  ARCHIVE_CURRENT_CONFLICT:
+    "I turni archiviati sono incompatibili con la configurazione corrente.",
+  ARCHIVE_COMPLETION:
+    "Il periodo di lavoro svolto deve essere esplicito, verificabile e non può retrocedere.",
+  SCENARIO_CONFLICT:
+    "Il documento indica uno scenario diverso da quello previsto. Controlla l’identificatore stabile e la modalità di importazione.",
+  CHANGE_SET_CONFLICT:
+    "Questo identificatore di modifica è già stato usato con un contenuto differente.",
+  ENTITY_CONFLICT:
+    "Un’entità è cambiata dopo la preparazione del documento. Esporta un nuovo contesto e rigenera la modifica.",
+  HARD_RULE_AUTHORIZATION:
+    "La modifica di calendario, definizioni o vincoli richiede un’autorizzazione esplicita.",
+  PROTECTED_ASSIGNMENT:
+    "La modifica interessa turni effettivi o pubblicati. Crea una revisione futura esplicita senza alterare lo storico.",
+  SPACING_TARGET:
+    "Seleziona almeno un turno gravoso o una categoria condivisa.",
+  SPACING_NORMAL:
+    "I turni normali devono essere lavorativi e distinti dalla categoria gravosa; selezionali esplicitamente per la distanza in lavoro effettivo.",
+  VERIFY_SPACING:
+    "La verifica indipendente ha rilevato una violazione del distanziamento obbligatorio.",
+  WORKLOAD_MISMATCH:
+    "Il rapporto sul carico non coincide con il ricalcolo indipendente delle assegnazioni.",
+  DUPLICATE_WEEKDAY:
+    "Uno schema di lavoro può avere una sola eccezione per ciascun giorno della settimana.",
+  IMPROVEMENT_CONTEXT:
+    "La ricerca di miglioramento richiede la stessa configurazione operativa. Per cambiare i vincoli crea una revisione.",
+  SEARCH_BUDGET:
+    "Il tempo di ricerca deve essere compreso tra zero e 600 secondi.",
+
   WORK_PATTERN_ASSIGNMENT_CONFLICT:
     "Più regole automatiche con la stessa priorità massima assegnano schemi differenti alla stessa persona e data. Correggi le priorità, i selettori o gli intervalli di efficacia.",
   WORK_PATTERN_UNASSIGNED:

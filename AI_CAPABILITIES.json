@@ -1,0 +1,497 @@
+{
+  "format": "rostercore.ai-capabilities",
+  "schemaVersion": 1,
+  "engineVersion": "0.4.0",
+  "scenarioVersions": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "preferredScenarioVersion": 4,
+  "documents": [
+    "rostercore.scenario",
+    "rostercore.scenario-change-set",
+    "rostercore.planning-policy",
+    "rostercore.hr-events",
+    "rostercore.history-contexts",
+    "rostercore.schedule-archive",
+    "rostercore.workspace-backup"
+  ],
+  "operations": [
+    {
+      "name": "CREATE_EMPLOYEE_TYPE",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_EMPLOYEE_TYPE",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_EMPLOYEE_TYPE",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_ATTRIBUTE",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_ATTRIBUTE",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_ATTRIBUTE",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_GROUP",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_GROUP",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_GROUP",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_SHIFT",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_SHIFT",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_SHIFT",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_WORK_PATTERN",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_WORK_PATTERN",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_WORK_PATTERN",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_PATTERN_RULE",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_PATTERN_RULE",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_PATTERN_RULE",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_WEEK_PROFILE",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_WEEK_PROFILE",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_WEEK_PROFILE",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_AVAILABILITY",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_AVAILABILITY",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_AVAILABILITY",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_ALLOWED_SHIFTS",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_ALLOWED_SHIFTS",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_ALLOWED_SHIFTS",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_CONSTRAINT",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_CONSTRAINT",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_CONSTRAINT",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_CONSTRAINT_SET",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_CONSTRAINT_SET",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_CONSTRAINT_SET",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_POLICY",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_POLICY",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_POLICY",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_COVERAGE",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_COVERAGE",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_COVERAGE",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_TEMPORAL_RULE",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_TEMPORAL_RULE",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_TEMPORAL_RULE",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_SPACING_RULE",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "REPLACE_SPACING_RULE",
+      "required": [
+        "op",
+        "value",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "DELETE_SPACING_RULE",
+      "required": [
+        "op",
+        "id",
+        "expectedEntityHash"
+      ]
+    },
+    {
+      "name": "CREATE_EMPLOYEE",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "UPDATE_EMPLOYEE",
+      "required": [
+        "op",
+        "employeeId",
+        "effectiveFrom",
+        "patch"
+      ]
+    },
+    {
+      "name": "RENAME_EMPLOYEE",
+      "required": [
+        "op",
+        "employeeId",
+        "label"
+      ]
+    },
+    {
+      "name": "END_EMPLOYMENT",
+      "required": [
+        "op",
+        "employeeId",
+        "effectiveFrom"
+      ]
+    },
+    {
+      "name": "SET_WEEK_CONFIGURATION",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "SET_CALENDAR",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "SET_BASE_CONSTRAINTS",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "SET_SEARCH",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "SET_CLOSURES",
+      "required": [
+        "op",
+        "value"
+      ]
+    },
+    {
+      "name": "SYNC_HR",
+      "required": [
+        "op",
+        "value"
+      ]
+    }
+  ],
+  "entityCollections": {
+    "EMPLOYEE_TYPE": "employeeTypes",
+    "ATTRIBUTE": "attributeDefinitions",
+    "GROUP": "groups",
+    "SHIFT": "shifts",
+    "WORK_PATTERN": "workPatterns",
+    "PATTERN_RULE": "workPatternAssignmentRules",
+    "WEEK_PROFILE": "weekProfiles",
+    "AVAILABILITY": "availability",
+    "ALLOWED_SHIFTS": "allowedShifts",
+    "CONSTRAINT": "constraints",
+    "CONSTRAINT_SET": "constraintSets",
+    "POLICY": "policies",
+    "COVERAGE": "dutyRequirements",
+    "TEMPORAL_RULE": "temporalRules",
+    "SPACING_RULE": "spacingRules"
+  },
+  "timeConventions": {
+    "scenarioPeriod": "inclusive dates",
+    "scopePeriod": "inclusive dates",
+    "effectiveVersions": "[validFrom,validTo)",
+    "employmentEnd": "exclusive",
+    "weeks": "ISO Monday",
+    "today": "explicit referenceDate; never infer",
+    "normalWorkGap": "actual intervening configured normal WORKING assignments",
+    "calendarGap": "difference between assignment dates"
+  },
+  "priorities": [
+    "all hard constraints",
+    "lexicographic fallback worst level first",
+    "desired week frequency",
+    "stability if BEFORE_FAIRNESS",
+    "fairness and soft spacing by ascending priority",
+    "stability if AFTER_FAIRNESS"
+  ],
+  "unsupported": [
+    "arbitrary JSON pointers",
+    "code execution",
+    "partial-day absence",
+    "minute-based fairness",
+    "burden points",
+    "arbitrary IANA elapsed-time zones",
+    "automatic hard-rule relaxation",
+    "automatic publication or completion",
+    "remote mandatory AI service"
+  ],
+  "examples": [
+    "01-create-scenario.json",
+    "02-anna-part-time.json",
+    "03-giuseppe-vacation.json",
+    "04-marco-unexpected-absence.json",
+    "05-evening-shift.json",
+    "06-special-sunday-manager.json",
+    "07-new-colleague-fairness.json"
+  ]
+}

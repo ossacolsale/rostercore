@@ -1,0 +1,28 @@
+{
+  "format": "rostercore.scenario-change-set",
+  "schemaVersion": 1,
+  "id": "03-giuseppe-vacation",
+  "scenarioId": "ai-five-person-business",
+  "expectedRevision": 1,
+  "allowHardRuleChanges": false,
+  "description": "Giuseppe is away 10\u201317 August 2027 inclusive.",
+  "referenceDate": "2026-11-09",
+  "operations": [
+    {
+      "op": "CREATE_AVAILABILITY",
+      "value": {
+        "id": "giuseppe-vacation",
+        "selector": {
+          "employeeIds": [
+            "giuseppe"
+          ]
+        },
+        "scope": {
+          "start": "2027-08-10",
+          "end": "2027-08-17"
+        },
+        "state": "ABSENT"
+      }
+    }
+  ]
+}

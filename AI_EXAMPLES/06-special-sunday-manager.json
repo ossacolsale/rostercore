@@ -1,0 +1,53 @@
+{
+  "format": "rostercore.scenario-change-set",
+  "schemaVersion": 1,
+  "id": "06-special-sunday-manager",
+  "scenarioId": "ai-five-person-business",
+  "expectedRevision": 1,
+  "allowHardRuleChanges": true,
+  "description": "During special weeks, at least one manager must be physically present on Sunday 09:00\u201312:00.",
+  "referenceDate": "2026-11-09",
+  "operations": [
+    {
+      "op": "CREATE_COVERAGE",
+      "value": {
+        "id": "sunday-manager",
+        "label": "Sunday manager presence",
+        "mode": "PRESENCE",
+        "shiftIds": [
+          "regular"
+        ],
+        "levels": [
+          {
+            "selector": {
+              "where": {
+                "op": "EQ",
+                "attributeId": "manager",
+                "value": true
+              }
+            },
+            "level": 0
+          }
+        ],
+        "comparison": "GE",
+        "count": 1,
+        "intervals": [
+          {
+            "start": "09:00",
+            "end": "12:00",
+            "endDayOffset": 0
+          }
+        ],
+        "scope": {
+          "weekProfileIds": [
+            "special"
+          ],
+          "weekdays": [
+            7
+          ]
+        },
+        "preferencePriority": 0
+      }
+    }
+  ]
+}

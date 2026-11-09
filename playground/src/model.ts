@@ -1,3 +1,4 @@
+import type { ScheduleArchive } from "./archives";
 import type {
   AttributeDefinition,
   EmployeeVersion,
@@ -85,9 +86,25 @@ export type Assignment = {
   variantId?: string;
   weekProfileId?: string;
 };
+export type SpacingRule = {
+  id: string;
+  label: string;
+  selector: Selector;
+  shiftIds: string[];
+  fairnessTags?: string[];
+  scope: Scope;
+  mode: "HARD" | "SOFT";
+  unit: "CALENDAR" | "NORMAL_WORK_DAYS";
+  minimumGap: number;
+  normalShiftIds: string[];
+  penalty: "CLOSE_PAIRS" | "GAP_DEFICIT";
+  priority: number;
+};
 export type Scenario = {
+  dutyBindingMode?: "ACTIVE_SCOPE" | "GLOBAL";
+  spacingRules?: SpacingRule[];
   format: "rostercore.scenario";
-  schemaVersion: 1 | 2 | 3;
+  schemaVersion: 1 | 2 | 3 | 4;
   attributeDefinitions?: AttributeDefinition[];
   workPatterns?: WorkPattern[];
   workPatternAssignmentRules?: WorkPatternAssignmentRule[];
@@ -95,6 +112,8 @@ export type Scenario = {
   weekConfiguration?: WeekConfiguration;
   dutyRequirements?: DutyRequirement[];
   temporalRules?: TemporalRule[];
+  archiveState?: { publishedIds: string[]; completedIds: string[] };
+  proposal?: { supersedesId: string; from: string };
   replanning?: {
     from: string;
     baseline: Assignment[];
@@ -188,6 +207,54 @@ export type Result = {
     suggestion?: string;
     section?: string;
   }[];
+  archives?: ScheduleArchive[];
+  archive?: ScheduleArchive;
+  document?: unknown;
+  csv?: string;
+  restoredSchedule?: {
+    scenario: Scenario;
+    result: Result;
+    archiveId: string;
+    scenarioEncoding?: string;
+  };
+  workload?: {
+    ruleId: string;
+    employeeId: string;
+    mode: string;
+    unit: string;
+    totalBurden: number;
+    byShift: Record<string, number>;
+    knownPriorBurden: number;
+    minimumCalendarGap: number | null;
+    minimumNormalWorkGap: number | null;
+    consecutivePairs: number;
+    closePairs: number;
+    penalty: number;
+  }[];
+  quality?: {
+    fallback: {
+      status: string;
+      totalSubstitutions: number;
+      stages: {
+        policyId: string;
+        metric: string;
+        priority: number;
+        minimumLevel: number;
+        incumbent: number;
+        lowerBound: number;
+        provedMinimum: boolean;
+      }[];
+    };
+    substitutions: {
+      date: string;
+      requirementId: string;
+      employeeId: string;
+      level: number;
+      minimumProved: boolean;
+      reasonCode: string;
+    }[];
+    audit?: unknown[];
+  };
   workforce?: WorkforcePreview;
   weekAssignments?: WeekAssignment[];
   calendarDays?: {
@@ -324,4 +391,41 @@ export function download(name: string, value: unknown) {
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+export function planningSignature(s: Scenario, result?: Result) {
+  const copy = structuredClone(s);
+  for (const key of [
+    "revision",
+    "schemaVersion",
+    "archiveState",
+    "proposal",
+    "appliedChangeSets",
+  ] as const)
+    delete (copy as unknown as Record<string, unknown>)[key];
+  const own = new Map(
+    result?.assignments?.map((a) => [a.employeeId + ":" + a.date, a]),
+  );
+  copy.publishedAssignments = copy.publishedAssignments.filter((a) => {
+    const planned = own.get(a.employeeId + ":" + a.date);
+    return (
+      !planned ||
+      planned.shiftId !== a.shiftId ||
+      (!!a.intervals &&
+        JSON.stringify(a.intervals) !== JSON.stringify(planned.intervals))
+    );
+  });
+  for (const key of [
+    "attributeDefinitions",
+    "workPatterns",
+    "workPatternAssignmentRules",
+    "weekProfiles",
+    "dutyRequirements",
+    "temporalRules",
+    "spacingRules",
+  ] as const)
+    if (!(copy as unknown as Record<string, unknown>)[key])
+      (copy as unknown as Record<string, unknown>)[key] = [];
+  copy.calendar.closures ??= [];
+  return JSON.stringify(copy);
 }

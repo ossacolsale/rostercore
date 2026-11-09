@@ -1,4 +1,9 @@
 import { test, expect } from "@playwright/test";
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("rostercore.mode.v1", "ADVANCED"),
+  );
+});
 test("operation feedback stays at the viewport bottom, translates, and exposes persistent error diagnostics", async ({
   page,
   request,
@@ -104,6 +109,19 @@ test("HTTP completion does not turn UNKNOWN or INFEASIBLE into success", async (
   await page.getByLabel("Scenario JSON").fill(JSON.stringify(s));
   await page
     .getByRole("button", { name: "Validate & apply JSON", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Review complete scenario import" }),
+  ).toBeVisible();
+  await page
+    .getByRole("dialog")
+    .getByLabel(
+      "Explicitly authorize changes to calendar, definitions and hard rules",
+    )
+    .check();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Confirm changes", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Your planning scenario" }),

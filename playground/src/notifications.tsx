@@ -104,6 +104,11 @@ const operationLabels: Record<string, string> = {
   "sync-hr": "HR synchronization",
   regenerate: "Calendar regeneration",
   migrate: "Scenario migration",
+  archives: "Saved calendar operation",
+  "verify-quality": "Independent quality check",
+  improve: "Calendar improvement search",
+  "change-set": "Scenario change set",
+  "import-scenario": "Complete scenario import",
   verify: "Independent verification",
   consolidate: "History consolidation",
   context: "AI authoring context",
@@ -117,7 +122,13 @@ export function notifyResult(result: Result, operation?: string) {
     errors.length ||
     ["VALIDATION_ERROR", "MODEL_INVALID"].includes(result.status)
       ? "ERROR"
-      : ["INFEASIBLE", "UNKNOWN", "FEASIBLE"].includes(result.status) ||
+      : [
+            "INFEASIBLE",
+            "UNKNOWN",
+            "FEASIBLE",
+            "QUALITY_UNKNOWN",
+            "QUALITY_IMPROVABLE",
+          ].includes(result.status) ||
           result.diagnostics.some((d) => d.severity === "WARNING")
         ? "WARNING"
         : ["INSPECTED", "CONTEXT", "PREVIEW"].includes(result.status)

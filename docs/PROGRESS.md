@@ -32,3 +32,14 @@ No industry behavior is embedded in the engine. The full five-week reference rea
 | 4 — Regression/distribution | 37 legacy + 42 evolution + 18 assignment tests, 20 bilingual browser tests, installed preview, reproducible schemas and independently verified full automatic-pattern example. The complete Linux/Windows/macOS release matrix passed, including Linux API/browser tests. | Complete for local evaluation |
 
 `UX_ASSIGNMENTS.md` describes semantics and compatibility. Full validation remains separate from progressive editing and pattern-only preview.
+
+## 0.4 reliability and ordinary usability — four phases
+
+| Phase | Delivered behavior | Verification |
+| --- | --- | --- |
+| 1 — Reliable operational priorities | Reproduced the long pharmacy timeout; deferred fairness auxiliary construction until fallback proof, independent fallback-quality counterfactuals, bounds/provisional explanations and verified-incumbent search restart. Patched Vite within 7.x. | Anonymized real-trial and hard/quality regressions; native and web checks in TEST_REPORT.md. |
+| 2 — Contextual archives and continuity | Versioned drafts/publications/completed prefixes/superseded revisions; canonical import previews, conflict/idempotency checks, original context/hash recovery, explicit historical reconstruction, CSV and complete backups. | Native lifecycle/accounting/recovery tests and browser reload→publish→complete→backup→fresh-session restore. |
+| 3 — Simple and advanced | Default six-question configuration over the same model; reusable tag categories, actual-eligibility combined fairness, hard/soft calendar/normal-work spacing, diagnostics and priority ordering. English/Italian, phone/tablet/desktop and 200% layout-scale checks. | Ten-person operational scenario created visually without JSON/numeric priorities; zero fallback and independent verification. |
+| 4 — Complete optional AI exchange | Strict typed change-set transactions/preconditions/receipts, complete-scenario preview/import, dated partial personnel updates, explicit hard-rule authorization, protected work and optional minimized AI package. Guides/capabilities and seven generated executable examples. | Native rollback/conflict/dated-field/history/HR/regeneration tests, real browser AI preview and protected recovery workflows. |
+
+The current contract is `RELIABILITY_REDESIGN.md`. Final executed totals/platform outcomes are recorded in `TEST_REPORT.md`; user operational acceptance remains separate.

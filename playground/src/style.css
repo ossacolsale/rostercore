@@ -1421,3 +1421,240 @@ footer span:last-child {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+.hidden {
+  display: none !important;
+}
+.mode-simple .sidebar {
+  display: none;
+}
+.mode-simple.app {
+  grid-template-columns: minmax(0, 1fr);
+}
+.mode-simple .workspace {
+  margin-left: 0;
+  width: 100%;
+}
+.mode-simple .advanced-only {
+  display: none !important;
+}
+.mode-simple .multi small {
+  display: none;
+}
+.simple-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+.simple-heading h1 {
+  font-size: clamp(1.5rem, 3vw, 2.3rem);
+  overflow-wrap: anywhere;
+}
+.simple-steps {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 1rem 0 1.5rem;
+}
+.simple-steps button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left;
+  white-space: normal;
+  min-width: 0;
+  padding: 0.8rem;
+}
+.simple-steps button span {
+  font-size: 1.15rem;
+  color: var(--accent);
+}
+.simple-steps .active {
+  background: #e0f0e9;
+  border-color: #20766a;
+}
+.simple-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 1rem;
+}
+.simple-next {
+  display: flex;
+  justify-content: flex-end;
+  margin: 1rem 0;
+}
+.simple-workspace .field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.simple-workspace .row {
+  align-items: end;
+  flex-wrap: wrap;
+}
+.simple-workspace .multi {
+  min-width: 0;
+}
+.simple-workspace details {
+  margin: 1rem 0;
+}
+.simple-workspace .item-card {
+  min-width: 0;
+  margin: 1rem 0;
+}
+.simple-workspace .panel,
+.simple-workspace section {
+  min-width: 0;
+}
+.simple-workspace .interval-row {
+  flex-wrap: wrap;
+}
+.schedule-library input[type="file"] {
+  max-width: 14rem;
+}
+.archive-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 1rem;
+}
+.selected-archive {
+  border-left: 4px solid #20766a;
+}
+.topbar,
+.top-actions {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.top-actions .field {
+  margin: 0;
+  max-width: 12rem;
+}
+.row > * {
+  min-width: 0;
+}
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+.item-card code {
+  overflow-wrap: anywhere;
+}
+.quality-proof {
+  border-left: 4px solid #20766a;
+}
+.quality-provisional {
+  border-left: 4px solid #d19a38;
+}
+@media (max-width: 1000px) {
+  .simple-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .mode-simple .topbar {
+    position: static;
+  }
+  .mode-simple main {
+    padding: 1rem;
+  }
+  .simple-heading {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 600px) {
+  .simple-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .simple-workspace .row > * {
+    flex: 1 1 100%;
+  }
+  .simple-workspace .panel {
+    padding: 1rem;
+  }
+  .top-actions {
+    justify-content: flex-start;
+  }
+  .top-actions button,
+  .top-actions .field {
+    flex: 1 1 auto;
+  }
+  .simple-heading h1 {
+    font-size: 1.5rem;
+  }
+  .field {
+    min-width: 0 !important;
+  }
+}
+.change-diff {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.change-diff pre {
+  max-height: 24rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.simple-workspace .interval-editor {
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .change-diff {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mode-simple .topbar {
+  height: auto;
+  min-height: 82px;
+}
+.mode-simple button {
+  white-space: normal;
+}
+.simple-workspace textarea {
+  width: 100%;
+}
+.simple-steps button span {
+  color: #226958;
+}
+.mode-simple .breadcrumb {
+  display: none;
+}
+.mode-simple .simple-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 1rem;
+}
+.archive-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+}
+.simple-steps button {
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  font-size: 0.95rem;
+  font-weight: 550;
+}
+.simple-steps button.active {
+  color: var(--ink);
+  background: #e0f0e9;
+  border-color: #20766a;
+}
+.simple-steps button:hover {
+  color: var(--ink);
+  background: #eaf3e8;
+  border-color: #8bab98;
+}
+.simple-steps button span,
+.simple-steps button.active span {
+  color: #226958;
+  opacity: 1;
+  width: auto;
+  flex-shrink: 0;
+}

@@ -23,10 +23,26 @@ Json Scenario::weekOptions(int d) const {
   int w = isoMonday(d);
   auto config = source.value("weekConfiguration", Json::object());
   Json ids = Json::array();
+  // The original published/actual profile is authoritative before this horizon.
+  if (d < days.front())
+    for (auto &a : knownAssignments(*this))
+      if (isoMonday(day(a["date"])) == w && a.contains("weekProfileId")) {
+        if (!ids.empty() && ids[0] != a["weekProfileId"])
+          throw Error(
+              "WEEK_CONFLICT", "/publishedAssignments",
+              "Protected records disagree on the preceding week profile");
+        if (ids.empty())
+          ids.push_back(a["weekProfileId"]);
+      }
+
   std::string origin = "LEGACY", derived;
   for (auto &h : config.value("history", Json::array()))
     if (isoMonday(day(h["week"])) == w) {
-      ids.push_back(h["profileId"]);
+      if (!ids.empty() && ids[0] != h["profileId"])
+        throw Error("WEEK_CONFLICT", "/weekConfiguration/history",
+                    "Historical and published week profiles disagree");
+      if (ids.empty())
+        ids.push_back(h["profileId"]);
       origin = "HISTORY";
     }
   for (auto &r : config.value("recurrences", Json::array()))
@@ -167,7 +183,7 @@ bool Scenario::matches(const Json &item, int d,
 Json migrate(const Json &j) {
   validate(j);
   Json updated = j;
-  updated["schemaVersion"] = 3;
+  updated["schemaVersion"] = 4;
   for (auto key :
        {"attributeDefinitions", "workPatterns", "weekProfiles",
         "dutyRequirements", "temporalRules", "workPatternAssignmentRules"})
@@ -183,7 +199,7 @@ Json migrate(const Json &j) {
   auto out = response("MIGRATED");
   out["scenario"] = updated;
   out["migration"] = {{"fromSchemaVersion", j["schemaVersion"]},
-                      {"toSchemaVersion", 3},
+                      {"toSchemaVersion", 4},
                       {"identifiersPreserved", true},
                       {"historyPreserved", true},
                       {"manualActions", Json::array()}};

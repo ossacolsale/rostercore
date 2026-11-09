@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+test.beforeEach(async({page})=>{await page.addInitScript(()=>localStorage.setItem("rostercore.mode.v1","ADVANCED"));});
 import { readFile } from "node:fs/promises";
 test.beforeEach(async ({ page }) => {
   await page.goto("/");

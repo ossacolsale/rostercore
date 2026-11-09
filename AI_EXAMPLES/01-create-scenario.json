@@ -1,0 +1,442 @@
+{
+  "format": "rostercore.scenario",
+  "schemaVersion": 4,
+  "id": "ai-five-person-business",
+  "label": "Five-person business",
+  "revision": 1,
+  "employeeTypes": [
+    {
+      "id": "staff",
+      "label": "Qualified staff"
+    }
+  ],
+  "employees": [
+    {
+      "id": "anna",
+      "label": "Anna",
+      "typeId": "staff",
+      "attributes": {
+        "manager": true
+      },
+      "employment": {
+        "validFrom": "2026-01-01"
+      },
+      "versions": []
+    },
+    {
+      "id": "giuseppe",
+      "label": "Giuseppe",
+      "typeId": "staff",
+      "attributes": {
+        "manager": true
+      },
+      "employment": {
+        "validFrom": "2026-01-01"
+      },
+      "versions": []
+    },
+    {
+      "id": "marco",
+      "label": "Marco",
+      "typeId": "staff",
+      "attributes": {
+        "manager": false
+      },
+      "employment": {
+        "validFrom": "2026-01-01"
+      },
+      "versions": []
+    },
+    {
+      "id": "luca",
+      "label": "Luca",
+      "typeId": "staff",
+      "attributes": {
+        "manager": false
+      },
+      "employment": {
+        "validFrom": "2026-01-01"
+      },
+      "versions": []
+    },
+    {
+      "id": "sara",
+      "label": "Sara",
+      "typeId": "staff",
+      "attributes": {
+        "manager": false
+      },
+      "employment": {
+        "validFrom": "2026-01-01"
+      },
+      "versions": []
+    }
+  ],
+  "groups": [],
+  "shifts": [
+    {
+      "id": "regular",
+      "label": "Regular",
+      "kind": "WORKING",
+      "intervals": [
+        {
+          "start": "09:00",
+          "end": "17:00",
+          "endDayOffset": 0
+        }
+      ]
+    },
+    {
+      "id": "closing",
+      "label": "Closing",
+      "kind": "WORKING",
+      "intervals": [
+        {
+          "start": "16:00",
+          "end": "21:00",
+          "endDayOffset": 0
+        }
+      ],
+      "fairnessTags": [
+        "closing-burden"
+      ]
+    },
+    {
+      "id": "off",
+      "label": "Rest",
+      "kind": "OFF",
+      "intervals": []
+    }
+  ],
+  "calendar": {
+    "start": "2026-11-09",
+    "end": "2026-11-22",
+    "timezone": "Europe/Rome",
+    "excludedDates": [],
+    "excludedRanges": [],
+    "excludedIsoWeeks": [],
+    "closures": []
+  },
+  "availability": [],
+  "allowedShifts": [
+    {
+      "id": "normal-work",
+      "selector": {},
+      "shiftIds": [
+        "regular",
+        "closing"
+      ],
+      "scope": {
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "dayType": "NON_HOLIDAY"
+      },
+      "allowRequiredRest": true
+    }
+  ],
+  "constraints": [],
+  "baseConstraintIds": [],
+  "constraintSets": [],
+  "policies": [
+    {
+      "id": "closing-fairness",
+      "label": "Combined closing fairness",
+      "revision": 1,
+      "active": true,
+      "draft": false,
+      "dependencies": [],
+      "constraints": [],
+      "sharedConstraintIds": [],
+      "constraintSetIds": [],
+      "objective": {
+        "id": "closing-count",
+        "label": "All eligible current and future staff",
+        "type": "CUMULATIVE_FAIRNESS",
+        "mode": "CONTINUOUS_BALANCED",
+        "measure": "COUNT",
+        "selector": {
+          "typeIds": [
+            "staff"
+          ],
+          "where": {
+            "op": "EQ",
+            "attributeId": "eligible",
+            "value": true
+          }
+        },
+        "shiftIds": [],
+        "fairnessTags": [
+          "closing-burden"
+        ],
+        "participation": "AVAILABILITY_WEIGHTED",
+        "metrics": [
+          "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "FINAL_ABSOLUTE_DEVIATION"
+        ],
+        "priority": 0
+      }
+    }
+  ],
+  "history": {
+    "assignments": [],
+    "fairnessSnapshots": []
+  },
+  "publishedAssignments": [],
+  "hrState": {
+    "events": [],
+    "snapshotRevisions": {}
+  },
+  "search": {
+    "maxTimeSeconds": 10,
+    "seed": 42,
+    "workers": 1,
+    "deterministic": true
+  },
+  "attributeDefinitions": [
+    {
+      "id": "contract",
+      "label": "Contract",
+      "type": "ENUM",
+      "values": [
+        "FULL_TIME",
+        "PART_TIME"
+      ],
+      "default": "FULL_TIME"
+    },
+    {
+      "id": "manager",
+      "label": "Manager",
+      "type": "BOOLEAN",
+      "default": false
+    },
+    {
+      "id": "eligible",
+      "label": "Closing qualified",
+      "type": "BOOLEAN",
+      "default": true
+    }
+  ],
+  "workPatterns": [
+    {
+      "id": "full",
+      "label": "Full-time work",
+      "versions": [
+        {
+          "validFrom": "2026-01-01",
+          "weekdays": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "shiftIds": [
+            "regular",
+            "closing",
+            "off"
+          ],
+          "weekdayShifts": []
+        }
+      ]
+    },
+    {
+      "id": "part",
+      "label": "Part-time; closing only Friday or weekend",
+      "versions": [
+        {
+          "validFrom": "2026-01-01",
+          "weekdays": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "shiftIds": [
+            "regular",
+            "closing",
+            "off"
+          ],
+          "weekdayShifts": [
+            {
+              "weekday": 1,
+              "shiftIds": [
+                "regular",
+                "off"
+              ]
+            },
+            {
+              "weekday": 2,
+              "shiftIds": [
+                "regular",
+                "off"
+              ]
+            },
+            {
+              "weekday": 3,
+              "shiftIds": [
+                "regular",
+                "off"
+              ]
+            },
+            {
+              "weekday": 4,
+              "shiftIds": [
+                "regular",
+                "off"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "weekProfiles": [
+    {
+      "id": "ordinary",
+      "label": "Ordinary week",
+      "offWeekdays": [
+        6,
+        7
+      ],
+      "holidayMode": "OFF",
+      "constraintIds": [],
+      "policyIds": []
+    },
+    {
+      "id": "special",
+      "label": "Special week",
+      "offWeekdays": [],
+      "holidayMode": "NORMAL",
+      "constraintIds": [],
+      "policyIds": []
+    }
+  ],
+  "dutyRequirements": [
+    {
+      "id": "closing-duty",
+      "label": "One daily closing",
+      "mode": "RESPONSIBILITY",
+      "shiftIds": [
+        "closing"
+      ],
+      "levels": [
+        {
+          "selector": {
+            "typeIds": [
+              "staff"
+            ],
+            "where": {
+              "op": "EQ",
+              "attributeId": "eligible",
+              "value": true
+            }
+          },
+          "level": 0
+        }
+      ],
+      "comparison": "EQ",
+      "count": 1,
+      "intervals": [
+        {
+          "start": "20:00",
+          "end": "21:00",
+          "endDayOffset": 0
+        }
+      ],
+      "scope": {
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "dayType": "NON_HOLIDAY"
+      },
+      "preferencePriority": 0,
+      "exclusiveGroup": "daily-duties",
+      "bindAssignments": true
+    }
+  ],
+  "temporalRules": [],
+  "weekConfiguration": {
+    "manual": [],
+    "recurrences": [],
+    "frequencies": [],
+    "history": [],
+    "defaultProfileId": "ordinary"
+  },
+  "dutyBindingMode": "GLOBAL",
+  "workPatternAssignmentRules": [
+    {
+      "id": "full-rule",
+      "label": "Full-time contracts",
+      "enabled": true,
+      "selector": {
+        "where": {
+          "op": "EQ",
+          "attributeId": "contract",
+          "value": "FULL_TIME"
+        }
+      },
+      "workPatternId": "full",
+      "priority": 10,
+      "validFrom": "2026-01-01"
+    },
+    {
+      "id": "part-rule",
+      "label": "Part-time contracts",
+      "enabled": true,
+      "selector": {
+        "where": {
+          "op": "EQ",
+          "attributeId": "contract",
+          "value": "PART_TIME"
+        }
+      },
+      "workPatternId": "part",
+      "priority": 10,
+      "validFrom": "2026-01-01"
+    }
+  ],
+  "spacingRules": [
+    {
+      "id": "preferred-gap",
+      "label": "Avoid adjacent closings",
+      "selector": {
+        "typeIds": [
+          "staff"
+        ],
+        "where": {
+          "op": "EQ",
+          "attributeId": "eligible",
+          "value": true
+        }
+      },
+      "shiftIds": [],
+      "fairnessTags": [
+        "closing-burden"
+      ],
+      "scope": {},
+      "mode": "SOFT",
+      "unit": "CALENDAR",
+      "minimumGap": 2,
+      "normalShiftIds": [
+        "regular"
+      ],
+      "penalty": "CLOSE_PAIRS",
+      "priority": 50
+    }
+  ]
+}

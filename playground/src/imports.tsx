@@ -1,3 +1,4 @@
+import { AIConfiguration } from "./ai-configuration";
 import { useI18n } from "./i18n";
 import { useState } from "react";
 import { type Scenario, type Result, download } from "./model";
@@ -67,6 +68,7 @@ export function Imports({
   return (
     <>
       <EntityHeader title={t("AI & HR imports")} />
+      <AIConfiguration s={s} run={run} busy={busy} />
       <p className="intro">
         {t(
           "Import declarative documents, inspect the changes, then apply them explicitly. Validation and revision checks run in the C++ core.",

@@ -254,11 +254,14 @@ Json aiContext(const Json &j) {
                   {"employees", Json::array()}};
   for (auto key : {"attributeDefinitions", "workPatterns", "weekProfiles",
                    "weekConfiguration", "dutyRequirements", "temporalRules",
-                   "workPatternAssignmentRules"})
+                   "workPatternAssignmentRules", "spacingRules", "allowedShifts", "baseConstraintIds"})
     context[key] =
         j.value(key, std::string(key) == "weekConfiguration" ? Json::object()
                                                              : Json::array());
-  context["schemaVersion"] = 3;
+  context["schemaVersion"] = 4;
+  context["configurationHash"]=configurationHash(j);context["referenceDate"]=j["calendar"]["start"];context["calendar"]=j["calendar"];context["entityHashes"]=Json::object();
+  for(auto key:{"employeeTypes","attributeDefinitions","groups","shifts","workPatterns","workPatternAssignmentRules","weekProfiles","availability","allowedShifts","constraints","constraintSets","policies","dutyRequirements","temporalRules","spacingRules"})for(auto&entity:j.value(key,Json::array()))context["entityHashes"][key][entity["id"].get<std::string>()]=integrityHash(entity);
+  context["protectedHistoryThrough"]=j["history"].value("through",Json(nullptr));context["protectedPublicationCount"]=j["publishedAssignments"].size();
   std::set<std::string> attributes;
   std::function<void(const Json &)> visit = [&](const Json &v) {
     if (v.is_object()) {

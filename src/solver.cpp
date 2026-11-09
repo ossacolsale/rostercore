@@ -1,7 +1,9 @@
 #include "rostercore/core.hpp"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <functional>
+#include <limits>
 #include <ortools/base/version.h>
 #include <ortools/sat/cp_model.h>
 #include <ortools/sat/cp_model_solver.h>
@@ -165,13 +167,15 @@ struct Compiler {
           model.AddEquality(v, 0);
       }
     advanced();
+    spacing(true);
   }
-  std::vector<Stage> objectives() {
-    auto stages = preferredStages();
+  std::vector<Stage> objectives(bool includePreferred = true) {
+    auto stages = includePreferred ? preferredStages() : std::vector<Stage>{};
     bool stable = s.source.contains("replanning");
     if (stable &&
         s.source["replanning"]["stabilityPriority"] == "BEFORE_FAIRNESS")
       stages.push_back(stability());
+    auto fairnessStart = stages.size();
     for (auto &p : s.activePolicies) {
       auto &o = p["objective"];
       auto selected = fairnessMembers(s, o);
@@ -325,6 +329,23 @@ struct Compiler {
                           scale});
       }
     }
+    auto spaced = spacing(false);
+    stages.insert(stages.end(), spaced.begin(), spaced.end());
+    auto priority = [&](const Stage &stage) {
+      if (stage.metric == "CLOSE_PAIRS" || stage.metric == "GAP_DEFICIT") {
+        for (auto &r : s.source.value("spacingRules", Json::array()))
+          if ("spacing:" + r["id"].get<std::string>() == stage.policyId)
+            return r["priority"].get<int>();
+      } else
+        for (auto &p : s.activePolicies)
+          if (p["id"] == stage.policyId)
+            return p["objective"]["priority"].get<int>();
+      return 0;
+    };
+    std::stable_sort(stages.begin() + fairnessStart, stages.end(),
+                     [&](const Stage &a, const Stage &b) {
+                       return priority(a) < priority(b);
+                     });
     if (stable &&
         s.source["replanning"]["stabilityPriority"] == "AFTER_FAIRNESS")
       stages.push_back(stability());
@@ -447,13 +468,22 @@ Json verify(const Json &scenario, const Json &result) {
   if (out["status"] == "VERIFIED") {
     auto f = fairness(s, result["assignments"]);
     out["fairness"] = f.report;
+    auto workload = workloadReport(s, result["assignments"]);
+    out["workload"] = workload;
+    for (auto &row : workload)
+      if (row["mode"] == "HARD" && row["closePairs"].get<int>() > 0)
+        violation("VERIFY_SPACING", "Hard spacing violated for " +
+                                        row["employeeId"].get<std::string>());
+    if (result.contains("workload") && result["workload"] != workload)
+      violation("WORKLOAD_MISMATCH",
+                "Workload report differs from independent replay");
     if (result.contains("fairness") && result["fairness"] != f.report)
       violation("FAIRNESS_MISMATCH",
                 "Reported quotas/debts do not match independent replay");
   }
   return out;
 }
-Json solve(const Json &j) {
+static Json solveSeeded(const Json &j, const Json &hint) {
   auto start = std::chrono::steady_clock::now();
   validate(j);
   Scenario s(j);
@@ -466,7 +496,7 @@ Json solve(const Json &j) {
   out["metadata"] = {
       {"engineVersion", version},
       {"backendVersion", operations_research::OrToolsVersionString()},
-      {"configurationHash", sha256(j.dump())},
+      {"configurationHash", configurationHash(j)},
       {"search", j["search"]},
       {"policyRevisions", Json::object()},
       {"elapsedSeconds", 0}};
@@ -525,14 +555,55 @@ Json solve(const Json &j) {
     }
   Compiler c(s);
   c.assignments();
-  auto stages = c.objectives();
+  if (!hint.is_null()) {
+    std::set<std::tuple<std::string, int, std::string>> chosen;
+    for (auto &a : hint["assignments"])
+      chosen.insert({a["employeeId"], day(a["date"]), a["shiftId"]});
+    for (auto &[key, v] : c.x) {
+      auto [e, d, t] = key;
+      c.model.AddHint(v,
+                      chosen.contains({s.employees[e].id, d, s.shifts[t].id}));
+    }
+    for (auto &[key, v] : c.weekly) {
+      bool selected = false;
+      for (auto &w : hint.value("weekAssignments", Json::array()))
+        if (isoMonday(day(w["week"])) == key.first &&
+            w["profileId"] == key.second)
+          selected = true;
+      c.model.AddHint(v, selected);
+    }
+    auto accounting = fallbackAccounting(s, hint);
+    std::vector<BoolVar> alternatives, prefix;
+    for (auto &stage : c.preferredStages())
+      if (stage.metric.starts_with("FALLBACK_LEVEL_")) {
+        int64_t value = 0;
+        for (auto &r : accounting["fallback"]["stages"])
+          if (r["policyId"] == stage.policyId && r["metric"] == stage.metric)
+            value = r["incumbent"];
+        auto improved = prefix;
+        improved.push_back(c.atom(stage.value, "LE", value - 1));
+        alternatives.push_back(c.conjunction(improved));
+        prefix.push_back(c.atom(stage.value, "EQ", value));
+      }
+    if (!prefix.empty()) {
+      alternatives.push_back(c.conjunction(prefix));
+      c.model.AddBoolOr(alternatives);
+    }
+  }
+  // Prove operational preferences before building potentially large fairness
+  // auxiliaries.
+  auto stages = c.preferredStages();
+  bool deferredObjectives = !stages.empty();
+  if (stages.empty())
+    stages = c.objectives(false);
   if (stages.empty())
     stages.push_back(
         {"", "FEASIBILITY", operations_research::sat::LinearExpr(0), 1});
   operations_research::sat::CpSolverResponse incumbent;
   bool hasSolution = false, allOptimal = true;
   double budget = j["search"]["maxTimeSeconds"];
-  for (auto &stage : stages) {
+  for (size_t stageIndex = 0; stageIndex < stages.size(); ++stageIndex) {
+    auto stage = stages[stageIndex];
     double remaining = budget - elapsed();
     if (remaining <= 0) {
       allOptimal = false;
@@ -595,6 +666,22 @@ Json solve(const Json &j) {
       allOptimal = false;
       break;
     }
+    c.model.ClearHints();
+    for (auto &[key, v] : c.x) {
+      (void)key;
+      c.model.AddHint(
+          v, operations_research::sat::SolutionBooleanValue(incumbent, v));
+    }
+    for (auto &[key, v] : c.weekly) {
+      (void)key;
+      c.model.AddHint(
+          v, operations_research::sat::SolutionBooleanValue(incumbent, v));
+    }
+    if (deferredObjectives && stageIndex + 1 == stages.size()) {
+      auto later = c.objectives(false);
+      stages.insert(stages.end(), later.begin(), later.end());
+      deferredObjectives = false;
+    }
   }
   if (hasSolution) {
     out["status"] = allOptimal ? "OPTIMAL" : "FEASIBLE";
@@ -648,13 +735,227 @@ Json solve(const Json &j) {
         choices.push_back(choice);
     out["coverage"] = scheduleCoverage(s, out["assignments"], choices);
     out["fairness"] = fairness(s, out["assignments"]).report;
+    out["workload"] = workloadReport(s, out["assignments"]);
     auto checkedResult = verify(j, out);
     if (checkedResult["status"] != "VERIFIED") {
       out["status"] = "MODEL_INVALID";
       out["diagnostics"] = checkedResult["diagnostics"];
     }
   }
+  if (out.contains("assignments"))
+    out["quality"] = fallbackAccounting(s, out);
   out["metadata"]["elapsedSeconds"] = elapsed();
+  return out;
+}
+Json solve(const Json &j) { return solveSeeded(j, Json()); }
+Json improve(const Json &current, const Json &request) {
+  validateSchema(request, "improvement-request");
+  auto old = request["previousScenario"], previous = request["previousResult"];
+  if (request.contains("previousScenarioEncoding")) {
+    auto original =
+        Json::parse(request["previousScenarioEncoding"].get<std::string>());
+    if (integrityHash(original) != integrityHash(old))
+      throw Error("CONFIGURATION_MISMATCH", "/previousScenarioEncoding",
+                  "Original encoding differs from the readable context");
+    old = original;
+  }
+  validate(old);
+  validate(current);
+  auto business = [](Json j) {
+    j.erase("revision");
+    j.erase("search");
+    return j;
+  };
+  if (business(old) != business(current))
+    throw Error("IMPROVEMENT_CONTEXT", "/",
+                "Improvement requires the same business configuration; create "
+                "a revision for changed rules");
+  if (previous.value("metadata", Json::object())
+          .value("configurationHash", "") != configurationHash(old))
+    throw Error("CONFIGURATION_MISMATCH", "/",
+                "Previous schedule must match its original context");
+  auto checkedResult = verify(old, previous);
+  if (checkedResult["status"] != "VERIFIED")
+    return checkedResult;
+  Json next = current;
+  next["search"]["maxTimeSeconds"] = request["maxTimeSeconds"];
+  auto result = solveSeeded(next, previous);
+  bool retain = !result.contains("assignments");
+  // A complete optimum is at least as good as every verified incumbent. For a
+  // partial search, compare independently replayed fallback/fairness/spacing
+  // values; unknown criteria retain it.
+  if (!retain && result["status"] != "OPTIMAL") {
+    Scenario a(old), b(next);
+    resolveResultWeeks(a, previous);
+    resolveResultWeeks(b, result);
+    auto priorFallback = fallbackAccounting(a, previous),
+         newFallback = fallbackAccounting(b, result);
+    auto priorFairness = fairness(a, previous["assignments"]).report,
+         newFairness = fairness(b, result["assignments"]).report;
+    auto priorWork = workloadReport(a, previous["assignments"]),
+         newWork = workloadReport(b, result["assignments"]);
+    bool decided = false;
+    for (auto &phase : result["phases"]) {
+      std::string policy = phase["policyId"], metric = phase["metric"];
+      Rational before, after;
+      bool found = false;
+      if (metric.starts_with("FALLBACK_LEVEL_")) {
+        for (size_t i = 0; i < priorFallback["fallback"]["stages"].size();
+             ++i) {
+          auto &r = priorFallback["fallback"]["stages"][i];
+          if (r["policyId"] == policy && r["metric"] == metric) {
+            before = Rational(r["incumbent"]);
+            after = Rational(newFallback["fallback"]["stages"][i]["incumbent"]);
+            found = true;
+          }
+        }
+      } else {
+        for (size_t i = 0; i < priorFairness.size(); ++i)
+          if (priorFairness[i]["policyId"] == policy &&
+              priorFairness[i]["metrics"].contains(metric)) {
+            auto x = priorFairness[i]["metrics"][metric],
+                 y = newFairness[i]["metrics"][metric];
+            before = Rational(x["numerator"], x["denominator"]);
+            after = Rational(y["numerator"], y["denominator"]);
+            found = true;
+          }
+        for (auto &r : priorWork)
+          if ((metric == "CLOSE_PAIRS" || metric == "GAP_DEFICIT") &&
+              "spacing:" + r["ruleId"].get<std::string>() == policy) {
+            before = before + Rational(r["penalty"]);
+            found = true;
+          }
+        for (auto &r : newWork)
+          if ((metric == "CLOSE_PAIRS" || metric == "GAP_DEFICIT") &&
+              "spacing:" + r["ruleId"].get<std::string>() == policy)
+            after = after + Rational(r["penalty"]);
+      }
+      if (!found) {
+        retain = true;
+        decided = true;
+        break;
+      }
+      auto delta = after - before;
+      if (delta.n) {
+        retain = delta.n > 0;
+        decided = true;
+        break;
+      }
+    }
+    if (!decided)
+      retain = true;
+  }
+  if (retain) {
+    auto attempt = result;
+    result = previous;
+    result["status"] = "FEASIBLE";
+    result["phases"] = Json::array();
+    result["metadata"] = attempt["metadata"];
+    result["metadata"]["retainedVerifiedIncumbent"] = true;
+    result["metadata"]["attemptStatus"] = attempt["status"];
+    Scenario s(next);
+    resolveResultWeeks(s, result);
+    result["quality"] = fallbackAccounting(s, result);
+  }
+  result["metadata"]["searchContinuation"] = "RESTART_WITH_VERIFIED_HINT";
+  result["scenario"] = next;
+  return result;
+}
+Json verifyQuality(const Json &j, const Json &result, double budget) {
+  if (!std::isfinite(budget) || budget < 0 || budget > 600)
+    throw Error("SEARCH_BUDGET", "/budget",
+                "Quality audit budget must be between 0 and 600 seconds");
+  auto hard = verify(j, result);
+  if (hard["status"] != "VERIFIED")
+    return hard;
+  if (result.value("metadata", Json::object()).value("configurationHash", "") !=
+      configurationHash(j))
+    throw Error("CONFIGURATION_MISMATCH", "/result",
+                "Quality audit requires the exact original scenario");
+  Scenario s(j);
+  auto accounting = fallbackAccounting(s, result);
+  auto out = response("QUALITY_VERIFIED");
+  out["quality"] = accounting;
+  out["quality"]["audit"] = Json::array();
+  Compiler c(s);
+  c.assignments();
+  auto stages = c.preferredStages();
+  auto started = std::chrono::steady_clock::now();
+  for (auto &stage : stages) {
+    if (stage.metric.rfind("FALLBACK_LEVEL_", 0) != 0)
+      continue;
+    int64_t value = 0;
+    for (auto &row : accounting["fallback"]["stages"])
+      if (row["policyId"] == stage.policyId && row["metric"] == stage.metric)
+        value = row["incumbent"];
+    Json row = {{"policyId", stage.policyId},
+                {"metric", stage.metric},
+                {"incumbent", value}};
+    if (value == 0) {
+      row["status"] = "PROVED_MINIMUM";
+      row["lowerBound"] = 0;
+      c.model.AddEquality(stage.value, 0);
+      out["quality"]["audit"].push_back(row);
+      continue;
+    }
+    double remaining = budget - std::chrono::duration<double>(
+                                    std::chrono::steady_clock::now() - started)
+                                    .count();
+    if (remaining <= 0) {
+      row["status"] = "UNPROVED";
+      out["status"] = "QUALITY_UNKNOWN";
+      out["quality"]["audit"].push_back(row);
+      break;
+    }
+    // Independent counterfactual: retain all hard rules and previously verified
+    // priority values.
+    auto probe = c.model.Build();
+    auto *constraint = probe.add_constraints()->mutable_linear();
+    for (int k = 0; k < stage.value.variables().size(); ++k) {
+      constraint->add_vars(stage.value.variables()[k]);
+      constraint->add_coeffs(stage.value.coefficients()[k]);
+    }
+    constraint->add_domain(std::numeric_limits<int64_t>::min());
+    constraint->add_domain(value - 1 - stage.value.constant());
+    operations_research::sat::SatParameters parameters;
+    parameters.set_max_time_in_seconds(remaining);
+    parameters.set_num_search_workers(j["search"]["workers"]);
+    parameters.set_random_seed(j["search"]["seed"]);
+    auto response =
+        operations_research::sat::SolveWithParameters(probe, parameters);
+    if (response.status() ==
+        operations_research::sat::CpSolverStatus::INFEASIBLE) {
+      row["status"] = "PROVED_MINIMUM";
+      row["lowerBound"] = value;
+      c.model.AddEquality(stage.value, value);
+    } else if (response.status() ==
+                   operations_research::sat::CpSolverStatus::OPTIMAL ||
+               response.status() ==
+                   operations_research::sat::CpSolverStatus::FEASIBLE) {
+      row["status"] = "IMPROVABLE";
+      row["betterValue"] =
+          operations_research::sat::SolutionIntegerValue(response, stage.value);
+      out["status"] = "QUALITY_IMPROVABLE";
+    } else {
+      row["status"] = "UNPROVED";
+      out["status"] = "QUALITY_UNKNOWN";
+    }
+    out["quality"]["audit"].push_back(row);
+    if (out["status"] != "QUALITY_VERIFIED")
+      break;
+  }
+  out["quality"]["scope"] = "FALLBACK";
+  if (out["status"] == "QUALITY_VERIFIED") {
+    out["quality"]["fallback"]["status"] = "PROVED_MINIMUM";
+    for (auto &row : out["quality"]["fallback"]["stages"]) {
+      row["provedMinimum"] = true;
+      row["proofKind"] = "INDEPENDENT_COUNTERFACTUAL";
+    }
+    for (auto &row : out["quality"]["substitutions"]) {
+      row["minimumProved"] = true;
+      row["reasonCode"] = "GLOBAL_FALLBACK_MINIMUM_PROVED";
+    }
+  }
   return out;
 }
 } // namespace rostercore

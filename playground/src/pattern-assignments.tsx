@@ -50,7 +50,7 @@ export function ReviewDialog({
 }
 export function enableAssignmentRules(s: Scenario) {
   initializeEvolution(s);
-  s.schemaVersion = 3;
+  if (s.schemaVersion < 3) s.schemaVersion = 3;
   s.workPatternAssignmentRules ??= [];
 }
 export function PatternChoice({

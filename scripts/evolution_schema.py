@@ -46,5 +46,6 @@ def extend(defs, scenario, policy, hr, result, obj, arr, enum, ref, s, id_, inte
     policy['properties']['engineVersion']=enum('0.1.0','0.2.0','0.3.0')
     for key in ['weekAssignments','calendarDays','coverage','changes']:result['properties'][key]={'type':'array'}
     for key in ['workforce','migration']:result['properties'][key]={'type':'object'}
-    result['properties']['status']['enum']+=['MIGRATED','INSPECTED']
+    result['properties']['status']['enum']+=['MIGRATED','INSPECTED','QUALITY_VERIFIED','QUALITY_UNKNOWN','QUALITY_IMPROVABLE']
+    result['properties']['quality']={'type':'object'}
     result['properties']['diagnostics']['items']['properties'].update({'severity':enum('ERROR','WARNING','INFORMATION'),'objectIds':ids,'suggestion':label,'section':s})

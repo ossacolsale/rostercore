@@ -1,0 +1,28 @@
+{
+  "format": "rostercore.scenario-change-set",
+  "schemaVersion": 1,
+  "id": "05-evening-shift",
+  "scenarioId": "ai-five-person-business",
+  "expectedRevision": 1,
+  "allowHardRuleChanges": true,
+  "description": "Add an evening shift from 16:00 to 21:00; no coverage requirement is implied.",
+  "referenceDate": "2026-11-09",
+  "operations": [
+    {
+      "op": "CREATE_SHIFT",
+      "value": {
+        "id": "evening",
+        "label": "Evening",
+        "kind": "WORKING",
+        "intervals": [
+          {
+            "start": "16:00",
+            "end": "21:00",
+            "endDayOffset": 0
+          }
+        ],
+        "fairnessTags": []
+      }
+    }
+  ]
+}

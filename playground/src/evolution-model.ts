@@ -63,6 +63,7 @@ export type WorkPattern = {
     weekdays: number[];
     shiftIds: string[];
     exceptions?: { date: string; shiftIds: string[] }[];
+    weekdayShifts?:{weekday:number;shiftIds:string[]}[];
   })[];
 };
 export type ShiftVariant = {

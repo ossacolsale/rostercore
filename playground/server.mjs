@@ -19,6 +19,11 @@ const actions = new Set([
   "validate",
   "solve",
   "verify",
+  "verify-quality",
+  "archives",
+  "change-set",
+  "import-scenario",
+  "improve",
   "consolidate",
   "context",
   "import-policy",
@@ -37,7 +42,7 @@ const vite = production
       await import("vite")
     ).createServer({
       root: here,
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: { host: "127.0.0.1" } },
       appType: "spa",
     });
 function json(res, code, value) {
@@ -56,11 +61,22 @@ async function run(body) {
   try {
     dir = await mkdtemp(path.join(tmpdir(), "rostercore-"));
     const input = path.join(dir, "scenario.json");
-    await writeFile(input, JSON.stringify(body.scenario));
+    await writeFile(
+      input,
+      ["verify", "verify-quality"].includes(body.action) &&
+        typeof body.scenarioEncoding === "string"
+        ? body.scenarioEncoding
+        : JSON.stringify(body.scenario),
+    );
     const args = [body.action, input];
     if (
       [
         "verify",
+        "verify-quality",
+        "archives",
+        "change-set",
+        "import-scenario",
+        "improve",
         "consolidate",
         "import-policy",
         "sync-hr",
@@ -79,13 +95,20 @@ async function run(body) {
       await writeFile(selector, JSON.stringify(body.selector));
       args.push(selector, body.onDate || body.scenario.calendar.start);
     }
+    if (body.action === "verify-quality") args.push(String(body.budget ?? 15));
     if (body.action === "consolidate") {
       if (typeof body.through !== "string")
         throw new Error("Missing consolidation date");
       args.push(body.through);
     }
     if (
-      ["import-policy", "sync-hr", "rebuild-history"].includes(body.action) &&
+      [
+        "import-policy",
+        "sync-hr",
+        "rebuild-history",
+        "change-set",
+        "import-scenario",
+      ].includes(body.action) &&
       body.apply === true
     )
       args.push("--apply");
@@ -189,6 +212,17 @@ const server = http.createServer(async (req, res) => {
           ),
         ),
       );
+    if (req.method === "GET" && url.pathname === "/api/example-simple")
+      return json(
+        res,
+        200,
+        JSON.parse(
+          await readFile(
+            path.join(root, "AI_EXAMPLES/01-create-scenario.json"),
+            "utf8",
+          ),
+        ),
+      );
     if (req.method === "GET" && url.pathname === "/api/example")
       return json(
         res,
@@ -197,6 +231,64 @@ const server = http.createServer(async (req, res) => {
           await readFile(path.join(root, "examples/pharmacy.json"), "utf8"),
         ),
       );
+    if (req.method === "GET" && url.pathname === "/api/ai-resources") {
+      const compact = (schema) => {
+        const defs = schema.definitions ?? {};
+        const root = { ...schema };
+        delete root.definitions;
+        const used = new Set();
+        const visit = (v) => {
+          if (!v || typeof v !== "object") return;
+          if (
+            typeof v.$ref === "string" &&
+            v.$ref.startsWith("#/definitions/")
+          ) {
+            const key = v.$ref.slice(14);
+            if (!used.has(key)) {
+              used.add(key);
+              visit(defs[key]);
+            }
+          }
+          for (const x of Object.values(v)) visit(x);
+        };
+        visit(root);
+        root.definitions = Object.fromEntries(
+          [...used].sort().map((k) => [k, defs[k]]),
+        );
+        return root;
+      };
+      const guides = {};
+      for (const name of [
+        "AI_SCENARIO_AUTHORING_GUIDE.md",
+        "AI_SCENARIO_UPDATE_GUIDE.md",
+        "AI_POLICY_AUTHORING_GUIDE.md",
+      ])
+        guides[name] = await readFile(path.join(root, name), "utf8");
+      const schemas = {};
+      for (const name of [
+        "scenario",
+        "scenario-change-set",
+        "planning-policy",
+        "hr-events",
+      ])
+        schemas[name] = compact(
+          JSON.parse(
+            await readFile(
+              path.join(root, "schemas", name + ".schema.json"),
+              "utf8",
+            ),
+          ),
+        );
+      const capabilities = JSON.parse(
+        await readFile(path.join(root, "AI_CAPABILITIES.json"), "utf8"),
+      );
+      return json(res, 200, {
+        engineVersion: capabilities.engineVersion,
+        guides,
+        schemas,
+        capabilities,
+      });
+    }
     if (req.method === "GET" && url.pathname === "/api/guide") {
       res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8" });
       return res.end(

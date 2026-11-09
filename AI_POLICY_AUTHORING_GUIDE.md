@@ -1,6 +1,6 @@
 # RosterCore AI policy authoring guide
 
-Engine 0.3.0 · JSON Schema versions 1, 2 and 3 · no AI service is required by RosterCore.
+Engine 0.4.0 · JSON Schema versions 1, 2, 3 and 4 · no AI service is required by RosterCore.
 
 Generate **one complete policy exchange document**, containing both an objective and its hard constraints. Never generate scripts, code, SQL, custom expressions or unknown JSON fields. The authoritative contracts are `schemas/planning-policy.schema.json`, `schemas/scenario.schema.json` and `schemas/operators.json`. The executable core validates all paths, including visual configuration.
 
@@ -83,3 +83,11 @@ Use examples/pharmacy-evolution.json for the full reference and examples/pharmac
 Scenario workPatternAssignmentRules bind an existing selector to a workPatternId with enabled, priority and half-open effective dates. Use the existing `where` grammar; do not invent attributeCondition or an executable expression. Higher priority wins; incompatible ties are invalid. Individual base assignments and effective individual overrides take precedence. A dated workPatternId:null returns to automatic rules for that interval, whereas omission inherits the base. Never remove existing explicit patterns during migration or populate employee fields as an automatic-rule side effect.
 
 Rules belong to the scenario catalogue, not to a policy exchange CREATE/REPLACE patch. Reuse them when describing variant workPatternIds. The context exposes rule definitions and needed attributes. Preview actual employee/date resolutions with inspect-patterns; a preview carrying ERROR diagnostics is not a validated schedule. Use examples/automatic-work-patterns.json for a complete reference.
+
+## 0.4 reliability and complete configuration
+
+Schema-4 policies accept the same AST, targets, scopes and exact cumulative COUNT metrics. Complete scenarios and typed personnel/calendar/rule updates are documented in `AI_SCENARIO_AUTHORING_GUIDE.md` and `AI_SCENARIO_UPDATE_GUIDE.md`; supported operations are enumerated in `AI_CAPABILITIES.json`. Use a policy import for an isolated policy, and a scenario change set for a transaction spanning entities. Neither path accepts code or generic JSON Pointer patches.
+
+Shared `fairnessTags` define a union of logical shift targets without double counting within one objective. Use AVAILABILITY_WEIGHTED for actual dated eligibility; combined burden fairness normally precedes per-type objectives and soft spacing. Fairness and spacing priorities are lexicographic after hard constraints and fallback preferences. No lower objective can worsen a proved higher optimum. Keep objective IDs/definitions for continuing historical quotas; changing their definition requires explicit dated snapshot rebuilding. Schema-4 tagged snapshots additionally record their resolved target IDs. Do not sum the debts from overlapping aggregate and per-type objectives as another burden count.
+
+The independent hard verifier is distinct from `verify-quality`, which proves or refutes a fallback minimum through counterfactual searches. A feasible positive substitution alone does not prove necessity. Never claim an individual substitute is unavoidable merely because the global substitution count is minimal. Archives retain the original scenario/result; publication protects future work and does not create actual history. Explicit completed-prefix confirmation is required for historical consolidation.

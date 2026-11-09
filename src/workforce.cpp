@@ -317,6 +317,9 @@ std::vector<int> Scenario::domain(int e, int d,
                        sh.id) != prof["shiftIds"].end();
     if (!pattern.is_null()) {
       Json permitted = pattern["shiftIds"];
+      for (auto &byDay : pattern.value("weekdayShifts", Json::array()))
+        if (byDay["weekday"] == weekday(d))
+          permitted = byDay["shiftIds"];
       bool workday =
           std::find(pattern["weekdays"].begin(), pattern["weekdays"].end(),
                     weekday(d)) != pattern["weekdays"].end();
@@ -490,14 +493,14 @@ std::vector<CoverageCandidate> coverageCandidates(const Scenario &s,
       continue;
     for (int start = d - (r["mode"] == "PRESENCE" ? 1 : 0); start <= d;
          ++start) {
-      if (start < s.days.front() &&
-          std::none_of(
-              s.source["history"]["assignments"].begin(),
-              s.source["history"]["assignments"].end(),
-              [&](const Json &a) {
-                return a["employeeId"] == s.employees[e].id &&
-                       day(a["date"]) == start;
-              }))
+      auto known = knownAssignments(s);
+      if (start < s.days.front() && std::none_of(
+                                        known.begin(), known.end(),
+                                        [&](const Json &a) {
+                                          return a["employeeId"] ==
+                                                     s.employees[e].id &&
+                                                 day(a["date"]) == start;
+                                        }))
         continue;
       for (auto &q : s.weekOptions(start).value("profileIds", Json::array())) {
         std::string profileId = q;

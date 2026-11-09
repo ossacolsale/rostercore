@@ -107,7 +107,7 @@ class Acceptance(unittest.TestCase):
    r=self.solved(s)
    if mode=='CUSTOM_WEIGHTED':self.assertEqual([fraction(e['ideal']) for e in r['fairness'][0]['employees']],[1,2,3])
  def test_24_verifier_rejects_tampering(self):
-  s=scenario(3,end='2026-01-26');r=self.solved(s);r['assignments'][0]['shiftId']='off';self.assertEqual(invoke('verify',s,r)['status'],'MODEL_INVALID');r=self.solved(s);r['fairness'][0]['employees'][0]['actual']=99;self.assertEqual(invoke('verify',s,r)['status'],'MODEL_INVALID')
+  s=scenario(3,end='2026-01-26');r=self.solved(s);r['assignments'][0]['shiftId']='closing' if r['assignments'][0]['shiftId']=='off' else 'off';self.assertEqual(invoke('verify',s,r)['status'],'MODEL_INVALID');r=self.solved(s);r['fairness'][0]['employees'][0]['actual']=99;self.assertEqual(invoke('verify',s,r)['status'],'MODEL_INVALID')
  def test_25_randomized_fairness_properties(self):
   rng=random.Random(42)
   for _ in range(8):

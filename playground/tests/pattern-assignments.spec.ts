@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+test.beforeEach(async({page})=>{await page.addInitScript(()=>localStorage.setItem("rostercore.mode.v1","ADVANCED"));});
 
 async function configureRule(
   page: Page,
@@ -259,7 +260,7 @@ test("catalogue deletion reports dependencies and legacy individual assignments 
       localStorage.getItem("rostercore.scenario.v1"),
     )) || "{}",
   );
-  expect(migrated.schemaVersion).toBe(3);
+  expect(migrated.schemaVersion).toBe(4);
   expect(migrated.employees[0].workPatternId).toBe("full");
 });
 

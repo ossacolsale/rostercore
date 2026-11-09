@@ -37,7 +37,7 @@ class AutomaticAssignments(unittest.TestCase):
  def test_11_verifier_checks_automatic_domain(self):
   s=fixture();s['employees'][0]['attributes']['contract']='PART_TIME';r=self.solved(s);a=next(a for a in r['assignments'] if a['employeeId']=='e1');a['shiftId']='closing';self.assertEqual(engine.call('verify',s,r)['status'],'MODEL_INVALID')
  def test_12_migration_preserves_individual_assignments(self):
-  s=fixture();del s['workPatternAssignmentRules'];s['schemaVersion']=2;s['employees'][0]['workPatternId']='part';r=engine.call('migrate',s);self.assertEqual(r['scenario']['schemaVersion'],3);self.assertEqual(r['scenario']['employees'],s['employees']);self.assertEqual(r['scenario']['history'],s['history']);self.assertEqual(r['scenario']['workPatternAssignmentRules'],[]);self.solved(r['scenario'])
+  s=fixture();del s['workPatternAssignmentRules'];s['schemaVersion']=2;s['employees'][0]['workPatternId']='part';r=engine.call('migrate',s);self.assertEqual(r['scenario']['schemaVersion'],4);self.assertEqual(r['scenario']['employees'],s['employees']);self.assertEqual(r['scenario']['history'],s['history']);self.assertEqual(r['scenario']['workPatternAssignmentRules'],[]);self.solved(r['scenario'])
  def test_13_history_is_retained_after_future_change(self):
   s=fixture();r=self.solved(s);s=engine.call('consolidate',s,r,'2027-05-03')['scenario'];old=copy.deepcopy(s['history']);s['employees'][0]['versions']=[{'validFrom':'2027-05-04','attributes':{'contract':'PART_TIME'}}];self.solved(s);self.assertEqual(s['history'],old);self.assertEqual(assignments(s,'2027-05-04')['e1']['workPatternId'],'part')
  def test_14_unknown_references_dates_and_schema_are_rejected(self):

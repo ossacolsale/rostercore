@@ -121,12 +121,14 @@ export function Multi({
   options,
   onChange,
   createKind,
+  showIdentifiers = true,
 }: {
   label: string;
   values: string[];
   options: { id: string; label: string }[];
   onChange: (v: string[]) => void;
   createKind?: CatalogueKind;
+  showIdentifiers?: boolean;
 }) {
   const { t } = useI18n();
   const create = useCatalogue();
@@ -163,7 +165,7 @@ export function Multi({
               }
             />
             {x.label}
-            <small>{x.id}</small>
+            {showIdentifiers && <small>{x.id}</small>}
           </label>
         ))
       ) : (

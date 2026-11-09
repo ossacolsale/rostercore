@@ -83,9 +83,11 @@ int main(int argc, char **argv) {
                 << "\nCommands: validate|solve|context|migrate SCENARIO|-; "
                    "inspect|inspect-patterns SCENARIO [DATE]; select SCENARIO "
                    "SELECTOR [DATE]; "
-                   "regenerate SCENARIO REQUEST; verify "
+                   "regenerate|improve|archives SCENARIO REQUEST; "
+                   "verify|verify-quality "
                    "SCENARIO RESULT; consolidate SCENARIO RESULT THROUGH; "
-                   "import-policy|sync-hr|rebuild-history SCENARIO DOCUMENT "
+                   "import-policy|sync-hr|rebuild-history|change-set|import-"
+                   "scenario SCENARIO DOCUMENT "
                    "[--apply] [--mappings FILE]\n";
       return 0;
     }
@@ -125,13 +127,34 @@ int main(int argc, char **argv) {
     } else if (command == "inspect") {
       out = inspect(j, argc > 3 ? argv[3]
                                 : j["calendar"]["start"].get<std::string>());
+    } else if (command == "archives") {
+      if (argc < 4)
+        throw Error("ARGUMENTS", "/", "Missing archive operation request");
+      out = archiveOperation(j, read(argv[3]));
+    } else if (command == "import-scenario") {
+      if (argc < 4)
+        throw Error("ARGUMENTS", "/", "Missing scenario import request");
+      out = importScenario(j, read(argv[3]),
+                           !(argc > 4 && std::string(argv[4]) == "--apply"));
+    } else if (command == "improve") {
+      if (argc < 4)
+        throw Error("ARGUMENTS", "/", "Missing improvement request");
+      out = improve(j, read(argv[3]));
+    } else if (command == "change-set") {
+      if (argc < 4)
+        throw Error("ARGUMENTS", "/", "Missing change-set");
+      out = applyChangeSet(j, read(argv[3]),
+                           !(argc > 4 && std::string(argv[4]) == "--apply"));
     } else if (command == "context")
       out = aiContext(j);
-    else if (command == "verify" || command == "consolidate") {
+    else if (command == "verify" || command == "verify-quality" ||
+             command == "consolidate") {
       if (argc < 4)
         throw Error("ARGUMENTS", "/", "Missing result file");
       auto result = read(argv[3]);
-      if (command == "verify")
+      if (command == "verify-quality")
+        out = verifyQuality(j, result, argc > 4 ? std::stod(argv[4]) : 15);
+      else if (command == "verify")
         out = verify(j, result);
       else {
         if (argc < 5)

@@ -1,3 +1,4 @@
+import { Quality } from "./quality";
 import { OperationalResults } from "./operational-results";
 import { isoMonday } from "./evolution-model";
 import { useI18n } from "./i18n";
@@ -105,6 +106,7 @@ export function Results({
           )}{" "}
         </div>
       )}
+      <Quality s={s} r={r} run={run} stale={stale} />
       <div className="stats">
         <div>
           <span>{t("Assignments")}</span>

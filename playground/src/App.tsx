@@ -1,3 +1,6 @@
+import { SimplePanel } from "./simple";
+import { ScheduleLibrary, type ScheduleArchive } from "./archives";
+import { coreAction } from "./api";
 import { PatternAssignmentRules, ReviewDialog } from "./pattern-assignments";
 import {
   dependentReferences,
@@ -31,6 +34,7 @@ import {
   newPolicy,
   newConstraint,
   id,
+  planningSignature,
 } from "./model";
 import { People, Shifts, Calendar, type Update } from "./setup";
 import { Policies } from "./policies";
@@ -49,12 +53,63 @@ const tabs = [
   ["policies", "09", "Planning policies"],
   ["imports", "10", "AI & HR imports"],
   ["results", "11", "Schedule & fairness"],
+  ["archives", "▣", "Saved calendars"],
   ["advanced", "{ }", "Advanced JSON"],
 ];
-type Solved = { scenario: Scenario; result: Result };
+type Solved = {
+  scenario: Scenario;
+  result: Result;
+  archiveId?: string;
+  scenarioEncoding?: string;
+};
 const STORAGE = "rostercore.scenario.v1";
 export default function App() {
   const { t, diagnostic, localizeError } = useI18n();
+  const [mode, setMode] = useState(
+    () => localStorage.getItem("rostercore.mode.v1") ?? "SIMPLE",
+  );
+  const changeMode = (v: string) => {
+    setMode(v);
+    localStorage.setItem("rostercore.mode.v1", v);
+  };
+  const archiveStorageBroken = useRef(false);
+  const [archives, setArchives] = useState<ScheduleArchive[]>(() => {
+    try {
+      const data = JSON.parse(
+        localStorage.getItem("rostercore.archives.v1") ?? "[]",
+      );
+      if (
+        !Array.isArray(data) ||
+        data.some((a) => a?.format !== "rostercore.schedule-archive")
+      )
+        throw new Error("Invalid library");
+      return data;
+    } catch {
+      archiveStorageBroken.current = true;
+      return [];
+    }
+  });
+  const [fullImportReview, setFullImportReview] = useState<{
+    document: Record<string, unknown>;
+    candidate: Scenario;
+  }>();
+  const [allowFullReplacement, setAllowFullReplacement] = useState(false);
+  const [libraryReview, setLibraryReview] = useState<Record<string, unknown>>();
+  useEffect(() => {
+    if (archiveStorageBroken.current) {
+      notifyError(
+        "Saved calendar storage is unreadable. Its original contents have been preserved; export browser recovery data before repairing browser storage.",
+      );
+      return;
+    }
+    try {
+      localStorage.setItem("rostercore.archives.v1", JSON.stringify(archives));
+    } catch {
+      notifyError(
+        "Browser storage is full or disabled. Export your scenario before closing.",
+      );
+    }
+  }, [archives]);
   const [s, setS] = useState<Scenario>(),
     [tab, setTab] = useState("overview"),
     [busy, setBusy] = useState(false),
@@ -142,7 +197,9 @@ export default function App() {
             return;
           }
         }
-        const r = await fetch("/api/example");
+        const r = await fetch(
+          mode === "SIMPLE" ? "/api/example-simple" : "/api/example",
+        );
         if (!r.ok) throw new Error("Cannot load example");
         const j = await r.json();
         if (active) setS(j);
@@ -170,6 +227,8 @@ export default function App() {
       undoStack.current.push(s);
       if (undoStack.current.length > 20) undoStack.current.shift();
     }
+    if (s && JSON.stringify(s) !== JSON.stringify(next))
+      next.revision = s.revision + 1;
     setS(next);
   };
   const update: Update = (fn) => {
@@ -220,7 +279,39 @@ export default function App() {
     setAction(command);
     setFatal("");
     const snapshot = structuredClone(s);
+    if ((command === "verify" || command === "verify-quality") && solved) {
+      extra = {
+        ...extra,
+        scenario: solved.scenario,
+        ...(solved.scenarioEncoding
+          ? { scenarioEncoding: solved.scenarioEncoding }
+          : {}),
+      };
+    }
+    if (command === "improve" && solved?.scenarioEncoding)
+      extra = {
+        ...extra,
+        document: {
+          ...(extra.document as Record<string, unknown>),
+          previousScenarioEncoding: solved.scenarioEncoding,
+        },
+      };
     try {
+      if (command === "consolidate" && solved?.archiveId) {
+        command = "archives";
+        extra = {
+          document: {
+            operation: "COMPLETE",
+            id: solved.archiveId,
+            through: extra.through,
+            archives,
+            expectedRevision: snapshot.revision,
+            dryRun: true,
+            at: new Date().toISOString(),
+          },
+          inlineReview: true,
+        };
+      }
       const response = await fetch("/api/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -238,13 +329,70 @@ export default function App() {
             )
             .map((d: { path: string }) => d.path),
         });
-      if (command === "solve" || command === "regenerate") {
+      if (
+        command === "solve" ||
+        command === "regenerate" ||
+        command === "improve"
+      ) {
         if (solved?.result.assignments) setPrevious(solved.result);
-        setSolved({ scenario: r.scenario ?? snapshot, result: r });
+        const context = r.scenario ?? snapshot;
+        let archiveId: string | undefined;
+        if (r.assignments && ["OPTIMAL", "FEASIBLE"].includes(r.status)) {
+          const saved = await coreAction(
+            "archives",
+            context,
+            {
+              document: {
+                operation: "CREATE",
+                id: id("schedule"),
+                result: r,
+                createdAt: new Date().toISOString(),
+                source: "local-playground",
+                archives,
+                expectedRevision: context.revision,
+                dryRun: false,
+              },
+            },
+            { silent: true },
+          ).catch((error) => {
+            notifyError((error as Error).message);
+            return undefined;
+          });
+          if (saved?.archives && saved.archive) {
+            setArchives(saved.archives);
+            archiveId = saved.archive.id;
+          } else if (saved) notifyResult(saved, "archives");
+        }
+        setSolved({ scenario: context, result: r, archiveId });
         setTab("results");
       }
+      if (r.archives) setArchives(r.archives);
+      if (r.restoredSchedule) {
+        if (solved?.result.assignments) setPrevious(solved.result);
+        setSolved(r.restoredSchedule);
+        setTab("results");
+      }
+      if (
+        command === "archives" &&
+        r.status === "PREVIEW" &&
+        extra.inlineReview
+      )
+        setLibraryReview(extra.document as Record<string, unknown>);
+      if (command === "import-scenario" && r.scenario) {
+        setSolved(undefined);
+        setTab("overview");
+      }
       if (r.scenario) {
+        undoStack.current = [];
+        setUndoVersion((v) => v + 1);
         setS(r.scenario);
+        if (
+          command === "archives" &&
+          ["RESTORE"].includes(
+            (extra.document as { operation?: string })?.operation ?? "",
+          )
+        )
+          setSolved(undefined);
         if (command === "consolidate") {
           undoStack.current = [];
           setTab("overview");
@@ -284,13 +432,19 @@ export default function App() {
     }
   };
   const importScenario = async (text: string) => {
+    if (!s) return;
     try {
       const candidate = JSON.parse(text);
-      const r = await run("validate", { scenario: candidate });
-      if (r?.status === "VALID") {
-        setS(candidate);
-        setSolved(undefined);
-        setTab("overview");
+      const document = {
+        candidate,
+        expectedRevision: s.revision,
+        mode: candidate.id === s.id ? "REPLACE_CURRENT" : "NEW_SCENARIO",
+        allowHardRuleChanges: true,
+      };
+      const result = await run("import-scenario", { document, apply: false });
+      if (result?.status === "PREVIEW") {
+        setAllowFullReplacement(false);
+        setFullImportReview({ document, candidate });
       }
     } catch (e) {
       setFatal((e as Error).message);
@@ -308,7 +462,9 @@ export default function App() {
       </main>
     );
   const stale =
-    !!solved && JSON.stringify(s) !== JSON.stringify(solved.scenario);
+    !!solved &&
+    planningSignature(s, solved.result) !==
+      planningSignature(solved.scenario, solved.result);
   const blank = () => {
     const next = structuredClone(s);
     next.id = id("scenario");
@@ -379,7 +535,7 @@ export default function App() {
       }}
     >
       <div
-        className="app"
+        className={"app mode-" + mode.toLowerCase()}
         onFocusCapture={() => {
           lastBlur.current = JSON.stringify(s);
         }}
@@ -390,6 +546,67 @@ export default function App() {
           }
         }}
       >
+        {fullImportReview && (
+          <ReviewDialog
+            title={t("Review complete scenario import")}
+            onCancel={() => setFullImportReview(undefined)}
+            disabled={
+              busy ||
+              (fullImportReview.candidate.id === s.id && !allowFullReplacement)
+            }
+            onConfirm={async () => {
+              const result = await run("import-scenario", {
+                document: fullImportReview.document,
+                apply: true,
+              });
+              if (result?.status === "IMPORTED") setFullImportReview(undefined);
+            }}
+          >
+            <p>
+              {t(
+                "The native preview validated references and protected history. Applying replaces the current configuration; saved calendar archives remain available.",
+              )}
+            </p>
+            <p>
+              {s.label} → {fullImportReview.candidate.label}
+            </p>
+            <p>
+              {t("Employees")}: {s.employees.length} →{" "}
+              {fullImportReview.candidate.employees.length}
+            </p>
+            {fullImportReview.candidate.id === s.id && (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={allowFullReplacement}
+                  onChange={(e) => setAllowFullReplacement(e.target.checked)}
+                />
+                {t(
+                  "Explicitly authorize changes to calendar, definitions and hard rules",
+                )}
+              </label>
+            )}
+          </ReviewDialog>
+        )}
+        {libraryReview && (
+          <ReviewDialog
+            title={t("Confirm calendar operation")}
+            onCancel={() => setLibraryReview(undefined)}
+            onConfirm={async () => {
+              const r = await run("archives", {
+                document: { ...libraryReview, dryRun: false },
+              });
+              if (r && r.status !== "VALIDATION_ERROR")
+                setLibraryReview(undefined);
+            }}
+          >
+            <p>
+              {t(
+                "Publishing protects future work. Confirming completion adds only the explicitly selected actual-work prefix to history.",
+              )}
+            </p>
+          </ReviewDialog>
+        )}
         {deletion && (
           <ReviewDialog
             title={t("Review catalogue deletion")}
@@ -452,7 +669,7 @@ export default function App() {
             {t("LOCAL WORKSPACE")} <span className="live-dot" />
           </div>
           <nav aria-label={t("Main navigation")}>
-            {tabs.map(([key, num, label]) => (
+            {(mode === "ADVANCED" ? tabs : []).map(([key, num, label]) => (
               <button
                 key={key}
                 data-testid={"nav-" + key}
@@ -466,7 +683,7 @@ export default function App() {
             ))}
           </nav>
           <div className="sidebar-bottom">
-            <span className="version">v0.3.0 · CP-SAT</span>
+            <span className="version">v0.4.0 · CP-SAT</span>
             <p>
               {t("Continuous fairness.")} <br />
               {t("One shared model.")}{" "}
@@ -483,6 +700,15 @@ export default function App() {
             </div>
             <div className="top-actions">
               <LanguageSelector />
+              <Select
+                label={t("Interface mode")}
+                value={mode}
+                options={[
+                  { id: "SIMPLE", label: t("Simple") },
+                  { id: "ADVANCED", label: t("Advanced") },
+                ]}
+                onChange={changeMode}
+              />
               <button
                 disabled={busy || !undoStack.current.length}
                 onClick={() => {
@@ -516,384 +742,445 @@ export default function App() {
               {t("LOCAL & PRIVATE")}{" "}
             </div>
             <div className={busy ? "busy-content" : ""} aria-busy={busy}>
-              <ConfigurationGuide
-                s={s}
-                tab={tab}
-                onNavigate={choose}
-                errorPaths={
-                  validationContext?.hash === JSON.stringify(s)
-                    ? validationContext.paths
-                    : []
-                }
-                result={solved?.result}
-                stale={stale}
-              />
-              <UpgradeNotice s={s} onUpgrade={() => run("migrate")} />
-              {solved?.result.assignments &&
-                ["overview", "results", "calendar", "imports"].includes(
-                  tab,
-                ) && (
-                  <RegenerationControl
-                    s={s}
-                    previousScenario={solved.scenario}
-                    previousResult={solved.result}
-                    run={run}
-                  />
-                )}
-              {tab === "overview" && (
-                <CatalogueUsage s={s} onNavigate={choose} />
+              {mode === "SIMPLE" && (
+                <SimplePanel
+                  s={s}
+                  update={update}
+                  replace={(next) => {
+                    commitEdit(next);
+                    if (next.id !== s.id) setSolved(undefined);
+                  }}
+                  solved={solved}
+                  previous={previous}
+                  stale={stale}
+                  busy={busy}
+                  run={run}
+                  archives={archives}
+                  compare={setPrevious}
+                  publish={() => {
+                    if (!solved?.archiveId) {
+                      notifyError(
+                        "Save a verified draft archive before publishing.",
+                      );
+                      return;
+                    }
+                    run("archives", {
+                      document: {
+                        operation: "PUBLISH",
+                        id: solved.archiveId,
+                        archives,
+                        expectedRevision: s.revision,
+                        dryRun: true,
+                        at: new Date().toISOString(),
+                      },
+                      inlineReview: true,
+                    });
+                  }}
+                />
               )}
-              {tab === "overview" && (
-                <>
-                  <div className="hero">
-                    <div>
-                      <span className="pill">
-                        {t("DECLARATIVE PLANNING ENGINE")}
-                      </span>
-                      <h1>
-                        {t("A fairer schedule,")} <br />
-                        <em>{t("across every horizon.")}</em>
-                      </h1>
+              <div
+                className={
+                  mode === "SIMPLE"
+                    ? "advanced-surface hidden"
+                    : "advanced-surface"
+                }
+              >
+                <ConfigurationGuide
+                  s={s}
+                  tab={tab}
+                  onNavigate={choose}
+                  errorPaths={
+                    validationContext?.hash === JSON.stringify(s)
+                      ? validationContext.paths
+                      : []
+                  }
+                  result={solved?.result}
+                  stale={stale}
+                />
+                <UpgradeNotice s={s} onUpgrade={() => run("migrate")} />
+                {solved?.result.assignments &&
+                  ["overview", "results", "calendar", "imports"].includes(
+                    tab,
+                  ) && (
+                    <RegenerationControl
+                      s={s}
+                      previousScenario={solved.scenario}
+                      previousResult={solved.result}
+                      run={run}
+                    />
+                  )}
+                {tab === "overview" && (
+                  <CatalogueUsage s={s} onNavigate={choose} />
+                )}
+                {tab === "overview" && (
+                  <>
+                    <div className="hero">
+                      <div>
+                        <span className="pill">
+                          {t("DECLARATIVE PLANNING ENGINE")}
+                        </span>
+                        <h1>
+                          {t("A fairer schedule,")} <br />
+                          <em>{t("across every horizon.")}</em>
+                        </h1>
+                        <p>
+                          {t(
+                            "Define your people and rules. Generate a real schedule. Carry every fairness balance forward.",
+                          )}{" "}
+                        </p>
+                        <div className="row">
+                          <button
+                            className="primary"
+                            disabled={busy}
+                            onClick={() => run("solve")}
+                          >
+                            {t("Generate schedule ↗")}{" "}
+                          </button>
+                          <button onClick={() => choose("policies")}>
+                            {t("Configure policies")}{" "}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="hero-graphic" aria-hidden="true">
+                        <div className="orbit one" />
+                        <div className="orbit two" />
+                        <div className="orbit three" />
+                        <span className="core-dot" />
+                        <span className="orbit-dot a" />
+                        <span className="orbit-dot b" />
+                        <span className="orbit-dot c" />
+                        <small>{t("IDEAL − ACTUAL = DEBT")}</small>
+                      </div>
+                    </div>
+                    <div className="stats">
+                      <div>
+                        <span>{t("People")}</span>
+                        <strong>
+                          {s.employees.length.toString().padStart(2, "0")}
+                        </strong>
+                        <small>
+                          {t("across {count} types", {
+                            count: s.employeeTypes.length,
+                          })}
+                        </small>
+                      </div>
+                      <div>
+                        <span>{t("Shift types")}</span>
+                        <strong>
+                          {s.shifts.length.toString().padStart(2, "0")}
+                        </strong>
+                        <small>{t("working & scheduled rest")}</small>
+                      </div>
+                      <div>
+                        <span>{t("Active policies")}</span>
+                        <strong>
+                          {s.policies
+                            .filter((p) => p.active)
+                            .length.toString()
+                            .padStart(2, "0")}
+                        </strong>
+                        <small>{t("solved jointly")}</small>
+                      </div>
+                      <div>
+                        <span>{t("Consolidated assignments")}</span>
+                        <strong>{s.history.assignments.length}</strong>
+                        <small>{t("no monthly reset")}</small>
+                      </div>
+                    </div>
+                    <section className="panel">
+                      <EntityHeader title={t("Your planning scenario")}>
+                        <span className="badge">
+                          {t("JSON contract v{version}", {
+                            version: s.schemaVersion,
+                          })}
+                        </span>
+                      </EntityHeader>
+                      <div className="row">
+                        <Text
+                          label={t("Scenario ID")}
+                          value={s.id}
+                          onChange={(v) =>
+                            update((d) => {
+                              d.id = v;
+                            })
+                          }
+                        />
+                        <Text
+                          label={t("Scenario label")}
+                          value={s.label}
+                          onChange={(v) =>
+                            update((d) => {
+                              d.label = v;
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="row">
+                        <Text
+                          label={t("Planning start")}
+                          type="date"
+                          value={s.calendar.start}
+                          onChange={(v) =>
+                            update((d) => {
+                              d.calendar.start = v;
+                            })
+                          }
+                        />
+                        <Text
+                          label={t("Planning end")}
+                          type="date"
+                          value={s.calendar.end}
+                          onChange={(v) =>
+                            update((d) => {
+                              d.calendar.end = v;
+                            })
+                          }
+                        />
+                        <Text
+                          label={t("Timezone")}
+                          value={s.calendar.timezone}
+                          onChange={(v) =>
+                            update((d) => {
+                              d.calendar.timezone = v;
+                            })
+                          }
+                        />
+                      </div>
+                    </section>
+                    <div className="two-columns">
+                      <section className="panel">
+                        <h3>{t("Get started")}</h3>
+                        <p className="hint">
+                          {t(
+                            "The pharmacy reference is a complete generic example: five people, one closing duty per day, and continuous fairness across a month boundary.",
+                          )}{" "}
+                        </p>
+                        <div className="stack">
+                          <button onClick={() => loadExample()}>
+                            {t("Load pharmacy reference")}{" "}
+                          </button>
+                          <button onClick={() => loadExample("evolution")}>
+                            {t("Load evolving pharmacy example")}
+                          </button>
+                          <button onClick={() => loadExample("automatic")}>
+                            {t("Load automatic week example")}
+                          </button>
+                          <button onClick={() => loadExample("patterns")}>
+                            {t("Load automatic work-pattern example")}
+                          </button>
+                          <button onClick={blank}>
+                            {t("Create an empty scenario")}
+                          </button>
+                          <button
+                            disabled={
+                              !s.shifts.some((sh) => sh.kind === "WORKING")
+                            }
+                            onClick={simple}
+                          >
+                            {t("Add simple balanced-duty template")}{" "}
+                          </button>
+                        </div>
+                      </section>
+                      <section className="panel">
+                        <h3>{t("Search controls")}</h3>
+                        <Text
+                          label={t("Global solve time budget (seconds)")}
+                          type="number"
+                          value={s.search.maxTimeSeconds}
+                          onChange={(v) =>
+                            update((d) => {
+                              d.search.maxTimeSeconds = Number(v);
+                            })
+                          }
+                        />
+                        <div className="row">
+                          <Text
+                            label={t("Random seed")}
+                            type="number"
+                            value={s.search.seed}
+                            onChange={(v) =>
+                              update((d) => {
+                                d.search.seed = Number(v);
+                              })
+                            }
+                          />
+                          <Text
+                            label={t("Workers")}
+                            type="number"
+                            value={s.search.workers}
+                            onChange={(v) =>
+                              update((d) => {
+                                d.search.workers = Number(v);
+                                if (Number(v) > 1)
+                                  d.search.deterministic = false;
+                              })
+                            }
+                          />
+                        </div>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={s.search.deterministic}
+                            onChange={(e) =>
+                              update((d) => {
+                                d.search.deterministic = e.target.checked;
+                                if (e.target.checked) d.search.workers = 1;
+                              })
+                            }
+                          />{" "}
+                          {t("Deterministic mode (one worker)")}{" "}
+                        </label>
+                      </section>
+                    </div>
+                    <section className="panel">
+                      <h3>{t("Portable configuration")}</h3>
+                      <div className="row">
+                        <button onClick={() => download(`${s.id}.json`, s)}>
+                          {t("Export scenario JSON")}{" "}
+                        </button>
+                        <label className="button">
+                          {t("Import scenario JSON")}{" "}
+                          <input
+                            hidden
+                            type="file"
+                            accept=".json,application/json"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) await importScenario(await file.text());
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                        <span className="hint">
+                          {t(
+                            "Changes are saved in this browser. Export to move or back up your workspace.",
+                          )}{" "}
+                        </span>
+                      </div>
+                    </section>
+                  </>
+                )}
+                {tab === "contracts" && (
+                  <>
+                    <WorkPatterns s={s} update={update} />
+                    <PatternAssignmentRules s={s} update={update} />
+                  </>
+                )}
+                {tab === "variants" && <Variants s={s} update={update} />}
+                {tab === "weeks" && <WeekPlanner s={s} update={update} />}
+                {tab === "coverage" && <CoverageRules s={s} update={update} />}
+                {tab === "people" && (
+                  <>
+                    <People s={s} update={update} />
+                    <Workforce s={s} update={update} />
+                  </>
+                )}
+                {tab === "shifts" && (
+                  <>
+                    <Shifts s={s} update={update} />
+                  </>
+                )}
+                {tab === "calendar" && (
+                  <>
+                    <Calendar s={s} update={update} />
+                    <HolidayClosures s={s} update={update} />
+                  </>
+                )}
+                {tab === "policies" && <Policies s={s} update={update} />}
+                {tab === "imports" && <Imports s={s} run={run} busy={busy} />}
+                {tab === "results" &&
+                  (solved ? (
+                    <Results
+                      s={solved.scenario}
+                      r={solved.result}
+                      previous={previous}
+                      stale={stale}
+                      run={run}
+                      publish={() => {
+                        if (!solved.archiveId) {
+                          notifyError(
+                            "Save a verified draft archive before publishing.",
+                          );
+                          return;
+                        }
+                        run("archives", {
+                          document: {
+                            operation: "PUBLISH",
+                            id: solved.archiveId,
+                            archives,
+                            expectedRevision: s.revision,
+                            dryRun: true,
+                            at: new Date().toISOString(),
+                          },
+                          inlineReview: true,
+                        });
+                      }}
+                    />
+                  ) : (
+                    <section className="empty-state">
+                      <div className="empty-glyph">▦</div>
+                      <h2>{t("Your next schedule starts here")}</h2>
                       <p>
                         {t(
-                          "Define your people and rules. Generate a real schedule. Carry every fairness balance forward.",
+                          "Generate a schedule to inspect assignments, coverage, and cumulative fairness.",
                         )}{" "}
                       </p>
+                      <button className="primary" onClick={() => run("solve")}>
+                        {t("Generate schedule")}{" "}
+                      </button>
+                    </section>
+                  ))}
+                {(tab === "archives" || tab === "results") && (
+                  <ScheduleLibrary
+                    s={s}
+                    archives={archives}
+                    activeId={solved?.archiveId}
+                    run={run}
+                    comparisonScenarioId={solved?.scenario.id}
+                    onCompare={(result) => {
+                      setPrevious(result);
+                      setTab("results");
+                    }}
+                  />
+                )}
+                {tab === "advanced" && (
+                  <>
+                    <EntityHeader title={t("Advanced JSON")} />
+                    <p className="intro">
+                      {t(
+                        "This is the same document used by the visual editors and CLI. Apply only after core validation.",
+                      )}{" "}
+                    </p>
+                    <section className="panel">
+                      <label className="field">
+                        <span>{t("Scenario JSON")}</span>
+                        <textarea
+                          className="json-editor full"
+                          value={raw}
+                          onChange={(e) => setRaw(e.target.value)}
+                        />
+                      </label>
                       <div className="row">
                         <button
                           className="primary"
                           disabled={busy}
-                          onClick={() => run("solve")}
+                          onClick={() => importScenario(raw)}
                         >
-                          {t("Generate schedule ↗")}{" "}
-                        </button>
-                        <button onClick={() => choose("policies")}>
-                          {t("Configure policies")}{" "}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="hero-graphic" aria-hidden="true">
-                      <div className="orbit one" />
-                      <div className="orbit two" />
-                      <div className="orbit three" />
-                      <span className="core-dot" />
-                      <span className="orbit-dot a" />
-                      <span className="orbit-dot b" />
-                      <span className="orbit-dot c" />
-                      <small>{t("IDEAL − ACTUAL = DEBT")}</small>
-                    </div>
-                  </div>
-                  <div className="stats">
-                    <div>
-                      <span>{t("People")}</span>
-                      <strong>
-                        {s.employees.length.toString().padStart(2, "0")}
-                      </strong>
-                      <small>
-                        {t("across {count} types", {
-                          count: s.employeeTypes.length,
-                        })}
-                      </small>
-                    </div>
-                    <div>
-                      <span>{t("Shift types")}</span>
-                      <strong>
-                        {s.shifts.length.toString().padStart(2, "0")}
-                      </strong>
-                      <small>{t("working & scheduled rest")}</small>
-                    </div>
-                    <div>
-                      <span>{t("Active policies")}</span>
-                      <strong>
-                        {s.policies
-                          .filter((p) => p.active)
-                          .length.toString()
-                          .padStart(2, "0")}
-                      </strong>
-                      <small>{t("solved jointly")}</small>
-                    </div>
-                    <div>
-                      <span>{t("Consolidated assignments")}</span>
-                      <strong>{s.history.assignments.length}</strong>
-                      <small>{t("no monthly reset")}</small>
-                    </div>
-                  </div>
-                  <section className="panel">
-                    <EntityHeader title={t("Your planning scenario")}>
-                      <span className="badge">
-                        {t("JSON contract v{version}", {
-                          version: s.schemaVersion,
-                        })}
-                      </span>
-                    </EntityHeader>
-                    <div className="row">
-                      <Text
-                        label={t("Scenario ID")}
-                        value={s.id}
-                        onChange={(v) =>
-                          update((d) => {
-                            d.id = v;
-                          })
-                        }
-                      />
-                      <Text
-                        label={t("Scenario label")}
-                        value={s.label}
-                        onChange={(v) =>
-                          update((d) => {
-                            d.label = v;
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="row">
-                      <Text
-                        label={t("Planning start")}
-                        type="date"
-                        value={s.calendar.start}
-                        onChange={(v) =>
-                          update((d) => {
-                            d.calendar.start = v;
-                          })
-                        }
-                      />
-                      <Text
-                        label={t("Planning end")}
-                        type="date"
-                        value={s.calendar.end}
-                        onChange={(v) =>
-                          update((d) => {
-                            d.calendar.end = v;
-                          })
-                        }
-                      />
-                      <Text
-                        label={t("Timezone")}
-                        value={s.calendar.timezone}
-                        onChange={(v) =>
-                          update((d) => {
-                            d.calendar.timezone = v;
-                          })
-                        }
-                      />
-                    </div>
-                  </section>
-                  <div className="two-columns">
-                    <section className="panel">
-                      <h3>{t("Get started")}</h3>
-                      <p className="hint">
-                        {t(
-                          "The pharmacy reference is a complete generic example: five people, one closing duty per day, and continuous fairness across a month boundary.",
-                        )}{" "}
-                      </p>
-                      <div className="stack">
-                        <button onClick={() => loadExample()}>
-                          {t("Load pharmacy reference")}{" "}
-                        </button>
-                        <button onClick={() => loadExample("evolution")}>
-                          {t("Load evolving pharmacy example")}
-                        </button>
-                        <button onClick={() => loadExample("automatic")}>
-                          {t("Load automatic week example")}
-                        </button>
-                        <button onClick={() => loadExample("patterns")}>
-                          {t("Load automatic work-pattern example")}
-                        </button>
-                        <button onClick={blank}>
-                          {t("Create an empty scenario")}
+                          {t("Validate & apply JSON")}{" "}
                         </button>
                         <button
-                          disabled={
-                            !s.shifts.some((sh) => sh.kind === "WORKING")
-                          }
-                          onClick={simple}
+                          onClick={() => setRaw(JSON.stringify(s, null, 2))}
                         >
-                          {t("Add simple balanced-duty template")}{" "}
+                          {t("Reset editor from current scenario")}{" "}
+                        </button>
+                        <button onClick={() => download(`${s.id}.json`, s)}>
+                          {t("Export current scenario")}{" "}
                         </button>
                       </div>
                     </section>
-                    <section className="panel">
-                      <h3>{t("Search controls")}</h3>
-                      <Text
-                        label={t("Global solve time budget (seconds)")}
-                        type="number"
-                        value={s.search.maxTimeSeconds}
-                        onChange={(v) =>
-                          update((d) => {
-                            d.search.maxTimeSeconds = Number(v);
-                          })
-                        }
-                      />
-                      <div className="row">
-                        <Text
-                          label={t("Random seed")}
-                          type="number"
-                          value={s.search.seed}
-                          onChange={(v) =>
-                            update((d) => {
-                              d.search.seed = Number(v);
-                            })
-                          }
-                        />
-                        <Text
-                          label={t("Workers")}
-                          type="number"
-                          value={s.search.workers}
-                          onChange={(v) =>
-                            update((d) => {
-                              d.search.workers = Number(v);
-                              if (Number(v) > 1) d.search.deterministic = false;
-                            })
-                          }
-                        />
-                      </div>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={s.search.deterministic}
-                          onChange={(e) =>
-                            update((d) => {
-                              d.search.deterministic = e.target.checked;
-                              if (e.target.checked) d.search.workers = 1;
-                            })
-                          }
-                        />{" "}
-                        {t("Deterministic mode (one worker)")}{" "}
-                      </label>
-                    </section>
-                  </div>
-                  <section className="panel">
-                    <h3>{t("Portable configuration")}</h3>
-                    <div className="row">
-                      <button onClick={() => download(`${s.id}.json`, s)}>
-                        {t("Export scenario JSON")}{" "}
-                      </button>
-                      <label className="button">
-                        {t("Import scenario JSON")}{" "}
-                        <input
-                          hidden
-                          type="file"
-                          accept=".json,application/json"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (file) await importScenario(await file.text());
-                            e.target.value = "";
-                          }}
-                        />
-                      </label>
-                      <span className="hint">
-                        {t(
-                          "Changes are saved in this browser. Export to move or back up your workspace.",
-                        )}{" "}
-                      </span>
-                    </div>
-                  </section>
-                </>
-              )}
-              {tab === "contracts" && (
-                <>
-                  <WorkPatterns s={s} update={update} />
-                  <PatternAssignmentRules s={s} update={update} />
-                </>
-              )}
-              {tab === "variants" && <Variants s={s} update={update} />}
-              {tab === "weeks" && <WeekPlanner s={s} update={update} />}
-              {tab === "coverage" && <CoverageRules s={s} update={update} />}
-              {tab === "people" && (
-                <>
-                  <People s={s} update={update} />
-                  <Workforce s={s} update={update} />
-                </>
-              )}
-              {tab === "shifts" && (
-                <>
-                  <Shifts s={s} update={update} />
-                </>
-              )}
-              {tab === "calendar" && (
-                <>
-                  <Calendar s={s} update={update} />
-                  <HolidayClosures s={s} update={update} />
-                </>
-              )}
-              {tab === "policies" && <Policies s={s} update={update} />}
-              {tab === "imports" && <Imports s={s} run={run} busy={busy} />}
-              {tab === "results" &&
-                (solved ? (
-                  <Results
-                    s={solved.scenario}
-                    r={solved.result}
-                    previous={previous}
-                    stale={stale}
-                    run={run}
-                    publish={() => {
-                      update((d) => {
-                        const keys = new Set(
-                          solved.result.assignments?.map(
-                            (a) => a.employeeId + ":" + a.date,
-                          ),
-                        );
-                        d.publishedAssignments = [
-                          ...d.publishedAssignments.filter(
-                            (a) => !keys.has(a.employeeId + ":" + a.date),
-                          ),
-                          ...(solved.result.assignments || []),
-                        ];
-                      });
-                      setMessage({ status: "IMPORTED", diagnostics: [] });
-                    }}
-                  />
-                ) : (
-                  <section className="empty-state">
-                    <div className="empty-glyph">▦</div>
-                    <h2>{t("Your next schedule starts here")}</h2>
-                    <p>
-                      {t(
-                        "Generate a schedule to inspect assignments, coverage, and cumulative fairness.",
-                      )}{" "}
-                    </p>
-                    <button className="primary" onClick={() => run("solve")}>
-                      {t("Generate schedule")}{" "}
-                    </button>
-                  </section>
-                ))}
-              {tab === "advanced" && (
-                <>
-                  <EntityHeader title={t("Advanced JSON")} />
-                  <p className="intro">
-                    {t(
-                      "This is the same document used by the visual editors and CLI. Apply only after core validation.",
-                    )}{" "}
-                  </p>
-                  <section className="panel">
-                    <label className="field">
-                      <span>{t("Scenario JSON")}</span>
-                      <textarea
-                        className="json-editor full"
-                        value={raw}
-                        onChange={(e) => setRaw(e.target.value)}
-                      />
-                    </label>
-                    <div className="row">
-                      <button
-                        className="primary"
-                        disabled={busy}
-                        onClick={() => importScenario(raw)}
-                      >
-                        {t("Validate & apply JSON")}{" "}
-                      </button>
-                      <button
-                        onClick={() => setRaw(JSON.stringify(s, null, 2))}
-                      >
-                        {t("Reset editor from current scenario")}{" "}
-                      </button>
-                      <button onClick={() => download(`${s.id}.json`, s)}>
-                        {t("Export current scenario")}{" "}
-                      </button>
-                    </div>
-                  </section>
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>
             <footer>
               RosterCore <span>{t("Open-source scheduling · Apache-2.0")}</span>

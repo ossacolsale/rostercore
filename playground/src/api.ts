@@ -15,7 +15,7 @@ export async function coreAction(
     const result = await response.json();
     if (!response.ok || result.error)
       throw new Error(result.error || "Request failed");
-    if (!options.silent) notifyResult(result,action);
+    if (!options.silent) notifyResult(result, action);
     return result;
   } catch (e) {
     if (!options.silent) notifyError((e as Error).message);

@@ -1,0 +1,70 @@
+{
+  "format": "rostercore.scenario-change-set",
+  "schemaVersion": 1,
+  "id": "07-new-colleague-fairness",
+  "scenarioId": "ai-five-person-business",
+  "expectedRevision": 1,
+  "allowHardRuleChanges": true,
+  "description": "Include new eligible hires through the dynamic staff selector and preserve the existing objective identity and historical quota definition.",
+  "referenceDate": "2026-11-09",
+  "operations": [
+    {
+      "op": "CREATE_EMPLOYEE",
+      "value": {
+        "id": "new-colleague",
+        "label": "New colleague",
+        "typeId": "staff",
+        "attributes": {
+          "eligible": true
+        },
+        "employment": {
+          "validFrom": "2026-11-16"
+        },
+        "versions": []
+      }
+    },
+    {
+      "op": "REPLACE_POLICY",
+      "value": {
+        "id": "closing-fairness",
+        "label": "Closing fairness including new eligible colleagues",
+        "revision": 2,
+        "active": true,
+        "draft": false,
+        "dependencies": [],
+        "constraints": [],
+        "sharedConstraintIds": [],
+        "constraintSetIds": [],
+        "objective": {
+          "id": "closing-count",
+          "label": "All eligible current and future staff",
+          "type": "CUMULATIVE_FAIRNESS",
+          "mode": "CONTINUOUS_BALANCED",
+          "measure": "COUNT",
+          "selector": {
+            "typeIds": [
+              "staff"
+            ],
+            "where": {
+              "op": "EQ",
+              "attributeId": "eligible",
+              "value": true
+            }
+          },
+          "shiftIds": [],
+          "fairnessTags": [
+            "closing-burden"
+          ],
+          "participation": "AVAILABILITY_WEIGHTED",
+          "metrics": [
+            "MAX_ABSOLUTE_PREFIX_DEVIATION",
+            "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+            "FINAL_ABSOLUTE_DEVIATION"
+          ],
+          "priority": 0
+        }
+      },
+      "expectedEntityHash": "757cd813a80fc40ca3624e2c7d34e5d1ee29080d1ef9936a5301d8d3566b53c9"
+    }
+  ]
+}

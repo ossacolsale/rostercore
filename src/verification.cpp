@@ -72,6 +72,67 @@ Json scheduleCoverage(const Scenario &s, const Json &assignments,
       }
   return report;
 }
+Json fallbackAccounting(const Scenario &s, const Json &result) {
+  Json stages = Json::array(), substitutions = Json::array();
+  std::map<int, std::set<int>> levels;
+  for (auto &r : s.duties())
+    for (auto &l : r["levels"])
+      if (l["level"].get<int>() > 0)
+        levels[r["preferencePriority"].get<int>()].insert(
+            l["level"].get<int>());
+  bool proved = true;
+  int total = 0;
+  for (auto &row : result.value("coverage", Json::array()))
+    for (auto &person : row["people"])
+      if (person["level"].get<int>() > 0) {
+        ++total;
+        substitutions.push_back({{"date", row["date"]},
+                                 {"requirementId", row["requirementId"]},
+                                 {"employeeId", person["employeeId"]},
+                                 {"level", person["level"]}});
+      }
+  for (auto &[priority, tiers] : levels)
+    for (auto it = tiers.rbegin(); it != tiers.rend(); ++it) {
+      std::string pid = "coverage:" + std::to_string(priority),
+                  metric = "FALLBACK_LEVEL_" + std::to_string(*it);
+      int count = 0;
+      for (auto &r : s.duties())
+        if (r["preferencePriority"] == priority)
+          for (auto &row : result.value("coverage", Json::array()))
+            if (row["requirementId"] == r["id"])
+              for (auto &p : row["people"])
+                count += p["level"].get<int>() >= *it;
+      bool optimal = count == 0;
+      Json lower = 0, status = "NONNEGATIVE_ZERO_PROOF";
+      for (auto &phase : result.value("phases", Json::array()))
+        if (phase["policyId"] == pid && phase["metric"] == metric) {
+          if (phase.contains("bestBoundScaled"))
+            lower = phase["bestBoundScaled"];
+          optimal |= phase["status"] == "OPTIMAL" &&
+                     phase.value("valueScaled", -1) == count;
+          status = phase["status"];
+        }
+      proved &= optimal;
+      stages.push_back({{"policyId", pid},
+                        {"metric", metric},
+                        {"priority", priority},
+                        {"minimumLevel", *it},
+                        {"incumbent", count},
+                        {"lowerBound", lower},
+                        {"provedMinimum", optimal},
+                        {"searchStatus", status}});
+    }
+  for (auto &item : substitutions) {
+    item["minimumProved"] = proved;
+    item["reasonCode"] = proved ? "GLOBAL_FALLBACK_MINIMUM_PROVED"
+                                : "FALLBACK_NECESSITY_UNPROVED";
+  }
+  return {{"fallback",
+           {{"status", proved ? "PROVED_MINIMUM" : "PROVISIONAL"},
+            {"totalSubstitutions", total},
+            {"stages", stages}}},
+          {"substitutions", substitutions}};
+}
 Json verifyEvolution(const Scenario &s, const Json &result) {
   auto out = response("VERIFIED");
   auto fail = [&](std::string code, std::string message) {
@@ -209,7 +270,7 @@ Json verifyEvolution(const Scenario &s, const Json &result) {
     employees[s.employees[e].id] = int(e);
   for (size_t t = 0; t < s.shifts.size(); ++t)
     shifts[s.shifts[t].id] = int(t);
-  auto combined = s.source["history"]["assignments"];
+  auto combined = knownAssignments(s);
   for (auto &a : assignments)
     combined.push_back(a);
   for (auto &a : assignments) {
@@ -326,7 +387,8 @@ Json verifyEvolution(const Scenario &s, const Json &result) {
     bool binding = false, claimed = false;
     for (auto &r : s.duties())
       if (r["mode"] == "RESPONSIBILITY" && r.value("bindAssignments", true) &&
-          s.matches(r, day(a["date"])) &&
+          (s.source.value("dutyBindingMode", "ACTIVE_SCOPE") == "GLOBAL" ||
+           s.matches(r, day(a["date"]))) &&
           std::find(r["shiftIds"].begin(), r["shiftIds"].end(), a["shiftId"]) !=
               r["shiftIds"].end())
         binding = true;
@@ -363,7 +425,7 @@ Json regenerate(const Json &scenario, const Json &request) {
     return checked;
   if (previous.value("metadata", Json::object())
           .value("configurationHash", "") !=
-      sha256(request["previousScenario"].dump()))
+      configurationHash(request["previousScenario"]))
     throw Error("CONFIGURATION_MISMATCH", "/previousResult",
                 "Previous result does not match its supplied scenario");
   int from = day(request["from"]);

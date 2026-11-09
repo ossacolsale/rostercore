@@ -32,7 +32,7 @@ BoolVar assigned(int e, int d, int t) {
   if (it != x.end())
     return it->second;
   bool historic = false;
-  for (auto &a : s.source["history"]["assignments"])
+  for (auto &a : knownAssignments(s))
     if (a["employeeId"] == s.employees[e].id && day(a["date"]) == d &&
         a["shiftId"] == s.shifts[t].id)
       historic = true;
@@ -241,6 +241,24 @@ void advanced() {
             }
           }
         }
+  if (s.source.value("dutyBindingMode", "ACTIVE_SCOPE") == "GLOBAL")
+    for (auto &[key, v] : x) {
+      auto [e, d, t] = key;
+      (void)e;
+      (void)d;
+      bool binding = false;
+      for (auto &r : s.duties())
+        if (r["mode"] == "RESPONSIBILITY" && r.value("bindAssignments", true) &&
+            std::find(r["shiftIds"].begin(), r["shiftIds"].end(),
+                      s.shifts[t].id) != r["shiftIds"].end())
+          binding = true;
+      if (binding) {
+        LinearExpr claimed;
+        for (auto choice : dutyBindings[key])
+          claimed += choice;
+        model.AddLessOrEqual(v, claimed);
+      }
+    }
   for (auto &[key, gates] : bindingGates) {
     LinearExpr claimed;
     for (auto v : dutyBindings[key])
@@ -266,10 +284,10 @@ void advanced() {
       int next = d + delta;
       if (next < s.days.front() || next > s.days.back())
         continue;
+      auto known = knownAssignments(s);
       if (d < s.days.front() &&
           std::none_of(
-              s.source["history"]["assignments"].begin(),
-              s.source["history"]["assignments"].end(),
+              known.begin(), known.end(),
               [&](const Json &a) { return day(a["date"]) == d; }))
         continue;
       for (size_t e = 0; e < s.employees.size(); ++e)
@@ -285,7 +303,7 @@ void advanced() {
                   continue;
                 bool previous = x.contains({int(e), d, int(a)});
                 if (d < s.days.front())
-                  for (auto &h : s.source["history"]["assignments"])
+                  for (auto &h : knownAssignments(s))
                     if (h["employeeId"] == s.employees[e].id &&
                         day(h["date"]) == d && h["shiftId"] == s.shifts[a].id)
                       previous = true;
@@ -316,7 +334,7 @@ void advanced() {
                   x.contains({e, d, int(t)})) {
                 LinearExpr required;
                 bool hasPrevious = d - 1 >= s.days.front();
-                for (auto &a : s.source["history"]["assignments"])
+                for (auto &a : knownAssignments(s))
                   if (a["employeeId"] == s.employees[e].id &&
                       day(a["date"]) == d - 1)
                     hasPrevious = true;
@@ -407,4 +425,55 @@ Stage stability() {
             cost += 1;
   }
   return {"regeneration", "SCHEDULE_CHANGES", cost, 1};
+}
+
+LinearExpr burden(int e, int d, const Json &r) {
+  LinearExpr sum;
+  for (size_t t = 0; t < s.shifts.size(); ++t)
+    if (targetShift(s, r, int(t)))
+      sum += assigned(e, d, int(t));
+  return sum;
+}
+LinearExpr normalBetween(int e, int first, int second, const Json &r) {
+  LinearExpr n;
+  for (int d = first + 1; d < second; ++d)
+    for (auto &id : r["normalShiftIds"])
+      n += assigned(e, d, shifts.at(id));
+  return n;
+}
+std::vector<Stage> spacing(bool hard) {
+  std::vector<Stage> stages;
+  for (auto &r : s.source.value("spacingRules", Json::array())) {
+    if ((r["mode"] == "HARD") != hard)
+      continue;
+    LinearExpr total;
+    int gap = r["minimumGap"];
+    for (auto &pair : spacingPairs(s, r)) {
+      auto both =
+          conjunction({atom(burden(pair.employee, pair.first, r), "EQ", 1),
+                       atom(burden(pair.employee, pair.second, r), "EQ", 1),
+                       week(pair.second, pair.profile)});
+      LinearExpr distance =
+          r["unit"] == "CALENDAR"
+              ? LinearExpr(pair.second - pair.first)
+              : normalBetween(pair.employee, pair.first, pair.second, r);
+      if (hard)
+        model.AddGreaterOrEqual(distance, gap).OnlyEnforceIf(both);
+      else if (r["penalty"] == "CLOSE_PAIRS")
+        total += conjunction({both, atom(distance, "LE", gap - 1)});
+      else {
+        auto deficit = model.NewIntVar(Domain(0, gap));
+        model.AddMaxEquality(deficit,
+                             {LinearExpr(0), LinearExpr(gap) - distance});
+        auto cost = model.NewIntVar(Domain(0, gap));
+        model.AddEquality(cost, deficit).OnlyEnforceIf(both);
+        model.AddEquality(cost, 0).OnlyEnforceIf(both.Not());
+        total += cost;
+      }
+    }
+    if (!hard)
+      stages.push_back(
+          {"spacing:" + r["id"].get<std::string>(), r["penalty"], total, 1});
+  }
+  return stages;
 }

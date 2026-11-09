@@ -40,7 +40,7 @@ export function UpgradeNotice({
   onUpgrade: () => void;
 }) {
   const { t } = useI18n();
-  return s.schemaVersion < 3 ? (
+  return s.schemaVersion < 4 ? (
     <div className="notice">
       <p>
         {t(

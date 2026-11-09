@@ -1,4 +1,21 @@
-# Validation report · 0.3.0
+# Validation report · 0.4.0
+
+Environment: Ubuntu x86-64, GCC 15.2, CMake 4.2, Python 3.14, Node.js 22, OR-Tools 9.15.6755 and installed Chrome through Playwright 1.56.1. The following are executed results, not inferred product acceptance.
+
+- Release build: passed without compiler warnings. Nine CTest targets passed in 60.86 seconds: core invariants/startup and **152 Python cases** (37 legacy, 42 evolution, 18 automatic assignment, 11 reliability, 18 archives, 12 spacing, 14 change sets).
+- Complete browser suite: **24 passed**, approximately 1.1 minutes. A subsequent focused check passed after correcting simple-navigation contrast found during visual inspection; the check enforces at least 4.5:1 text contrast. Desktop/phone screenshots were inspected. Automated reflow checks cover 1280, 768 and 390 pixels plus 200% CSS layout scale, with label/control and page-overflow assertions. This is a layout-scale check, not an assertion about every browser's native zoom implementation.
+- `npm ci`, `npm ls vite`, strict TypeScript and production build: passed. Vite **7.3.7**, plugin-react 5.1.0 and TypeScript 5.9.3 resolve together; npm reported zero vulnerabilities at installation time. Dependency changes are Vite and its required esbuild/platform packages, plus release version metadata.
+- Both production and development API/SPA tests passed, including actual CLI validation, foreign Origin rejection, a raw HTTP foreign Host check, SPA fallback and development module transformation. HTTP and development HMR listeners are explicitly loopback-only. No demonstrated practical exploit is claimed for the audited older dependency.
+- Installed 0.4.0 CLI passed version and validation of the complete schema-4 AI example using installed schemas. Generated schemas, capabilities and seven AI documents reproduce byte-for-byte. Whitespace checks passed.
+- The user's unchanged original trial files were tested without committing personal data: two-week original **OPTIMAL, 1.943 s, zero substitutions**; longer original **OPTIMAL, 10.381 s, zero substitutions**, all seven phases optimal. The reproduced baseline longer run had stopped after approximately 30.4 s with two substitutions and bound zero; its necessity was unproved. Measurements include local concurrent workload and are not latency guarantees.
+
+Reliability checks include absence, truly necessary fallback, multiple preference tiers, exact distinct duties/binding, timeout truthfulness, independent counterfactual improvement/proof and rejected untrusted phase claims. Archives cover original context/hash and browser numeric round trips, lifecycle/revision protection, completed-prefix advancement, repeated import/publication, actual-history conflicts, full recovery/CSV, missing contexts, new and profile-linked quota rebuilding. Spacing covers shared targets, weekday eligibility, actual normal assignments versus OFF/absence, calendar/normal boundaries, hard independent verification, category redefinition and no unneeded duties outside scope. Change sets exercise all seven AI examples, preserved unspecified/future employee fields, atomic rollback, revision/entity/receipt conflicts, explicit hard-rule authorization, protected domains/absence, future regeneration, continuing history for new hires, full-scenario preview and retained verified incumbents.
+
+Browser integration creates a ten-person operational team visually, with roles/qualification, two distinct exact closing duties, reserve preferences, a part-time Friday-only pattern, combined fairness and spacing; it produces zero substitutes and independently VERIFIED assignments without JSON or numeric priorities. Other flows cover English/Italian parity, advanced editing, reload→open→publish→confirm actual prefix→backup→fresh-session restore→generate, minimized AI-package export and explicit change-set confirmation. Publication does not accrue actual history; quotas are not counted twice on recovery.
+
+Cross-platform release CI is checked after push and recorded below. Remaining semantic/operational limits are in `LIMITATIONS.md`; final workforce/contract acceptance belongs to the user.
+
+## Previous 0.3.0 release evidence
 
 Local environment: Ubuntu x86-64, GCC 15.2, CMake 4.2, Python 3.14, Node.js 22, OR-Tools 9.15.6755. Browser tests use installed Chrome through Playwright 1.56.1.
 

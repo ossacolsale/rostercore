@@ -1,0 +1,611 @@
+{
+  "allowedShifts": [
+    {
+      "id": "fixture-010",
+      "selector": {
+        "employeeIds": [
+          "fixture-023"
+        ]
+      },
+      "scope": {
+        "weekdays": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "weekProfileIds": [
+          "fixture-032"
+        ]
+      },
+      "shiftIds": [
+        "fixture-006",
+        "fixture-011"
+      ]
+    },
+    {
+      "id": "fixture-009",
+      "selector": {
+        "typeIds": [
+          "fixture-005",
+          "fixture-004"
+        ]
+      },
+      "scope": {
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "dayType": "NON_HOLIDAY",
+        "weekProfileIds": [
+          "fixture-032"
+        ]
+      },
+      "shiftIds": [
+        "fixture-001",
+        "fixture-000",
+        "fixture-006"
+      ],
+      "allowRequiredRest": true
+    },
+    {
+      "id": "fixture-013",
+      "selector": {
+        "typeIds": [
+          "fixture-012"
+        ]
+      },
+      "scope": {
+        "weekProfileIds": [
+          "fixture-032"
+        ],
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "dayType": "NON_HOLIDAY"
+      },
+      "shiftIds": [
+        "fixture-006",
+        "fixture-001",
+        "fixture-000"
+      ],
+      "allowRequiredRest": true
+    }
+  ],
+  "attributeDefinitions": [
+    {
+      "default": "FULL_TIME",
+      "id": "fixture-014",
+      "label": "Test entity 1",
+      "type": "ENUM",
+      "values": [
+        "FULL_TIME",
+        "PART_TIME"
+      ],
+      "visible": true
+    }
+  ],
+  "availability": [],
+  "baseConstraintIds": [],
+  "calendar": {
+    "closures": [],
+    "end": "2026-11-22",
+    "excludedDates": [],
+    "excludedIsoWeeks": [],
+    "excludedRanges": [],
+    "start": "2026-11-09",
+    "timezone": "Europe/Rome",
+    "holidays": {
+      "country": "IT",
+      "catalogueVersion": "IT-2001-2026.1",
+      "localDates": []
+    }
+  },
+  "constraintSets": [],
+  "constraints": [],
+  "dutyRequirements": [
+    {
+      "id": "fixture-016",
+      "label": "Test entity 2",
+      "mode": "RESPONSIBILITY",
+      "shiftIds": [
+        "fixture-000"
+      ],
+      "levels": [
+        {
+          "selector": {
+            "typeIds": [
+              "fixture-004"
+            ]
+          },
+          "level": 0
+        },
+        {
+          "level": 1,
+          "selector": {
+            "typeIds": [
+              "fixture-012"
+            ]
+          }
+        }
+      ],
+      "comparison": "EQ",
+      "count": 1,
+      "intervals": [],
+      "scope": {
+        "weekProfileIds": [
+          "fixture-032"
+        ],
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "dayType": "NON_HOLIDAY"
+      },
+      "preferencePriority": 0,
+      "exclusiveGroup": "daily-duties",
+      "bindAssignments": true
+    },
+    {
+      "id": "fixture-017",
+      "label": "Test entity 3",
+      "mode": "RESPONSIBILITY",
+      "shiftIds": [
+        "fixture-001"
+      ],
+      "levels": [
+        {
+          "selector": {
+            "typeIds": [
+              "fixture-004",
+              "fixture-005"
+            ]
+          },
+          "level": 0
+        },
+        {
+          "level": 1,
+          "selector": {
+            "typeIds": [
+              "fixture-012"
+            ]
+          }
+        }
+      ],
+      "comparison": "EQ",
+      "count": 1,
+      "intervals": [],
+      "scope": {
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "weekProfileIds": [
+          "fixture-032"
+        ],
+        "dayType": "NON_HOLIDAY"
+      },
+      "preferencePriority": 0,
+      "exclusiveGroup": "daily-duties",
+      "bindAssignments": true
+    }
+  ],
+  "employeeTypes": [
+    {
+      "id": "fixture-005",
+      "label": "Test entity 4"
+    },
+    {
+      "id": "fixture-004",
+      "label": "Test entity 5"
+    },
+    {
+      "id": "fixture-012",
+      "label": "Test entity 6"
+    }
+  ],
+  "employees": [
+    {
+      "attributes": {},
+      "id": "fixture-026",
+      "label": "Test entity 7",
+      "typeId": "fixture-012",
+      "workPatternId": "fixture-029"
+    },
+    {
+      "attributes": {},
+      "id": "fixture-027",
+      "label": "Test entity 8",
+      "typeId": "fixture-012",
+      "workPatternId": "fixture-029"
+    },
+    {
+      "attributes": {},
+      "id": "fixture-018",
+      "label": "Test entity 9",
+      "typeId": "fixture-012",
+      "workPatternId": "fixture-029"
+    },
+    {
+      "attributes": {},
+      "id": "fixture-025",
+      "label": "Test entity 10",
+      "typeId": "fixture-004",
+      "workPatternId": "fixture-029"
+    },
+    {
+      "attributes": {},
+      "id": "fixture-024",
+      "label": "Test entity 11",
+      "typeId": "fixture-005",
+      "workPatternId": "fixture-029"
+    },
+    {
+      "attributes": {},
+      "id": "fixture-022",
+      "label": "Test entity 12",
+      "typeId": "fixture-005",
+      "workPatternId": "fixture-029"
+    },
+    {
+      "attributes": {
+        "fixture-014": "PART_TIME"
+      },
+      "id": "fixture-023",
+      "label": "Test entity 13",
+      "typeId": "fixture-004",
+      "workPatternId": "fixture-030"
+    },
+    {
+      "attributes": {},
+      "id": "fixture-020",
+      "label": "Test entity 14",
+      "typeId": "fixture-004",
+      "workPatternId": "fixture-029"
+    },
+    {
+      "attributes": {},
+      "id": "fixture-019",
+      "label": "Test entity 15",
+      "typeId": "fixture-004",
+      "workPatternId": "fixture-029"
+    },
+    {
+      "attributes": {},
+      "id": "fixture-021",
+      "label": "Test entity 16",
+      "typeId": "fixture-004",
+      "workPatternId": "fixture-029"
+    }
+  ],
+  "format": "rostercore.scenario",
+  "groups": [],
+  "history": {
+    "assignments": [],
+    "fairnessSnapshots": []
+  },
+  "hrState": {
+    "events": [],
+    "snapshotRevisions": {}
+  },
+  "id": "preferred-coverage-regression",
+  "label": "Anonymized actual pharmacy trial",
+  "policies": [
+    {
+      "id": "fixture-002",
+      "label": "Test entity 18",
+      "revision": 2,
+      "active": true,
+      "draft": false,
+      "dependencies": [],
+      "objective": {
+        "id": "fixture-007",
+        "label": "Test entity 17",
+        "type": "CUMULATIVE_FAIRNESS",
+        "mode": "CONTINUOUS_BALANCED",
+        "measure": "COUNT",
+        "selector": {
+          "typeIds": [
+            "fixture-004"
+          ]
+        },
+        "shiftIds": [
+          "fixture-000"
+        ],
+        "participation": "AVAILABILITY_WEIGHTED",
+        "metrics": [
+          "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "FINAL_ABSOLUTE_DEVIATION"
+        ],
+        "priority": 0,
+        "scope": {
+          "weekdays": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "dayType": "NON_HOLIDAY",
+          "weekProfileIds": [
+            "fixture-032"
+          ]
+        }
+      },
+      "constraints": [],
+      "sharedConstraintIds": [],
+      "constraintSetIds": []
+    },
+    {
+      "id": "fixture-003",
+      "label": "Test entity 20",
+      "revision": 1,
+      "active": true,
+      "draft": false,
+      "dependencies": [],
+      "objective": {
+        "id": "fixture-008",
+        "label": "Test entity 19",
+        "type": "CUMULATIVE_FAIRNESS",
+        "mode": "CONTINUOUS_BALANCED",
+        "measure": "COUNT",
+        "selector": {
+          "typeIds": [
+            "fixture-005",
+            "fixture-004"
+          ]
+        },
+        "shiftIds": [
+          "fixture-001"
+        ],
+        "participation": "AVAILABILITY_WEIGHTED",
+        "metrics": [
+          "MAX_ABSOLUTE_PREFIX_DEVIATION",
+          "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
+          "FINAL_ABSOLUTE_DEVIATION"
+        ],
+        "priority": 1,
+        "scope": {
+          "weekdays": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "weekProfileIds": [
+            "fixture-032"
+          ],
+          "dayType": "NON_HOLIDAY"
+        }
+      },
+      "constraints": [],
+      "sharedConstraintIds": [],
+      "constraintSetIds": []
+    }
+  ],
+  "publishedAssignments": [],
+  "revision": 1,
+  "schemaVersion": 3,
+  "search": {
+    "deterministic": true,
+    "maxTimeSeconds": 10,
+    "seed": 42,
+    "workers": 1
+  },
+  "shifts": [
+    {
+      "id": "fixture-006",
+      "intervals": [
+        {
+          "end": "13:00",
+          "endDayOffset": 0,
+          "start": "08:30"
+        },
+        {
+          "end": "20:00",
+          "endDayOffset": 0,
+          "start": "16:30"
+        }
+      ],
+      "kind": "WORKING",
+      "label": "Test entity 23",
+      "variants": [
+        {
+          "id": "fixture-034",
+          "label": "Test entity 21",
+          "priority": 0,
+          "selector": {},
+          "scope": {},
+          "intervals": [
+            {
+              "end": "13:00",
+              "endDayOffset": 0,
+              "start": "08:30"
+            },
+            {
+              "end": "20:00",
+              "endDayOffset": 0,
+              "start": "16:30"
+            }
+          ]
+        },
+        {
+          "id": "fixture-033",
+          "label": "Test entity 22",
+          "priority": 10,
+          "selector": {},
+          "scope": {
+            "weekdays": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          "intervals": [
+            {
+              "end": "13:00",
+              "endDayOffset": 0,
+              "start": "08:30"
+            }
+          ],
+          "workPatternIds": [
+            "fixture-030"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fixture-001",
+      "intervals": [
+        {
+          "end": "13:00",
+          "endDayOffset": 0,
+          "start": "09:00"
+        },
+        {
+          "end": "20:30",
+          "endDayOffset": 0,
+          "start": "16:30"
+        }
+      ],
+      "kind": "WORKING",
+      "label": "Test entity 24",
+      "variants": []
+    },
+    {
+      "id": "fixture-000",
+      "intervals": [
+        {
+          "end": "13:30",
+          "endDayOffset": 0,
+          "start": "09:30"
+        },
+        {
+          "end": "20:30",
+          "endDayOffset": 0,
+          "start": "16:30"
+        }
+      ],
+      "kind": "WORKING",
+      "label": "Test entity 25",
+      "variants": []
+    },
+    {
+      "id": "fixture-011",
+      "intervals": [],
+      "kind": "OFF",
+      "label": "Test entity 26"
+    }
+  ],
+  "temporalRules": [],
+  "weekConfiguration": {
+    "frequencies": [],
+    "history": [],
+    "manual": [],
+    "recurrences": [
+      {
+        "id": "fixture-015",
+        "label": "Test entity 27",
+        "anchor": "2026-10-26",
+        "validFrom": "2026-11-02",
+        "sequence": [
+          "fixture-031",
+          "fixture-032",
+          "fixture-032",
+          "fixture-032"
+        ]
+      }
+    ],
+    "defaultProfileId": "fixture-032"
+  },
+  "weekProfiles": [
+    {
+      "id": "fixture-032",
+      "label": "Test entity 28",
+      "offWeekdays": [
+        6,
+        7
+      ],
+      "holidayMode": "OFF",
+      "constraintIds": [],
+      "policyIds": []
+    },
+    {
+      "id": "fixture-031",
+      "label": "Test entity 29",
+      "offWeekdays": [],
+      "holidayMode": "NORMAL",
+      "constraintIds": [],
+      "policyIds": []
+    }
+  ],
+  "workPatternAssignmentRules": [],
+  "workPatterns": [
+    {
+      "id": "fixture-029",
+      "label": "Test entity 30",
+      "versions": [
+        {
+          "exceptions": [],
+          "shiftIds": [
+            "fixture-006",
+            "fixture-001",
+            "fixture-000",
+            "fixture-011"
+          ],
+          "validFrom": "2026-11-09",
+          "weekdays": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            7,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fixture-030",
+      "label": "Test entity 31",
+      "versions": [
+        {
+          "exceptions": [],
+          "shiftIds": [
+            "fixture-006",
+            "fixture-001",
+            "fixture-000",
+            "fixture-011"
+          ],
+          "validFrom": "2026-11-09",
+          "weekdays": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        }
+      ]
+    }
+  ]
+}

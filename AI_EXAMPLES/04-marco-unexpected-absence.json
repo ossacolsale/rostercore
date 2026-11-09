@@ -1,0 +1,28 @@
+{
+  "format": "rostercore.scenario-change-set",
+  "schemaVersion": 1,
+  "id": "04-marco-unexpected-absence",
+  "scenarioId": "ai-five-person-business",
+  "expectedRevision": 1,
+  "allowHardRuleChanges": false,
+  "description": "Reference today is 9 November 2026; Marco is absent today and the following two days. Regenerate the plan.",
+  "referenceDate": "2026-11-09",
+  "operations": [
+    {
+      "op": "CREATE_AVAILABILITY",
+      "value": {
+        "id": "marco-unplanned",
+        "selector": {
+          "employeeIds": [
+            "marco"
+          ]
+        },
+        "scope": {
+          "start": "2026-11-09",
+          "end": "2026-11-11"
+        },
+        "state": "ABSENT"
+      }
+    }
+  ]
+}

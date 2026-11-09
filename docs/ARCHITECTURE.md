@@ -1,6 +1,6 @@
 # Architecture and mathematical contract
 
-RosterCore 0.3 uses a stateless C++20 library and JSON CLI. The domain and interpreter do not expose OR-Tools. Structural validation precedes semantic normalization. The CP-SAT adapter compiles the same expressions evaluated independently by the verifier. A loopback-only Node adapter invokes the CLI with argument arrays, never a shell. No data is transmitted to AI/HR services.
+RosterCore 0.4 uses a stateless C++20 library and JSON CLI. The domain and interpreter do not expose OR-Tools. Structural validation precedes semantic normalization. The CP-SAT adapter compiles the same expressions evaluated independently by the verifier. A loopback-only Node adapter invokes the CLI with argument arrays, never a shell. No data is transmitted to AI/HR services.
 
 ## Time
 
@@ -39,3 +39,11 @@ CP-SAT is a proven solver, but finite-horizon fairness is not an infinite-future
 `UX_ASSIGNMENTS.md` defines schema-3 precedence and migration. The workforce interpreter separates raw dated employee state from effective work-pattern resolution, so automatic selectors can reuse resolved attributes/groups without recursively resolving patterns. Domain/variant consumers and preview share that resolver; the verifier checks actual schedules against it. Individual source records are never rewritten by rule evaluation.
 
 The playground's local progress/dependency checks guide unfinished forms; they do not replace C++ validation or reproduce scheduling resolution. Operation notifications are centralized, bounded and deduplicated, with persistent errors and explicit diagnostic actions. Logical shifts precede arrangements, and concrete variants have their own step after arrangements. Existing internal navigation IDs remain stable.
+
+## Reliability and saved contexts (0.4)
+
+Operational preference models are solved before constructing lower-priority fairness auxiliaries. This fixes the reproduced long-horizon fallback timeout while preserving one lexicographic CP-SAT model. Only a proved optimum is fixed before proceeding; intermediate incumbents supply verified assignment/week hints. Quality counterfactuals build the hard model independently and test a strictly smaller fallback tier under already verified earlier tiers. Restarted improvement carries a verified incumbent, never fabricates a CP-SAT solution or claims persistence of internal search state.
+
+`spacing.cpp` defines candidate pairs and independent workload replay, using existing shift IDs/tags. Compiler hard pair constraints run before preference search; soft pair costs share explicit lexicographic ordering with fairness. Calendar distance and actual intervening normal assignments are separate units. Known pre-horizon published assignments supply temporal context without accruing actual-history quota. Week-profile provenance is retained at that boundary. Tagged schema-4 snapshots retain their resolved targets to detect changed category membership.
+
+`archives.cpp` implements canonical verified contexts, publication/completion/revision transitions, idempotent history merging, portable backup/CSV and explicit dated historical reconstruction. `change_sets.cpp` applies only schema-catalogued operations to a private copy, checks revisions/receipts/protected assignments and validates the complete candidate before returning it. The simple UI is a question-oriented editor of the same Scenario. AI authoring is file exchange; the application does not contact an AI service.

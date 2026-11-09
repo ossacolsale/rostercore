@@ -130,6 +130,16 @@ void validateEvolution(const Json &j, bool workforceOnly) {
     timeline(p["versions"], "/workPatterns/versions", false);
     for (auto &v : p["versions"]) {
       refs(shifts, v["shiftIds"], "/workPatterns/versions/shiftIds");
+      std::set<int> dayOverrides;
+      for (auto &byDay : v.value("weekdayShifts", Json::array())) {
+        if (j["schemaVersion"].get<int>() < 4)
+          error("SCHEMA_VERSION", "/workPatterns",
+                "Weekday overrides require schema 4");
+        if (!dayOverrides.insert(byDay["weekday"].get<int>()).second)
+          error("DUPLICATE_WEEKDAY", "/workPatterns/versions/weekdayShifts",
+                "A weekday can have only one override");
+        refs(shifts, byDay["shiftIds"], "/workPatterns/versions/weekdayShifts");
+      }
       for (auto &x : v.value("exceptions", Json::array())) {
         day(x["date"]);
         refs(shifts, x["shiftIds"], "/workPatterns/exceptions");
@@ -319,6 +329,7 @@ void validateEvolution(const Json &j, bool workforceOnly) {
     scenario.weekOptions(w);
   for (int d : scenario.days)
     scenario.holiday(d);
+  registry(scenario.duties(), "/dutyRequirements");
   for (auto &r : scenario.duties()) {
     refs(shifts, r["shiftIds"], "/dutyRequirements/shiftIds");
     intervals(r["intervals"], false);
@@ -330,6 +341,29 @@ void validateEvolution(const Json &j, bool workforceOnly) {
       if (!levels.insert(l["level"].get<int>()).second)
         error("COVERAGE_LEVEL", "/dutyRequirements/levels",
               "Preference levels must be unique");
+  }
+  registry(array("spacingRules"), "/spacingRules");
+  for (auto &r : array("spacingRules")) {
+    if (j["schemaVersion"].get<int>() < 4)
+      error("SCHEMA_VERSION", "/spacingRules", "Spacing requires schema 4");
+    refs(shifts, r["shiftIds"], "/spacingRules/shiftIds");
+    refs(shifts, r["normalShiftIds"], "/spacingRules/normalShiftIds");
+    if (r["shiftIds"].empty() && r.value("fairnessTags", Json::array()).empty())
+      error("SPACING_TARGET", "/spacingRules",
+            "Select at least one burden shift or shared fairness tag");
+    if (r["unit"] == "NORMAL_WORK_DAYS" && r["normalShiftIds"].empty())
+      error("SPACING_NORMAL", "/spacingRules/normalShiftIds",
+            "Explicit normal WORKING shifts are required");
+    for (size_t t = 0; t < scenario.shifts.size(); ++t)
+      if (std::find(r["normalShiftIds"].begin(), r["normalShiftIds"].end(),
+                    scenario.shifts[t].id) != r["normalShiftIds"].end() &&
+          (scenario.shifts[t].kind != "WORKING" ||
+           targetShift(scenario, r, int(t))))
+        error("SPACING_NORMAL", "/spacingRules/normalShiftIds",
+              "Normal shifts must be WORKING and separate from the burden "
+              "category");
+    for (int d : scenario.days)
+      scenario.select(r["selector"], d);
   }
   for (auto &r : scenario.transitions()) {
     refs(shifts, r["fromShiftIds"], "/temporalRules/fromShiftIds");

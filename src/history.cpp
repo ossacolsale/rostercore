@@ -22,6 +22,38 @@ bool targetShift(const Scenario &s, const Json &o, int shift) {
       return true;
   return false;
 }
+static bool dutyEligible(const Scenario &s, int e, int d, int t,
+                         const std::string &p) {
+  if (s.source.value("dutyBindingMode", "ACTIVE_SCOPE") != "GLOBAL")
+    return true;
+  bool binding = false, qualified = false;
+  for (auto &r : s.duties())
+    if (r["mode"] == "RESPONSIBILITY" &&
+        std::find(r["shiftIds"].begin(), r["shiftIds"].end(), s.shifts[t].id) !=
+            r["shiftIds"].end()) {
+      binding |= r.value("bindAssignments", true);
+      if (!s.matches(r, d, p) || r["count"].get<int>() == 0)
+        continue;
+      bool member = false;
+      for (auto &level : r["levels"]) {
+        auto members = s.select(level["selector"], d, {}, p);
+        member |= std::find(members.begin(), members.end(), e) != members.end();
+      }
+      if (!member)
+        continue;
+      auto ranges = spans(s, e, d, t, p);
+      bool fits = true;
+      for (auto &needed : requirementSpans(s, r, d)) {
+        auto cursor = needed.first;
+        for (auto &span : ranges)
+          if (span.first <= cursor && span.second > cursor)
+            cursor = span.second;
+        fits &= cursor >= needed.second;
+      }
+      qualified |= fits;
+    }
+  return !binding || qualified;
+}
 std::map<int, int64_t> participants(const Scenario &s, const Json &o, int d,
                                     const std::string &profileId) {
   std::map<int, int64_t> weights;
@@ -32,7 +64,7 @@ std::map<int, int64_t> participants(const Scenario &s, const Json &o, int d,
     if (o["participation"] == "AVAILABILITY_WEIGHTED") {
       eligible = false;
       for (int sh : s.domain(e, d, profileId))
-        if (targetShift(s, o, sh))
+        if (targetShift(s, o, sh) && dutyEligible(s, e, d, sh, profileId))
           eligible = true;
     }
     if (eligible)
@@ -74,6 +106,17 @@ Ledger historicalLedger(const Scenario &s, const Json &o) {
   std::map<int, Json> snapshots;
   for (auto &snap : s.source["history"]["fairnessSnapshots"])
     if (snap["objectiveId"] == o["id"]) {
+      if (snap.contains("targetShiftIds")) {
+        Json targets = Json::array();
+        for (size_t t = 0; t < s.shifts.size(); ++t)
+          if (targetShift(s, o, int(t)))
+            targets.push_back(s.shifts[t].id);
+        std::sort(targets.begin(), targets.end());
+        if (targets != snap["targetShiftIds"])
+          throw Error("HISTORY_REBUILD_REQUIRED", "/history/fairnessSnapshots",
+                      "Shared burden tag membership changed; rebuild dated "
+                      "historical participation explicitly");
+      }
       if (snap["fingerprint"] != objectiveFingerprint(o))
         throw Error(
             "HISTORY_REBUILD_REQUIRED", "/history/fairnessSnapshots",
@@ -150,6 +193,15 @@ FairnessData fairness(const Scenario &s, const Json &assignments) {
                                 {"objectiveId", o["id"]},
                                 {"fingerprint", objectiveFingerprint(o)},
                                 {"weights", w}});
+      if (s.source["schemaVersion"].get<int>() >= 4 &&
+          !o.value("fairnessTags", Json::array()).empty()) {
+        Json targets = Json::array();
+        for (size_t t = 0; t < s.shifts.size(); ++t)
+          if (targetShift(s, o, int(t)))
+            targets.push_back(s.shifts[t].id);
+        std::sort(targets.begin(), targets.end());
+        data.snapshots.back()["targetShiftIds"] = targets;
+      }
       if (!s.profile(d).empty())
         data.snapshots.back()["weekProfileId"] = s.profile(d);
       std::vector<int> actual;
@@ -226,7 +278,7 @@ Json consolidate(const Json &scenario, const Json &result,
     return verified;
   if (!result.contains("metadata") ||
       result["metadata"].value("configurationHash", "") !=
-          sha256(scenario.dump()))
+          configurationHash(scenario))
     throw Error("CONFIGURATION_MISMATCH", "/result",
                 "Result does not belong to this exact configuration");
   Json updated = scenario;
@@ -289,6 +341,14 @@ Json rebuildHistory(const Json &scenario, const Json &document, bool dryRun) {
         throw Error("HISTORY_CONTEXT_OVERLAP", "/scenarios",
                     "Historical contexts must not overlap");
     context["policies"] = scenario["policies"];
+    if (context.contains("weekProfiles"))
+      for (auto &profile : context["weekProfiles"])
+        for (auto &currentProfile :
+             scenario.value("weekProfiles", Json::array()))
+          if (profile["id"] == currentProfile["id"]) {
+            profile["policyIds"] = currentProfile["policyIds"];
+            profile["constraintIds"] = currentProfile["constraintIds"];
+          }
     context["constraints"] = scenario["constraints"];
     context["baseConstraintIds"] = scenario["baseConstraintIds"];
     context["constraintSets"] = scenario["constraintSets"];
