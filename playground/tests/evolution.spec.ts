@@ -1,11 +1,23 @@
 import { test, expect } from "@playwright/test";
-test.beforeEach(async({page})=>{await page.addInitScript(()=>localStorage.setItem("rostercore.mode.v1","ADVANCED"));});
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("rostercore.mode.v1", "ADVANCED"),
+  );
+});
 
 test("dated pharmacy workflow previews hours, imports leave and regenerates with an explicit substitute", async ({
   page,
 }, testInfo) => {
   page.on("pageerror", (error) => {
     console.error("BROWSER ERROR", error.message);
+  });
+  let releaseLoad!: () => void;
+  const exampleReady = new Promise<void>((resolve) => {
+    releaseLoad = resolve;
+  });
+  await page.route("**/api/example-evolution", async (route) => {
+    await exampleReady;
+    await route.continue();
   });
   await page.goto("/");
   await expect(
@@ -17,6 +29,16 @@ test("dated pharmacy workflow previews hours, imports leave and regenerates with
       exact: true,
     })
     .click();
+  try {
+    await expect(
+      page.getByLabel("Planning start", { exact: true }),
+    ).toBeDisabled();
+  } finally {
+    releaseLoad();
+  }
+  await expect(page.getByLabel("Scenario label", { exact: true })).toHaveValue(
+    "Pharmacy · evolving workforce",
+  );
   await page.getByLabel("Planning start", { exact: true }).fill("2027-05-10");
   await page.getByLabel("Planning end", { exact: true }).fill("2027-05-14");
   await page.getByTestId("nav-people").click();

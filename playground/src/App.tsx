@@ -411,6 +411,9 @@ export default function App() {
     setTab(key);
   };
   const loadExample = async (kind = "legacy") => {
+    if (busy) return;
+    setBusy(true);
+    setAction("load-example");
     try {
       const res = await fetch(
         kind === "patterns"
@@ -429,6 +432,9 @@ export default function App() {
       setTab("overview");
     } catch (e) {
       setFatal((e as Error).message);
+    } finally {
+      setBusy(false);
+      setAction("");
     }
   };
   const importScenario = async (text: string) => {
@@ -741,7 +747,11 @@ export default function App() {
               {t("WORKFORCE OPTIMIZATION")} <span>●</span>{" "}
               {t("LOCAL & PRIVATE")}{" "}
             </div>
-            <div className={busy ? "busy-content" : ""} aria-busy={busy}>
+            <fieldset
+              className={"scenario-content " + (busy ? "busy-content" : "")}
+              disabled={busy}
+              aria-busy={busy}
+            >
               {mode === "SIMPLE" && (
                 <SimplePanel
                   s={s}
@@ -1181,7 +1191,7 @@ export default function App() {
                   </>
                 )}
               </div>
-            </div>
+            </fieldset>
             <footer>
               RosterCore <span>{t("Open-source scheduling · Apache-2.0")}</span>
               <span>{t("Local civil time · Exact rational fairness")}</span>

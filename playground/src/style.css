@@ -1658,3 +1658,10 @@ textarea {
   width: auto;
   flex-shrink: 0;
 }
+
+.scenario-content {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}

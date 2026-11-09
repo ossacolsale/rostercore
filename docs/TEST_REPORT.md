@@ -13,7 +13,7 @@ Reliability checks include absence, truly necessary fallback, multiple preferenc
 
 Browser integration creates a ten-person operational team visually, with roles/qualification, two distinct exact closing duties, reserve preferences, a part-time Friday-only pattern, combined fairness and spacing; it produces zero substitutes and independently VERIFIED assignments without JSON or numeric priorities. Other flows cover English/Italian parity, advanced editing, reload→open→publish→confirm actual prefix→backup→fresh-session restore→generate, minimized AI-package export and explicit change-set confirmation. Publication does not accrue actual history; quotas are not counted twice on recovery.
 
-Cross-platform release CI is checked after push and recorded below. Remaining semantic/operational limits are in `LIMITATIONS.md`; final workforce/contract acceptance belongs to the user.
+The first 0.4 matrix passed all native targets and builds on macOS/Windows and all native targets on Linux. Its Linux browser run exposed an asynchronous example-loading race: the first date edit could occur before the replacement example arrived, producing a longer horizon with a genuinely required fallback. Example loading now marks the editor busy, native form controls are disabled during pending operations, and a delayed real-request test checks that guard before editing the loaded scenario. The complete local browser rerun passed 24/24. Final release CI is checked after the correction and recorded below. Remaining semantic/operational limits are in `LIMITATIONS.md`; final workforce/contract acceptance belongs to the user.
 
 ## Previous 0.3.0 release evidence
 
