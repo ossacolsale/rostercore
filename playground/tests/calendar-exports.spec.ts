@@ -382,11 +382,12 @@ test("PDF non-working dates and named print-profile variants survive reopening a
   await expect(
     dialog.getByRole("button", { name: "Download PDF", exact: true }),
   ).toBeEnabled();
+  // Chromium versions differ in the punctuation emitted by Intl date formatting.
   await expect(
-    dialog.locator(".pdf-preview text").filter({ hasText: "Sat 14/11" }),
+    dialog.locator(".pdf-preview text").filter({ hasText: /Sat,?\s+14\/11/ }),
   ).toHaveCount(0);
   await expect(
-    dialog.locator(".pdf-preview text").filter({ hasText: "Mon 09/11" }),
+    dialog.locator(".pdf-preview text").filter({ hasText: /Mon,?\s+09\/11/ }),
   ).toHaveCount(1);
   await dialog
     .getByLabel("Print profile name", { exact: true })
