@@ -2,6 +2,7 @@ import { PDFDocument, rgb, type PDFFont } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { zipSync, strToU8 } from "fflate";
 import {
+  calendarPrintView,
   type CalendarView,
   type CalendarCell,
   type Presentation,
@@ -70,6 +71,13 @@ export async function generatePdf(
   fonts: { regular: Uint8Array; bold: Uint8Array },
   generatedAt = new Date(),
 ): Promise<PdfExport> {
+  view = calendarPrintView(view, options);
+  if (!view.days.length)
+    throw new Error(
+      t(
+        "No days remain for printing. Include at least one day category or change the period.",
+      ),
+    );
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const regular = await doc.embedFont(fonts.regular, { subset: true }),
@@ -160,7 +168,7 @@ export async function generatePdf(
       true,
     );
     if (options.business && options.business !== view.scenarioLabel)
-      rows(view.scenarioLabel,margin,width - 2 * margin,9,false,"muted");
+      rows(view.scenarioLabel, margin, width - 2 * margin, 9, false, "muted");
     rows(
       options.title || t("Work schedule"),
       margin,

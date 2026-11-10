@@ -19,6 +19,33 @@ await build({
   format: "cjs",
   packages: "external",
 });
+const modelsPath = resolve("node_modules/.cache/rostercore/print-models.cjs");
+await build({
+  entryPoints: ["src/print-profiles.ts"],
+  outfile: modelsPath,
+  bundle: true,
+  platform: "node",
+  format: "cjs",
+  packages: "external",
+});
+const {
+  readPrintProfiles,
+  savePrintProfile,
+  applyPrintProfile,
+  printProfileKey,
+} = require(modelsPath);
+const viewModelsPath = resolve("node_modules/.cache/rostercore/print-view.cjs");
+await build({
+  entryPoints: ["src/calendar-export-model.ts"],
+  outfile: viewModelsPath,
+  bundle: true,
+  platform: "node",
+  format: "cjs",
+  packages: "external",
+});
+const { calendarPrintView, pdfDayCategories, defaultPresentation } = require(
+  viewModelsPath,
+);
 const {
   generatePdf,
   generateIcs,
@@ -238,6 +265,188 @@ test("ICS: true resolved instants, split intervals, folds, escaped UTF-8 and ind
   );
 });
 const awaitUnknown = await load("unknown");
+test("PDF day exclusions use complete native facts, preserve hidden work and omit empty weeks in every layout", async () => {
+  const source = await load("print-days"),
+    before = JSON.stringify(source),
+    all = Object.keys(pdfDayCategories);
+  const onlyWork = calendarPrintView(source, { excludedDayCategories: all });
+  assert.deepEqual(
+    onlyWork.days.map((d) => d.date),
+    ["2027-05-03", "2027-05-04"],
+  );
+  assert.equal(
+    calendarPrintView(source, { excludedDayCategories: ["CLOSURE"] }).days
+      .length,
+    source.days.length - 1,
+  );
+  assert.ok(
+    calendarPrintView(source, { excludedDayCategories: ["HOLIDAY"] }).days.some(
+      (d) => d.date === "2027-05-04",
+    ),
+    "working holidays stay",
+  );
+  const hidden = structuredClone(source);
+  hidden.cells.forEach((c) => {
+    if (c.state === "WORKING") {
+      c.state = "FILTERED_SHIFT";
+      c.intervals = [];
+    }
+  });
+  assert.deepEqual(
+    calendarPrintView(hidden, { excludedDayCategories: all }).days.map(
+      (d) => d.date,
+    ),
+    ["2027-05-03", "2027-05-04"],
+  );
+  const unknown = structuredClone(source);
+  unknown.days = [
+    {
+      date: "2027-05-12",
+      profileId: "",
+      profileLabel: "",
+      holidays: [],
+      hasWorkingAssignments: false,
+      noWorkCategories: ["UNCALCULATED"],
+    },
+  ];
+  unknown.cells = [];
+  assert.equal(
+    calendarPrintView(unknown, { excludedDayCategories: ["UNCALCULATED"] }).days
+      .length,
+    0,
+  );
+  const legacy = structuredClone(source);
+  legacy.days.forEach((d) => {
+    delete d.hasWorkingAssignments;
+    delete d.noWorkCategories;
+  });
+  assert.equal(
+    calendarPrintView(legacy, { excludedDayCategories: all }).days.length,
+    source.days.length,
+    "missing evidence stays visible",
+  );
+  for (const layout of ["WEEK", "MONTH", "PERSON"]) {
+    const result = await generatePdf(
+      source,
+      { ...options, layout, excludedDayCategories: all },
+      t,
+      fonts,
+      stamp,
+    );
+    await writeFile(resolve(out, "omitted-" + layout + ".pdf"), result.bytes);
+    assert.ok(
+      result.pages
+        .flatMap((p) => p.texts)
+        .some(
+          (x) => x.text.includes("Tue 04/05") || x.text.includes("2027-05-04"),
+        ),
+    );
+  }
+  const allClosed = {
+    ...source,
+    days: source.days.filter((d) => !d.hasWorkingAssignments),
+  };
+  await assert.rejects(
+    generatePdf(
+      allClosed,
+      { ...options, excludedDayCategories: all },
+      t,
+      fonts,
+      stamp,
+    ),
+    /No days remain/,
+  );
+  assert.equal(JSON.stringify(source), before);
+});
+test("named print profiles preserve variants, dates and privacy across persistence and calendar changes", () => {
+  const source = {
+    scenario: {
+      label: "Profile test",
+      policies: [],
+      employees: [{ id: "e1" }],
+      employeeTypes: [{ id: "staff" }],
+      groups: [],
+      shifts: [{ id: "normal", kind: "WORKING" }],
+    },
+    period: view.period,
+  };
+  const selected = structuredClone(view.options);
+  selected.includeAbsenceReasons = true;
+  selected.shiftSelection.hideNormal = true;
+  const first = savePrintProfile([], "Weekdays", source, selected, {
+    ...defaultPresentation(),
+    excludedDayCategories: ["REST"],
+  });
+  assert.equal(first.profile.options.includeAbsenceReasons, false);
+  selected.shiftSelection.hideNormal = false;
+  assert.equal(first.profile.options.shiftSelection.hideNormal, true);
+  const variant = savePrintProfile(
+    first.profiles,
+    "Weekdays A3",
+    source,
+    selected,
+    { ...first.profile.presentation, paper: "A3" },
+  );
+  assert.equal(variant.profiles.length, 2);
+  assert.equal(variant.profiles[0].presentation.paper, "A4");
+  assert.equal(variant.profiles[1].presentation.paper, "A3");
+  assert.throws(
+    () =>
+      savePrintProfile(
+        variant.profiles,
+        "weekdays",
+        source,
+        selected,
+        defaultPresentation(),
+      ),
+    /already exists/,
+  );
+  const updated = savePrintProfile(
+    variant.profiles,
+    "Weekdays",
+    source,
+    selected,
+    { ...first.profile.presentation, orientation: "PORTRAIT" },
+    first.profile.id,
+  );
+  assert.equal(updated.profiles.length, 2);
+  assert.equal(updated.profiles[0].id, first.profile.id);
+  const stored = JSON.stringify({ version: 1, profiles: updated.profiles }),
+    reloaded = readPrintProfiles({
+      getItem: (key) => (key === printProfileKey ? stored : null),
+    });
+  const loaded = applyPrintProfile(reloaded[0], source, view.options, "it");
+  assert.equal(loaded.presentation.language, "it");
+  assert.equal(loaded.options.includeAbsenceReasons, false);
+  assert.deepEqual(loaded.presentation.excludedDayCategories, ["REST"]);
+  const next = {
+    ...source,
+    period: { start: "2027-06-01", end: "2027-06-30" },
+    scenario: { ...source.scenario, employees: [], shifts: [] },
+  };
+  const reused = applyPrintProfile(
+    {
+      ...first.profile,
+      options: {
+        ...first.profile.options,
+        employeeSelection: {
+          all: false,
+          employeeIds: ["e1", "missing"],
+          typeIds: [],
+          groupIds: [],
+        },
+      },
+    },
+    next,
+    { ...view.options, ...next.period },
+    "en",
+  );
+  assert.equal(reused.options.start, next.period.start);
+  assert.equal(reused.options.end, next.period.end);
+  assert.deepEqual(reused.options.employeeSelection.employeeIds, []);
+  assert.equal(reused.options.shiftSelection.hideNormal, false);
+  assert.throws(() => readPrintProfiles({ getItem: () => "{broken" }));
+});
 test("independent parsers verify saved PDF pages and iCalendar event semantics", async () => {
   const checked = spawnSync(
     python,

@@ -62,12 +62,44 @@ export type CalendarView = {
     profileId: string;
     profileLabel: string;
     holidays: { id: string; label: string }[];
+    hasWorkingAssignments?: boolean;
+    noWorkCategories?: PdfDayCategory[];
   }[];
   cells: CalendarCell[];
   totalEmployees: number;
   options: ViewOptions;
 };
+export const pdfDayCategories = {
+  HOLIDAY: "Holidays without work",
+  CLOSURE: "Business closures without work",
+  REST: "Rest days, including weekly rest",
+  EXCLUDED: "Excluded dates and weeks",
+  UNCALCULATED: "Uncalculated or unplanned dates and weeks",
+  ABSENCE: "Days when everyone is absent or otherwise unavailable",
+  INACTIVE: "Days with no active employees",
+  OTHER: "Other days with no work",
+} as const;
+export type PdfDayCategory = keyof typeof pdfDayCategories;
+export function calendarPrintView(
+  view: CalendarView,
+  options: Pick<Presentation, "excludedDayCategories">,
+): CalendarView {
+  const excluded = new Set(options.excludedDayCategories ?? []);
+  const days = view.days.filter(
+    (day) =>
+      day.hasWorkingAssignments !== false ||
+      !day.noWorkCategories?.some((category) => excluded.has(category)),
+  );
+  if (days.length === view.days.length) return view;
+  const dates = new Set(days.map((day) => day.date));
+  return {
+    ...view,
+    days,
+    cells: view.cells.filter((cell) => dates.has(cell.date)),
+  };
+}
 export type Presentation = {
+  excludedDayCategories?: PdfDayCategory[];
   language: "en" | "it";
   mode: "COMPACT" | "COMPLETE";
   layout: "WEEK" | "MONTH" | "PERSON";
@@ -149,6 +181,7 @@ export function defaultViewOptions(a: ScheduleArchive): ViewOptions {
 }
 export function defaultPresentation(): Presentation {
   return {
+    excludedDayCategories: [],
     language: "en",
     mode: "COMPACT",
     layout: "WEEK",

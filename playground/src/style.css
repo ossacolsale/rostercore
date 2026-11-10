@@ -1953,3 +1953,7 @@ textarea {
     align-items: flex-start;
   }
 }
+.print-profiles { border-block: 1px solid var(--line); margin-block: 15px; padding-block: 8px; }
+.print-profiles h3 { margin-block: 4px 10px; }
+.print-day-filters { min-inline-size: 0; border: 1px solid var(--line); margin-block: 15px; padding: 10px; }
+.print-day-filters legend { font-weight: 600; }

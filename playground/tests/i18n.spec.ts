@@ -73,6 +73,8 @@ test("Italian results keep the same assignments without another solve", async ({
   await expect(
     page.getByRole("heading", { name: "Assignment calendar" }),
   ).toBeVisible();
+  await expect(page.locator(".roster tbody tr")).toHaveCount(5);
+  await expect(page.locator(".shift-cell").first()).toBeVisible();
   const shifts = await page.locator(".shift-cell").allTextContents();
   await page.getByLabel(selector).selectOption("it");
   await expect(page.locator(".status")).toHaveText("Soluzione ottimale");
@@ -234,6 +236,7 @@ test("Italian catalogue covers UI keys and preserves interpolation parameters", 
     "calendar-changes",
     "calendar-view",
     "export-dialog",
+    "print-profile-controls",
     "work-completion",
   ]) {
     const text = await readFile(

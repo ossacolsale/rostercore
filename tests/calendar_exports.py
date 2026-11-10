@@ -14,7 +14,25 @@ def fixture(start='2027-05-03',end='2027-05-05'):
 
 def options(a):return dict(start=a['period']['start'],end=a['period']['end'],employeeSelection=dict(all=True,employeeIds=[],typeIds=[],groupIds=[]),shiftSelection=dict(mode='ALL',shiftIds=[],normalShiftIds=['normal'],hideNormal=False),showAbsences=True,showRest=True,showClosuresAndHolidays=True,includeAbsenceReasons=False)
 def view(s,a,o=None):return action(s,[a],'VIEW',id=a['id'],options=o or options(a))
+def print_fixture():
+ s=fixture(end='2027-05-11')
+ s['calendar']['holidays']=dict(country='IT',catalogueVersion='IT-2001-2026.1',localDates=[dict(date='2027-05-04',label='Working holiday',holiday=True),dict(date='2027-05-05',label='Nonworking holiday',holiday=True)])
+ s['calendar']['closures']=[dict(id='closure',label='Closure',validFrom='2027-05-06',validTo='2027-05-07',selector={},reason='Closure',exceptions=[])]
+ s['calendar']['excludedDates']=['2027-05-07']
+ s['allowedShifts']=[dict(id='work',selector={},scope={'excludedDates':['2027-05-05','2027-05-08']},shiftIds=['normal'])]+[dict(id='rest-'+d,selector={},scope={'start':d,'end':d},shiftIds=['off']) for d in ['2027-05-05','2027-05-08']]
+ s['availability']=[dict(id='all-away',selector={},scope={'start':'2027-05-09','end':'2027-05-09'},state='ABSENT')]
+ for e in s['employees']:e['employment']=dict(validFrom='2027-05-03',validTo='2027-05-10')
+ return s
+
 class CalendarExports(unittest.TestCase):
+ def test_print_day_categories_come_from_complete_unfiltered_source(self):
+  s=print_fixture();a=created(s);o=options(a);o['showClosuresAndHolidays']=False;o['showRest']=False;o['showAbsences']=False;o['shiftSelection']['hideNormal']=True;o['employeeSelection']=dict(all=False,employeeIds=['e3'],typeIds=[],groupIds=[])
+  days={d['date']:d for d in view(s,a,o)['document']['days']}
+  self.assertTrue(days['2027-05-03']['hasWorkingAssignments']);self.assertTrue(days['2027-05-04']['hasWorkingAssignments']);self.assertEqual(days['2027-05-04']['noWorkCategories'],[]);self.assertEqual(days['2027-05-05']['holidays'],[])
+  for date,category in [('2027-05-05','HOLIDAY'),('2027-05-06','CLOSURE'),('2027-05-07','EXCLUDED'),('2027-05-08','REST'),('2027-05-09','ABSENCE'),('2027-05-10','INACTIVE')]:
+   self.assertFalse(days[date]['hasWorkingAssignments']);self.assertIn(category,days[date]['noWorkCategories'])
+ def test_excluded_week_is_not_classified_as_work_or_invented_unplanned_work(self):
+  s=fixture(end='2027-05-16');s['calendar']['excludedIsoWeeks']=['2027-W19'];a=created(s);v=view(s,a)['document'];days=[d for d in v['days'] if d['date']>='2027-05-10'];self.assertEqual(len(days),7);self.assertTrue(all(not d['hasWorkingAssignments'] and 'EXCLUDED' in d['noWorkCategories'] for d in days))
  def test_actual_split_and_dated_variant(self):
   s=fixture();s['shifts'][0]['variants']=[dict(id='base',label='Base',priority=0,selector={},scope={},intervals=s['shifts'][0]['intervals']),dict(id='wed',label='Wednesday',priority=1,selector={},scope={'weekdays':[3]},intervals=[dict(start='10:00',end='13:00',endDayOffset=0)])]
   a=created(s);v=view(s,a)['document'];cells=[c for c in v['cells'] if c['employeeId']=='e1'];self.assertEqual(len(cells[0]['intervals']),2);self.assertEqual(cells[2]['intervals'][0]['start'],'10:00');self.assertIn('startUtcMinute',cells[0]['intervals'][0]);self.assertEqual(cells[0]['state'],'WORKING');self.assertEqual(v['format'],'rostercore.calendar-view');self.assertFalse(v['authoritative'])

@@ -132,11 +132,55 @@ Json calendarView(const Json &a, const Json &o) {
     auto at = date(d), profile = s.profile(d);
     auto holidays =
         o["showClosuresAndHolidays"].get<bool>() ? s.holiday(d) : Json::array();
+    // Facts come from the complete source, before people/shift/display filters.
+    bool hasWork = false, rest = false, closure = false, absence = false,
+         uncalculated = false;
+    int active = 0;
+    for (size_t e = 0; e < s.employees.size(); ++e) {
+      auto k = s.employees[e].id + ":" + at;
+      if (assignments.contains(k)) {
+        for (const auto &shift : s.shifts)
+          if (shift.id == assignments[k]["shiftId"].get<std::string>()) {
+            hasWork |= shift.kind == "WORKING";
+            rest |= shift.kind == "OFF";
+          }
+      }
+      if (!s.active(int(e), d))
+        continue;
+      ++active;
+      closure |= s.closed(int(e), d);
+      absence |= s.absent(int(e), d);
+      uncalculated |=
+          !s.excluded(d) && !s.closed(int(e), d) && !s.absent(int(e), d) &&
+          !assignments.contains(k) &&
+          (!states.contains(k) || states[k]["state"] == "UNPLANNED");
+    }
+    Json categories = Json::array();
+    if (!hasWork) {
+      if (!s.holiday(d).empty())
+        categories.push_back("HOLIDAY");
+      if (closure)
+        categories.push_back("CLOSURE");
+      if (rest)
+        categories.push_back("REST");
+      if (s.excluded(d))
+        categories.push_back("EXCLUDED");
+      if (uncalculated)
+        categories.push_back("UNCALCULATED");
+      if (absence)
+        categories.push_back("ABSENCE");
+      if (!active)
+        categories.push_back("INACTIVE");
+      if (categories.empty())
+        categories.push_back("OTHER");
+    }
     out["days"].push_back(
         {{"date", at},
          {"profileId", profile},
          {"profileLabel", s.profileDefinition(profile).value("label", "")},
-         {"holidays", holidays}});
+         {"holidays", holidays},
+         {"hasWorkingAssignments", hasWork},
+         {"noWorkCategories", categories}});
     for (int e : included) {
       std::string id = s.employees[e].id, k = id + ":" + at;
       Json c = {

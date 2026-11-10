@@ -2,7 +2,7 @@
 import json,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).parent))
-from calendar_exports import fixture,view,options
+from calendar_exports import fixture,view,options,print_fixture
 from archives import created,action
 # evolution consumes the CLI argument; remaining argument is the output directory.
 out=Path(sys.argv[1]);out.mkdir(parents=True,exist_ok=True)
@@ -17,3 +17,5 @@ for kind in ['dst','fold','overnight','unknown']:
  a=created(s);(out/(kind+'.json')).write_text(json.dumps(view(s,a)['document']),encoding='utf-8')
 
 s=fixture();s['availability']=[dict(id='leave',selector={'employeeIds':['e1']},scope={'start':'2027-05-03','end':'2027-05-03'},state='ABSENT')];s['hrState']['events']=[dict(eventId='leave-1',source='hr',revision=1,externalId='leave',employeeId='e1',operation='UPSERT',start='2027-05-03',end='2027-05-03',status='APPROVED',absenceType='Private leave')];a=created(s);(out/'absence.json').write_text(json.dumps(view(s,a)['document']),encoding='utf-8');o=options(a);o['includeAbsenceReasons']=True;(out/'private-absence.json').write_text(json.dumps(view(s,a,o)['document']),encoding='utf-8')
+
+s=print_fixture();a=created(s);(out/'print-days.json').write_text(json.dumps(view(s,a)['document']),encoding='utf-8')

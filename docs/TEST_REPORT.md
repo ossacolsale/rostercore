@@ -1,5 +1,7 @@
 # Validation report · 0.5.0
 
+Latest print-profile follow-up: all **ten CTest targets passed** (168 Python cases, including 16 native calendar-export cases), the complete **31-test browser suite passed**, and independent file tests passed for eleven PDFs plus ICS/ZIP regressions. Weekly/monthly/person printouts omit non-working dates consistently, retain working holidays and hidden work, reject empty selections, and leave canonical archives untouched. Named-profile tests cover persistence, separate variants, explicit updates, duplicate names, date/ID adaptation and absence-reason privacy. Rendered weekly/person samples were inspected. An existing language-switch test now waits for the asynchronously loaded calendar before comparing its assignments.
+
 Local environment: Ubuntu x86-64, GCC 15.2, CMake 4.2, Python 3.14, Node.js 22, OR-Tools 9.15.6755 and installed Chrome through Playwright 1.56.1. These are executed checks, separate from user operational acceptance.
 
 - Release configuration/build passed without compiler warnings. **Ten CTest targets passed in 69.89 seconds**, including core invariants/startup and **166 Python cases**: the existing 152 plus 14 export/protected-change regressions. The strengthened dated-role/group and future-hour projection cases also passed afterward.

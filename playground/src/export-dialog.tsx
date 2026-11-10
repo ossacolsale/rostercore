@@ -1,6 +1,11 @@
+import { applyPrintProfile } from "./print-profiles";
+import { PrintProfileControls } from "./print-profile-controls";
 import { useEffect, useRef, useState } from "react";
 import { type ScheduleArchive, textDownload } from "./archives";
 import {
+  pdfDayCategories,
+  calendarPrintView,
+  type PdfDayCategory,
   type ViewOptions,
   type CalendarView,
   type Presentation,
@@ -145,53 +150,25 @@ export function ExportDialog({
       clearTimeout(timer);
     };
   }, [archive, o, p, format, language]);
-  const store = () => {
-    try {
-      localStorage.setItem(
-        preferenceKey,
-        JSON.stringify({
-          version: 1,
-          presentation: p,
-          options: { ...o, includeAbsenceReasons: false },
-        }),
-      );
-    } catch (e) {
-      notifyError((e as Error).message);
-    }
-  };
   const restore = () => {
     try {
       const saved = JSON.parse(localStorage.getItem(preferenceKey) ?? "null");
       if (saved?.version !== 1) return;
-      const candidate = {
-        ...defaultViewOptions(archive),
-        ...saved.options,
-        start: o.start,
-        end: o.end,
-        includeAbsenceReasons: false,
-      };
-      candidate.employeeSelection.employeeIds =
-        candidate.employeeSelection.employeeIds.filter((id: string) =>
-          archive.scenario.employees.some((e) => e.id === id),
-        );
-      candidate.employeeSelection.typeIds =
-        candidate.employeeSelection.typeIds.filter((id: string) =>
-          archive.scenario.employeeTypes.some((e) => e.id === id),
-        );
-      candidate.employeeSelection.groupIds =
-        candidate.employeeSelection.groupIds.filter((id: string) =>
-          archive.scenario.groups.some((e) => e.id === id),
-        );
-      candidate.shiftSelection.shiftIds =
-        candidate.shiftSelection.shiftIds.filter((id: string) =>
-          archive.scenario.shifts.some((e) => e.id === id),
-        );
-      candidate.shiftSelection.normalShiftIds =
-        candidate.shiftSelection.normalShiftIds.filter((id: string) =>
-          archive.scenario.shifts.some((e) => e.id === id),
-        );
-      setO(candidate);
-      setP({ ...defaultPresentation(), ...saved.presentation, language });
+      const loaded = applyPrintProfile(
+        {
+          id: "legacy",
+          name: "",
+          scenarioLabel: archive.scenario.label,
+          options: { ...saved.options, start: o.start, end: o.end },
+          presentation: saved.presentation,
+        },
+        archive,
+        o,
+        language,
+      );
+      setO(loaded.options);
+      setP(loaded.presentation);
+      setPreset("CUSTOM");
       setPrivacy(false);
     } catch (e) {
       notifyError((e as Error).message);
@@ -304,6 +281,21 @@ export function ExportDialog({
           />
           {format !== "JSON" ? (
             <>
+              {format === "PDF" && (
+                <PrintProfileControls
+                  archive={archive}
+                  options={o}
+                  presentation={p}
+                  onLegacy={restore}
+                  onLoad={(options, presentation) => {
+                    setO(options);
+                    setP(presentation);
+                    setPrivacy(false);
+                    setPreset("CUSTOM");
+                    setFocus(options.start);
+                  }}
+                />
+              )}
               <Select
                 label={t("Export preset")}
                 value={preset}
@@ -632,97 +624,156 @@ export function ExportDialog({
                 </p>
               </details>
               {format === "PDF" && (
-                <details open>
-                  <summary>{t("PDF layout")}</summary>
-                  <Select
-                    label={t("Cell detail")}
-                    value={p.mode}
-                    options={[
-                      { id: "COMPACT", label: t("Compact - shift labels") },
-                      { id: "COMPLETE", label: t("Complete - actual hours") },
-                    ]}
-                    onChange={(v) =>
-                      setP({ ...p, mode: v as Presentation["mode"] })
-                    }
-                  />
-                  <Select
-                    label={t("Page layout")}
-                    value={p.layout}
-                    options={[
-                      { id: "WEEK", label: t("Weekly grid") },
-                      { id: "MONTH", label: t("Monthly grid") },
-                      { id: "PERSON", label: t("List by employee") },
-                    ]}
-                    onChange={(v) =>
-                      setP({ ...p, layout: v as Presentation["layout"] })
-                    }
-                  />
-                  <div className="row">
-                    <Select
-                      label={t("Paper size")}
-                      value={p.paper}
-                      options={[
-                        { id: "A4", label: "A4" },
-                        { id: "A3", label: "A3" },
-                      ]}
-                      onChange={(v) =>
-                        setP({ ...p, paper: v as Presentation["paper"] })
-                      }
-                    />
-                    <Select
-                      label={t("Orientation")}
-                      value={p.orientation}
-                      options={[
-                        { id: "AUTO", label: t("Automatic") },
-                        { id: "PORTRAIT", label: t("Portrait") },
-                        { id: "LANDSCAPE", label: t("Landscape") },
-                      ]}
-                      onChange={(v) =>
-                        setP({
-                          ...p,
-                          orientation: v as Presentation["orientation"],
-                        })
-                      }
-                    />
-                  </div>
-                  <details>
-                    <summary>{t("Document heading and notes")}</summary>
-                    {(["business", "title", "notes"] as const).map((key) => (
-                      <Text
-                        key={key}
-                        label={t(
-                          key === "business"
-                            ? "Business name"
-                            : key === "title"
-                              ? "Custom title"
-                              : "Operational notes",
+                <>
+                  <fieldset className="print-day-filters">
+                    <legend>{t("Days to omit from PDF")}</legend>
+                    <p className="hint">
+                      {t(
+                        "Omit dates matching any checked category. Dates with actual work anywhere in the source calendar are always kept, even when a person or shift is hidden by a filter.",
+                      )}
+                    </p>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={Object.keys(pdfDayCategories).every((key) =>
+                          p.excludedDayCategories?.includes(
+                            key as PdfDayCategory,
+                          ),
                         )}
-                        value={p[key]}
-                        onChange={(v) => setP({ ...p, [key]: v })}
-                      />
-                    ))}
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={p.showPublishedDate}
                         onChange={(e) =>
-                          setP({ ...p, showPublishedDate: e.target.checked })
+                          setP({
+                            ...p,
+                            excludedDayCategories: e.target.checked
+                              ? (Object.keys(
+                                  pdfDayCategories,
+                                ) as PdfDayCategory[])
+                              : [],
+                          })
                         }
                       />
-                      {t("Show publication date")}
+                      {t("Exclude all days with no work")}
                     </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={p.showRevision}
-                        onChange={(e) =>
-                          setP({ ...p, showRevision: e.target.checked })
+                    {Object.entries(pdfDayCategories).map(
+                      ([category, label]) => (
+                        <label key={category}>
+                          <input
+                            type="checkbox"
+                            checked={
+                              p.excludedDayCategories?.includes(
+                                category as PdfDayCategory,
+                              ) ?? false
+                            }
+                            onChange={(e) =>
+                              setP({
+                                ...p,
+                                excludedDayCategories: e.target.checked
+                                  ? [
+                                      ...(p.excludedDayCategories ?? []),
+                                      category as PdfDayCategory,
+                                    ]
+                                  : (p.excludedDayCategories ?? []).filter(
+                                      (value) => value !== category,
+                                    ),
+                              })
+                            }
+                          />
+                          {t(label)}
+                        </label>
+                      ),
+                    )}
+                  </fieldset>
+                  <details open>
+                    <summary>{t("PDF layout")}</summary>
+                    <Select
+                      label={t("Cell detail")}
+                      value={p.mode}
+                      options={[
+                        { id: "COMPACT", label: t("Compact - shift labels") },
+                        { id: "COMPLETE", label: t("Complete - actual hours") },
+                      ]}
+                      onChange={(v) =>
+                        setP({ ...p, mode: v as Presentation["mode"] })
+                      }
+                    />
+                    <Select
+                      label={t("Page layout")}
+                      value={p.layout}
+                      options={[
+                        { id: "WEEK", label: t("Weekly grid") },
+                        { id: "MONTH", label: t("Monthly grid") },
+                        { id: "PERSON", label: t("List by employee") },
+                      ]}
+                      onChange={(v) =>
+                        setP({ ...p, layout: v as Presentation["layout"] })
+                      }
+                    />
+                    <div className="row">
+                      <Select
+                        label={t("Paper size")}
+                        value={p.paper}
+                        options={[
+                          { id: "A4", label: "A4" },
+                          { id: "A3", label: "A3" },
+                        ]}
+                        onChange={(v) =>
+                          setP({ ...p, paper: v as Presentation["paper"] })
                         }
                       />
-                      {t("Show revision")}
-                    </label>
+                      <Select
+                        label={t("Orientation")}
+                        value={p.orientation}
+                        options={[
+                          { id: "AUTO", label: t("Automatic") },
+                          { id: "PORTRAIT", label: t("Portrait") },
+                          { id: "LANDSCAPE", label: t("Landscape") },
+                        ]}
+                        onChange={(v) =>
+                          setP({
+                            ...p,
+                            orientation: v as Presentation["orientation"],
+                          })
+                        }
+                      />
+                    </div>
+                    <details>
+                      <summary>{t("Document heading and notes")}</summary>
+                      {(["business", "title", "notes"] as const).map((key) => (
+                        <Text
+                          key={key}
+                          label={t(
+                            key === "business"
+                              ? "Business name"
+                              : key === "title"
+                                ? "Custom title"
+                                : "Operational notes",
+                          )}
+                          value={p[key]}
+                          onChange={(v) => setP({ ...p, [key]: v })}
+                        />
+                      ))}
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={p.showPublishedDate}
+                          onChange={(e) =>
+                            setP({ ...p, showPublishedDate: e.target.checked })
+                          }
+                        />
+                        {t("Show publication date")}
+                      </label>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={p.showRevision}
+                          onChange={(e) =>
+                            setP({ ...p, showRevision: e.target.checked })
+                          }
+                        />
+                        {t("Show revision")}
+                      </label>
+                    </details>
                   </details>
-                </details>
+                </>
               )}
               {format === "ICS" && (
                 <>
@@ -760,17 +811,6 @@ export function ExportDialog({
                   </p>
                 </>
               )}
-              <details>
-                <summary>{t("Reuse export preferences")}</summary>
-                <div className="row">
-                  <button onClick={store}>
-                    {t("Save export preferences")}
-                  </button>
-                  <button onClick={restore}>
-                    {t("Load export preferences")}
-                  </button>
-                </div>
-              </details>
             </>
           ) : (
             <p>
@@ -803,8 +843,16 @@ export function ExportDialog({
                   })}{" "}
                   · {o.start} - {o.end}
                 </p>
-                {format === "PDF" && pdf ? (
-                  <PdfPreview pages={pdf.pages} />
+                {format === "PDF" && (
+                  <p>
+                    {t("Printing {printed} of {total} dates", {
+                      printed: calendarPrintView(view, p).days.length,
+                      total: view.days.length,
+                    })}
+                  </p>
+                )}
+                {format === "PDF" ? (
+                  pdf && <PdfPreview pages={pdf.pages} />
                 ) : (
                   <CalendarGrid view={view} mode={p.mode} />
                 )}

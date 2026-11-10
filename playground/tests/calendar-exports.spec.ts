@@ -359,3 +359,160 @@ test("recording actual work rejects future dates and requires explicit final con
   expect(saved.state).toBe("COMPLETED");
   expect(saved.publishedLocks).toHaveLength(0);
 });
+
+test("PDF non-working dates and named print-profile variants survive reopening and reload", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await generate(page);
+  const original = await archive(page);
+  await workspace(page)
+    .getByRole("button", { name: "Export calendar", exact: true })
+    .click();
+  let dialog = page.getByRole("dialog", {
+    name: "Export calendar",
+    exact: true,
+  });
+  await dialog
+    .getByLabel("Exclude all days with no work", { exact: true })
+    .check();
+  await expect(
+    dialog.getByText("Printing 5 of 7 dates", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Download PDF", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    dialog.locator(".pdf-preview text").filter({ hasText: "Sat 14/11" }),
+  ).toHaveCount(0);
+  await expect(
+    dialog.locator(".pdf-preview text").filter({ hasText: "Mon 09/11" }),
+  ).toHaveCount(1);
+  await dialog
+    .getByLabel("Print profile name", { exact: true })
+    .fill("Workdays");
+  await dialog
+    .getByRole("button", { name: "Save as new print profile", exact: true })
+    .click();
+  await dialog
+    .getByLabel("Rest days, including weekly rest", { exact: true })
+    .uncheck();
+  await dialog.getByLabel("Paper size", { exact: true }).selectOption("A3");
+  await dialog
+    .getByLabel("Print profile name", { exact: true })
+    .fill("Full week A3");
+  await dialog
+    .getByRole("button", { name: "Save as new print profile", exact: true })
+    .click();
+  let profiles = await page.evaluate(
+    () =>
+      JSON.parse(localStorage.getItem("rostercore.print-profiles.v1")!)
+        .profiles,
+  );
+  expect(profiles).toHaveLength(2);
+  expect(profiles[0].presentation.paper).toBe("A4");
+  expect(profiles[0].presentation.excludedDayCategories).toContain("REST");
+  expect(profiles[1].presentation.excludedDayCategories).not.toContain("REST");
+  await dialog
+    .getByLabel("Saved print profile", { exact: true })
+    .selectOption({ label: "Workdays" });
+  await expect(dialog.getByLabel("Paper size", { exact: true })).toHaveValue(
+    "A4",
+  );
+  await expect(
+    dialog.getByText("Printing 5 of 7 dates", { exact: true }),
+  ).toBeVisible();
+  await dialog
+    .getByLabel("Saved print profile", { exact: true })
+    .selectOption({ label: "Full week A3" });
+  await expect(
+    dialog.getByText("Printing 7 of 7 dates", { exact: true }),
+  ).toBeVisible();
+  await dialog
+    .getByLabel("Rest days, including weekly rest", { exact: true })
+    .check();
+  await dialog
+    .getByRole("button", { name: "Update selected print profile", exact: true })
+    .click();
+  expect(await archive(page)).toEqual(original);
+  await dialog
+    .getByRole("button", { name: "Close export", exact: true })
+    .click();
+  await page.reload();
+  await workspace(page)
+    .getByText("Saved calendars and recovery", { exact: true })
+    .click();
+  await workspace(page)
+    .locator(".archive-list")
+    .getByRole("button", { name: "Export calendar", exact: true })
+    .click();
+  dialog = page.getByRole("dialog", { name: "Export calendar", exact: true });
+  await dialog
+    .getByLabel("Saved print profile", { exact: true })
+    .selectOption({ label: "Full week A3" });
+  await expect(dialog.getByLabel("Paper size", { exact: true })).toHaveValue(
+    "A3",
+  );
+  await expect(
+    dialog.getByLabel("Rest days, including weekly rest", { exact: true }),
+  ).toBeChecked();
+  profiles = await page.evaluate(
+    () =>
+      JSON.parse(localStorage.getItem("rostercore.print-profiles.v1")!)
+        .profiles,
+  );
+  expect(profiles).toHaveLength(2);
+  expect(profiles[0].presentation.paper).toBe("A4");
+  expect(
+    profiles.every((p: any) => p.options.includeAbsenceReasons === false),
+  ).toBeTruthy();
+  expect(await archive(page)).toEqual(original);
+});
+
+test("Italian PDF exclusions reject an empty printout and leave canonical JSON untouched", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await generate(page);
+  const original = await archive(page);
+  await page
+    .getByLabel("Language / Lingua", { exact: true })
+    .selectOption("it");
+  await workspace(page)
+    .getByRole("button", { name: "Esporta calendario", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Esporta calendario",
+    exact: true,
+  });
+  await dialog
+    .getByLabel("Inizio esportazione", { exact: true })
+    .fill("2026-11-14");
+  await dialog
+    .getByLabel("Fine esportazione", { exact: true })
+    .fill("2026-11-15");
+  await dialog
+    .getByLabel("Escludi tutti i giorni senza lavoro", { exact: true })
+    .check();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "Non rimangono giorni da stampare",
+  );
+  await expect(
+    dialog.getByRole("button", { name: "Scarica PDF", exact: true }),
+  ).toBeDisabled();
+  await expect(dialog.locator(".pdf-preview")).toHaveCount(0);
+  await dialog
+    .getByLabel("Formato del file", { exact: true })
+    .selectOption("JSON");
+  const wait = page.waitForEvent("download");
+  await dialog
+    .getByRole("button", {
+      name: "Salva l'archivio completo del calendario",
+      exact: true,
+    })
+    .click();
+  const file = await wait;
+  expect(JSON.parse(await readFile((await file.path())!, "utf8"))).toEqual(
+    original,
+  );
+});

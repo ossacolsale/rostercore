@@ -49,3 +49,13 @@ assert 'Private leave' not in str(public)
 private=next(row for row in events('private-absence') if str(row['SUMMARY']).startswith('Unavailable'))
 assert str(private['DESCRIPTION'])=='Private leave'
 assert str(public['UID'])==str(private['UID'])
+
+for layout in ['WEEK','MONTH','PERSON']:
+ text='\n'.join(page.extract_text() for page in PdfReader(root/('omitted-'+layout+'.pdf')).pages)
+ assert 'Nonworking holiday' not in text
+ if layout=='PERSON':
+  assert '2027-05-03 Regular' in text and '2027-05-04 Regular' in text
+  assert '2027-05-05 ' not in text and '2027-05-08 ' not in text
+ else:
+  assert 'Mon 03/05' in text and 'Tue 04/05' in text
+  for day in ['Wed 05/05','Thu 06/05','Fri 07/05','Sat 08/05','Sun 09/05']:assert day not in text
