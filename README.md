@@ -2,16 +2,15 @@
 
 **Open-source workforce scheduling powered by constraint optimization and continuous fairness.**
 
-RosterCore generates workforce schedules from declarative rules using a C++20 engine and Google OR-Tools CP-SAT, with a local visual playground and **fairness that carries over across planning periods**.
+RosterCore generates workforce schedules from declarative rules using a C++20 engine and Google OR-Tools CP-SAT, with a bilingual desktop application and **fairness that carries over across planning periods**.
 
 Designed for integration into desktop applications and backend services, RosterCore aims to remain independent of any specific industry. Pharmacies are the initial reference use case, but the model is intended for healthcare, retail, hospitality, manufacturing, and other shift-based workplaces.
 
-> [!IMPORTANT]
-> **Version 0.5.0 — ready for local evaluation.** The native CLI and visual playground run real optimization and verify returned assignments. This is an initial release with explicit limits, not a certified HR system. See [implemented scope and limitations](docs/LIMITATIONS.md).
+**Version 0.7.0** asks where to work on first launch. Create a local workspace at the suggested path or choose another file, open an existing workspace, connect to a shared one, or try the isolated demo. RosterCore remembers the last local workspace. The persistent navigation provides **Calendar**, **People**, **Configuration** and **Archive** in English and Italian.
 
-The web panel opens in **Simple** mode: people → opening days → hours → required coverage → fair distribution → calendar. Switch to **Advanced** at any time without converting your data. English and Italian are available from the language selector. Generated calendars are saved with their exact context; publish future plans, explicitly confirm completed prefixes, export portable backups and create revisions without replacing the original calendar.
+Choose **Import a file** to review a configuration, a typed change, a saved calendar or a workspace backup. A successful import opens the calendar. Restoring a backup into a populated workspace requires confirmation because it replaces the current data.
 
-For optional AI configuration, use **Prepare configuration for AI**, then import either a complete scenario or a typed change set with a reviewed preview. Start with [complete scenario authoring](AI_SCENARIO_AUTHORING_GUIDE.md), [safe partial updates](AI_SCENARIO_UPDATE_GUIDE.md), [capabilities](AI_CAPABILITIES.json) and [seven executable examples](AI_EXAMPLES/). The [0.4 contract](docs/RELIABILITY_REDESIGN.md) records reliability findings, archive semantics and spacing units.
+From **Configuration**, describe the planning rules, copy or download the AI package, and import the JSON reply. Review the native validation and proposed changes before saving. Use a complete scenario for a new workspace and a revisioned, typed change set for updates. AI assistance works with a provider of your choice, without an account or key in RosterCore. See the [scenario guide](AI_SCENARIO_AUTHORING_GUIDE.md), [update guide](AI_SCENARIO_UPDATE_GUIDE.md) and [examples](AI_EXAMPLES/).
 
 ## Why RosterCore?
 
@@ -33,7 +32,7 @@ RosterCore implements **continuous, history-aware fairness**: it will optimize f
 - **Multiple objectives:** explicit priorities and lexicographic optimization, rather than arbitrary blending of unrelated goals.
 - **Portable integration:** a native C++ engine with a versioned JSON interface and a command-line entry point.
 - **AI-assisted authoring:** documented, schema-validated policy files that can be drafted by an AI assistant and reviewed before import.
-- **Visual configuration:** a local playground for building scenarios, composing rules, inspecting schedules, and diagnosing infeasibility.
+- **Desktop workflow:** calendar generation, roster changes, exports, SQLite workspaces and shared LAN operation.
 - **HR interoperability:** vendor-neutral JSON exchange for approved leave, absences, updates, and cancellations.
 - **Transparent results:** solver status, validation errors, fairness metrics, and reproducibility metadata.
 
@@ -41,11 +40,11 @@ See [public contracts and commands](docs/API.md), [architecture and semantics](d
 
 ## Daily calendar and exports
 
-Simple mode opens on the calendar: generate, modify planning, export and publish. Optional duty counts and diagnostics stay closed until needed; Advanced mode retains complete fairness metrics, search evidence and controls. The language and Simple mode / Advanced mode selectors share the header.
+Generate, modify, export and publish from **Calendar**. Open **More calendar actions** to inspect the native diagnostics, detailed fairness results and independent verification.
 
 **Export calendar** is available on the current calendar and every saved archive. Choose people, dated roles/groups, an inclusive period, working shifts and independent availability/rest/holiday filters. Hide normal work explicitly without changing assignments. PDF offers A4/A3, compact or actual-hour cells, weekly/monthly grids or person lists, repeated headings and a matching pagination preview. ICS offers collective or private personal files (ZIP for several people), with separate events for split intervals. CSV uses the same native view. Full JSON always saves the complete original canonical archive, including people outside the current filter.
 
-**Modify planning** supports reviewed absence, closure, future-hour, colleague, contract and pattern changes, followed by future regeneration. A protected published period requires an explicit revision proposal. Publication protects plans; **Record work performed** separately requires a past/current actual-work prefix and confirmation. Saved calendars and recovery contains portable backup/import and historical continuity tools.
+**Modify planning** supports reviewed absence, closure, future-hour, colleague, contract and pattern changes, followed by future regeneration. A protected published period requires an explicit revision proposal. Publication protects plans; **Record work performed** separately requires a past/current actual-work prefix and confirmation. **Archive** holds saved calendars, configuration revisions, backups and historical continuity tools.
 
 **Ask AI for help** prepares a local, scoped request to copy or download for an assistant of your choice. Import its typed answer, read the human description and explicitly confirm it. No external AI service is called. See [export semantics and limitations](docs/EXPORT_USABILITY.md).
 
@@ -107,45 +106,60 @@ Participation policies include equal shares, availability-weighted shares, and c
 | Build system | CMake |
 | Public configuration | Versioned JSON + JSON Schema |
 | Initial integration | Native command-line executable |
-| Local playground | React, TypeScript, Vite |
-| Optional local adapter | Node.js |
-| Target platforms | Windows, macOS, Linux |
+| Desktop interface | Electron, React, TypeScript, Vite |
+| Persistence and API | SQLite and Node.js |
+| Desktop targets | Windows x64, Linux x64 |
+| Native CLI targets | Windows, macOS, Linux |
 
 The solver is isolated behind an adapter so that domain rules and public schemas are not tied to a particular optimization library.
 
 ## Configuration and integrations
 
-RosterCore offers three equivalent ways to define scheduling rules:
-
-1. **Programmatic:** create or update JSON configuration documents.
-2. **Visual:** build the same configuration with a guided editor, including nested logical constraints.
-3. **AI-assisted:** provide a machine-readable scenario context and an authoring guide to an AI assistant, then import the generated policy after validation and review.
-
-AI-generated input is treated as **untrusted configuration**, not executable code. A generated policy must pass schema validation, reference checks, and semantic validation before it can become active.
+Use the native JSON contracts to define rules programmatically or with AI assistance. Complex selectors, patterns and hard rules remain available through schema-validated JSON. Everyday workforce changes, leave and absences are available in **People**. Imported configuration is validated by the native engine and requires review before saving.
 
 HR software remains external to the optimization core. An adapter or host application can synchronize leave and availability records through a documented JSON contract; published or historical assignments must not be silently rewritten.
 
-## Getting started
+## Install and use
 
-Requirements: C++20 compiler, CMake 3.24+, Python 3.12+ (dependency bootstrap/tests), Node.js 22+ (playground), and network access for initial dependency downloads. The supplied Linux binary dependency targets Ubuntu 24.04/glibc 2.39 or newer. Use `--source` on older distributions; Windows and macOS automatically build OR-Tools from source.
+Download the stable desktop installers, portable builds and SHA-256 checksums from [GitHub Releases](https://github.com/ossacolsale/rostercore/releases/latest).
+
+The official packages target Windows 11 x64 and Ubuntu 24.04 LTS x64 or newer. Windows offers a portable `.exe` and an NSIS installer. On Linux, make the AppImage executable and launch it, or install the DEB with `sudo apt install ./rostercore_0.7.0_amd64.deb`. The AppImage requires FUSE or its extract-and-run mode. The desktop packages include the UI, Node/Electron and native engine.
+
+Open **Workspace and backups** from Archive to change workspace, save a local database backup or restore it into a new file. The portable app's file picker starts next to its executable when available. The default workspace lives in the application data directory. An earlier browser workspace can be recovered explicitly from the original browser profile and origin, or moved using its JSON workspace backup. Print profiles and language remain preferences. The native 8 MiB JSON input limit also bounds combined archive operations and imports.
+
+### Share a workspace on the LAN
+
+Set these environment variables on the machine that owns the database. Use a local disk and a private IPv4 address assigned to that machine.
+
+| Variable | Value |
+| --- | --- |
+| `ROSTERCORE_WORKSPACE` | Absolute path to the host's SQLite file |
+| `ROSTERCORE_LISTEN` | Private IPv4 bind address |
+| `ROSTERCORE_TLS_PORT` | HTTPS port, default 4319 |
+| `ROSTERCORE_TOKEN` | Random shared token of at least 16 characters |
+| `ROSTERCORE_TLS_KEY` | Absolute path to the server's PEM private key |
+| `ROSTERCORE_TLS_CERT` | Absolute path to the server's PEM certificate or chain |
+
+With those variables set, launch the desktop app to host with a GUI. Run `node playground/server.mjs --headless` in a source checkout, or run `rostercore-host` or `rostercore-host.cmd` next to an installed desktop executable for headless hosting. For an AppImage, the host launcher is available in the extracted package. Use the host's interface or the client JSON export to back up an active shared workspace.
+
+On each client, choose **Connect to a shared workspace** in **Archive** or on the welcome screen. Enter the HTTPS URL and token. For a private CA or self-signed certificate, paste the trust certificate in PEM format. The certificate must identify the address entered by the client, such as an IP in its Subject Alternative Name. Keep shared workspace files on the host's local disk and use HTTPS for collaboration. On a conflict, reload and review the pending change again.
+
+## Build from source
+
+Install a C++20 compiler, CMake 3.24+, Python 3.12+ and Node.js 22.16+ (within the Node 22 LTS line, install a current patch version).
 
 ```sh
 python3 scripts/bootstrap.py
 cmake --preset dev
 cmake --build --preset dev
 ctest --preset dev
-build/rostercore solve examples/pharmacy.json > result.json
-build/rostercore verify examples/pharmacy.json result.json
 cd playground
 npm ci
-npm run dev
+npm run build
+npm run desktop
 ```
 
-Open **http://127.0.0.1:4317**. The reference example is loaded automatically: five employees, fourteen closing duties, exact continuous fairness. Generate a schedule, inspect coverage and debts, edit policies visually, or create an empty scenario. Use **Load evolving pharmacy example** to try part-time hours, two closing duties, fallback, nights, dated hires/departures and closures, or **Load automatic week example** for solver-selected weeks. Follow the numbered editors, preview workforce hours and weekly classification, then generate, import leave and regenerate from its effective date. Inputs are kept in browser storage; export JSON for a portable backup. The **Language / Lingua** selector in the top bar switches between English and Italian and remembers the choice in this browser. Navigation, editors, results, dates, numbers and known diagnostics are localized; original diagnostic codes/details remain available. Switching language preserves scenario data, custom labels and JSON exports.
-
-The **automatic work-pattern example** demonstrates schema 3: full-time and part-time attributes select reusable arrangements dynamically, including a future contract change. Existing schema-1/2 individual pattern assignments remain explicit until you change them. Follow the guided order: people/attributes → logical shifts → work patterns and assignment rules → concrete variants → calendar/coverage/policies. Outcomes appear in the viewport-bottom notification center; errors persist and **View diagnostics** opens their full details. Catalogue deletion checks references, and bulk workforce edits require a review before application.
-
-For a production UI build on the same local adapter, run `npm run build && npm start`. This still binds only to loopback. `ROSTERCORE_CLI` can select a different native executable; `PORT` changes the local port. No AI, cloud or HR account is required.
+Use `npm run dev` for the same interface at **http://127.0.0.1:4317**. Use `npm run package:desktop` after the native and UI builds to produce packages in `build/desktop`. Linux packages built locally may require the builder's newer glibc. The supplied OR-Tools binary dependency targets Ubuntu 24.04/glibc 2.39. Build it from source with `--source` on other Linux distributions.
 
 On Windows use a Developer PowerShell with Visual Studio 2022 C++ tools:
 
@@ -169,7 +183,7 @@ build/rostercore import-policy examples/pharmacy.json examples/policy-create.jso
 build/rostercore sync-hr examples/pharmacy.json examples/hr-events.json --apply
 ```
 
-Commands return JSON; imports return the updated scenario without overwriting the original. See [API and integration examples](docs/API.md). AI authors should read [AI_POLICY_AUTHORING_GUIDE.md](AI_POLICY_AUTHORING_GUIDE.md) and use [the policy schema](schemas/planning-policy.schema.json). The playground exports a privacy-conscious AI context and requires preview/confirmation before applying an import.
+Commands return JSON; imports return the updated scenario without overwriting the original. See [API and integration examples](docs/API.md). AI authors should read [AI_POLICY_AUTHORING_GUIDE.md](AI_POLICY_AUTHORING_GUIDE.md) and use [the policy schema](schemas/planning-policy.schema.json). The desktop application exports a compact AI context and requires review before applying an import.
 
 ## Validation, benchmarks and packaging
 
@@ -181,6 +195,7 @@ npm run build
 npx playwright install chromium
 npm run test:server
 npm run test:e2e
+npm run test:exports
 ```
 
 If Chrome is already installed, `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e` uses it instead of a downloaded browser. See [test report](docs/TEST_REPORT.md) and [measured benchmark data](docs/benchmark-results.json). Larger cases can exhaust their budget; FEASIBLE and UNKNOWN are reported honestly.
@@ -194,7 +209,7 @@ If Chrome is already installed, `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e` use
 | 1. Foundations | C++20/CMake, domain, strict JSON Schema/semantic validation and CLI |
 | 2. Optimization | CP-SAT, nested logic, cumulative exact fairness, rolling history and independent verifier |
 | 3. Integrations | Atomic policy import, AI guide/drafts/mapping, history rebuild and HR revision/snapshot protocol |
-| 4. Playground & distribution | Visual configurator, results/comparison, local API, tests, measured benchmarks and cross-platform CI |
+| 4. User application & distribution | Calendar operations, AI configuration, persistent and shared workspaces, tests and native desktop packaging |
 
 [Requirements](docs/SPECIFICATION.md) · [phase record](docs/PROGRESS.md) · [agent instructions](AGENTS.md)
 

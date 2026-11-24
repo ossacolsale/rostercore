@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { type Scenario, type Result, id } from "./model";
 import type { ScheduleArchive } from "./archives";
 import type { CalendarCell } from "./calendar-export-model";
 import { Text, Select } from "./editors";
-import { IntervalEditor } from "./evolution";
+import { IntervalEditor } from "./interval-editor";
 import type { Interval } from "./evolution-model";
 import { useI18n } from "./i18n";
 import { coreAction } from "./api";
-import type { Run } from "./results";
+import type { Run } from "./api";
 import {
   type ChangeSet,
   type ChangeReview,
@@ -17,12 +17,15 @@ import {
 } from "./change-review";
 import { summarizeChanges } from "./change-summary";
 import { notifyError, notifyResult } from "./notifications";
+import { Modal } from "./review-dialog";
 export function CalendarChanges({
   s,
   archive,
   archives,
   run,
   initialCell,
+  initialPerson,
+  peopleOnly = false,
   initialAction = "ABSENCE",
   onClose,
 }: {
@@ -31,18 +34,19 @@ export function CalendarChanges({
   archives: ScheduleArchive[];
   run: Run;
   initialCell?: CalendarCell;
+  initialPerson?: string;
+  peopleOnly?: boolean;
   initialAction?: string;
   onClose: () => void;
 }) {
   const { t, diagnostic } = useI18n();
-  const ref = useRef<HTMLDialogElement>(null);
   const [action, setAction] = useState(initialAction),
     [person, setPerson] = useState(
-      initialCell?.employeeId ?? s.employees[0]?.id ?? "",
+      initialCell?.employeeId ?? initialPerson ?? s.employees[0]?.id ?? "",
     ),
     [from, setFrom] = useState(initialCell?.date ?? s.calendar.start),
     [end, setEnd] = useState(initialCell?.date ?? s.calendar.start),
-    [name, setName] = useState(""),
+    [name, setName] = useState(initialAction === "RENAME" ? s.employees.find((employee) => employee.id === initialPerson)?.label ?? "" : ""),
     [role, setRole] = useState(s.employeeTypes[0]?.id ?? ""),
     [shift, setShift] = useState(
       s.shifts.find((sh) => sh.kind === "WORKING")?.id ?? "",
@@ -64,15 +68,8 @@ export function CalendarChanges({
     [error, setError] = useState<Result>(),
     [working, setWorking] = useState(false),
     [regenerate, setRegenerate] = useState(true);
-  useEffect(() => {
-    const trigger = document.activeElement;
-    ref.current?.showModal();
-    return () => {
-      if (trigger instanceof HTMLElement) trigger.focus();
-    };
-  }, []);
   const earliest =
-    s.history.through && s.history.through >= from
+    !["RENAME", "REMOVE_ABSENCE"].includes(action) && s.history.through && s.history.through >= from
       ? s.history.through
       : undefined;
   const hard = action === "HOURS" || action === "CLOSURE";
@@ -106,6 +103,13 @@ export function CalendarChanges({
             }
           : { op: "CREATE_AVAILABILITY", value: entry },
       );
+    } else if (action === "REMOVE_ABSENCE") {
+      operations.push({ op: "DELETE_AVAILABILITY", id: absence,
+        expectedEntityHash: hashes.availability[absence] });
+    } else if (action === "RENAME") {
+      operations.push({ op: "RENAME_EMPLOYEE", employeeId: person, label: name.trim() });
+    } else if (action === "END") {
+      operations.push({ op: "END_EMPLOYMENT", employeeId: person, effectiveFrom: from });
     } else if (action === "CLOSURE") {
       const reopen = new Date(end + "T12:00:00Z");
       reopen.setUTCDate(reopen.getUTCDate() + 1);
@@ -129,7 +133,7 @@ export function CalendarChanges({
         op: "CREATE_EMPLOYEE",
         value: {
           id: id("person"),
-          label: name,
+          label: name.trim(),
           typeId: role,
           attributes: {},
           employment: { validFrom: from },
@@ -263,51 +267,17 @@ export function CalendarChanges({
     if (!review) return;
     setWorking(true);
     try {
-      let result: Result | undefined;
-      if (action === "REGENERATE") {
-        let context = s;
-        if (review.proposal) {
-          result = await run("archives", {
-            scenario: s,
-            document: {
-              operation: "REVISE",
-              id: review.proposal.archiveId,
-              from: review.proposal.from,
-              archives,
-              expectedRevision: s.revision,
-              dryRun: false,
-            },
-          });
-          if (!result?.scenario) return;
-          context = result.scenario;
-        }
-        if (archive)
-          result = await run("regenerate", {
-            scenario: context,
-            document: {
-              from: affectedFrom,
-              previousScenario: archive.scenario,
-              previousScenarioEncoding: archive.scenarioEncoding,
-              previousResult: archive.result,
-              stabilityPriority: "AFTER_FAIRNESS",
-            },
-          });
-        else result = await run("solve", { scenario: context });
-      } else {
-        result = await applyReviewedChange(review, s, archives, run);
-        if (result?.scenario && regenerate && archive) {
-          result = await run("regenerate", {
-            scenario: result.scenario,
-            document: {
-              from: affectedFrom,
-              previousScenario: archive.scenario,
-              previousScenarioEncoding: archive.scenarioEncoding,
-              previousResult: archive.result,
-              stabilityPriority: "AFTER_FAIRNESS",
-            },
-          });
-        }
-      }
+      const regeneration = archive && {
+        from: affectedFrom,
+        previousArchiveId: archive.id,
+        stabilityPriority: "AFTER_FAIRNESS",
+      };
+      const result = action === "REGENERATE"
+        ? await run(regeneration ? "regenerate" : "solve", {
+            proposal: review.proposal,
+            document: regeneration,
+          })
+        : await applyReviewedChange(review, s, run, regenerate && action !== "RENAME" ? regeneration : undefined);
       if (
         result &&
         !["VALIDATION_ERROR", "MODEL_INVALID"].includes(result.status)
@@ -322,6 +292,9 @@ export function CalendarChanges({
   };
   const options = [
     { id: "ABSENCE", label: t("Record or change unavailability") },
+    { id: "REMOVE_ABSENCE", label: t("Remove unavailability") },
+    { id: "RENAME", label: t("Change a colleague’s name") },
+    { id: "END", label: t("End employment") },
     { id: "CLOSURE", label: t("Add a business closure") },
     { id: "HOURS", label: t("Change standard working hours") },
     { id: "PERSON", label: t("Add a colleague") },
@@ -329,25 +302,59 @@ export function CalendarChanges({
     { id: "PATTERN", label: t("Change a work pattern") },
     { id: "REGENERATE", label: t("Regenerate future dates") },
   ];
+  const title = peopleOnly
+    ? initialAction === "PERSON" ? "Add a colleague" : initialAction === "ABSENCE" ? "Record leave or absence" : "Edit person"
+    : "Modify planning";
   return (
-    <dialog
-      ref={ref}
-      className="calendar-change-dialog"
-      aria-label={t("Modify planning")}
-      onCancel={(e) => {
-        e.preventDefault();
-        if (!working) onClose();
-      }}
-    >
-      <h2>{t(review ? "Review planning change" : "Modify planning")}</h2>
+    <Modal title={t(review ? "Review planning change" : title)}
+      label={t(title)} onClose={onClose} dismissible={!working}
+      actions={<>
+        <button
+          disabled={working}
+          onClick={
+            review
+              ? () => {
+                  setReview(undefined);
+                  setDoc(undefined);
+                }
+              : onClose
+          }
+        >
+          {t(review ? "Back" : "Cancel")}
+        </button>
+        <button
+          className="primary"
+          disabled={
+            working ||
+            (!review &&
+              ((hard && !authorize) ||
+                (["PERSON", "RENAME"].includes(action) && !name.trim()) ||
+                (action === "PERSON" && !role) ||
+                (action === "REMOVE_ABSENCE" && !absence) ||
+                (action === "CONTRACT" && !value) ||
+                Boolean(earliest)))
+          }
+          onClick={() => (review ? apply() : preview())}
+        >
+          {t(
+            working
+              ? "Working..."
+              : review
+                ? "Apply planning change"
+                : "Preview planning change",
+          )}
+        </button>
+      </>}>
       {!review ? (
         <>
           <Select
             label={t("What do you want to do?")}
             value={action}
-            options={options}
+            options={options.filter(({ id }) => !peopleOnly || !["REGENERATE", "HOURS", "CLOSURE"].includes(id))}
             onChange={(v) => {
               setAction(v);
+              if (v === "RENAME") setName(s.employees.find((employee) => employee.id === person)?.label ?? "");
+              setAbsence("");
               setDoc(undefined);
               setError(undefined);
             }}
@@ -359,22 +366,26 @@ export function CalendarChanges({
               options={s.employees}
               onChange={(v) => {
                 setPerson(v);
+                if (action === "RENAME") setName(s.employees.find((employee) => employee.id === v)?.label ?? "");
+                setAbsence("");
                 setDoc(undefined);
               }}
             />
           )}
-          {action === "ABSENCE" && (
+          {["ABSENCE", "REMOVE_ABSENCE"].includes(action) && (
             <>
               <Select
                 label={t("Unavailability entry")}
                 value={absence}
                 options={[
-                  { id: "", label: t("New unavailability") },
+                  { id: "", label: t(action === "ABSENCE" ? "New unavailability" : "Choose an item") },
                   ...s.availability
                     .filter(
                       (a) =>
                         a.selector.employeeIds?.length === 1 &&
-                        a.selector.employeeIds[0] === person,
+                        a.selector.employeeIds[0] === person &&
+                        Object.keys(a.selector).length === 1 &&
+                        Object.keys(a.scope).every((key) => ["start", "end"].includes(key)),
                     )
                     .map((a) => ({
                       id: a.id,
@@ -401,7 +412,7 @@ export function CalendarChanges({
               </p>
             </>
           )}
-          <div className="row">
+          {!["RENAME", "REMOVE_ABSENCE"].includes(action) && <div className="row">
             <Text
               label={t("Effective from")}
               type="date"
@@ -422,8 +433,8 @@ export function CalendarChanges({
                 }}
               />
             )}
-          </div>
-          {action === "PERSON" && (
+          </div>}
+          {["PERSON", "RENAME"].includes(action) && (
             <>
               <Text
                 label={t("Colleague name")}
@@ -433,7 +444,7 @@ export function CalendarChanges({
                   setDoc(undefined);
                 }}
               />
-              <Select
+              {action === "PERSON" && <Select
                 label={t("Role")}
                 value={role}
                 options={s.employeeTypes}
@@ -441,7 +452,7 @@ export function CalendarChanges({
                   setRole(v);
                   setDoc(undefined);
                 }}
-              />
+              />}
             </>
           )}
           {["PATTERN", "PERSON"].includes(action) && (
@@ -617,41 +628,6 @@ export function CalendarChanges({
           </details>
         </>
       )}
-      <div className="dialog-actions">
-        <button
-          disabled={working}
-          onClick={
-            review
-              ? () => {
-                  setReview(undefined);
-                  setDoc(undefined);
-                }
-              : onClose
-          }
-        >
-          {t(review ? "Back" : "Cancel")}
-        </button>
-        <button
-          className="primary"
-          disabled={
-            working ||
-            (!review &&
-              ((hard && !authorize) ||
-                (action === "PERSON" && !name.trim()) ||
-                (action === "CONTRACT" && !value) ||
-                Boolean(earliest)))
-          }
-          onClick={() => (review ? apply() : preview())}
-        >
-          {t(
-            working
-              ? "Working..."
-              : review
-                ? "Apply planning change"
-                : "Preview planning change",
-          )}
-        </button>
-      </div>
-    </dialog>
+    </Modal>
   );
 }

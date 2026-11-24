@@ -137,19 +137,21 @@ void protectedCells(const Json &before, const Json &after) {
 }
 } // namespace
 Json importScenario(const Json &s, const Json &doc, bool dryRun) {
-  validate(s);
+  const bool initial = s.is_null();
+  if (!initial)
+    validate(s);
   validateSchema(doc, "scenario-import-request");
-  if (doc["expectedRevision"] != s["revision"])
+  if (doc["expectedRevision"] != (initial ? Json(0) : s["revision"]))
     reject("REVISION_CONFLICT",
            "Workspace changed after the import was prepared");
   auto candidate = doc["candidate"];
   validate(candidate);
   if (doc["mode"] == "NEW_SCENARIO") {
-    if (candidate["id"] == s["id"])
+    if (!initial && candidate["id"] == s["id"])
       reject("SCENARIO_CONFLICT",
              "A new scenario requires a distinct stable ID");
   } else {
-    if (candidate["id"] != s["id"])
+    if (initial || candidate["id"] != s["id"])
       reject("SCENARIO_CONFLICT",
              "Replacement must retain the current scenario ID");
     if (!doc["allowHardRuleChanges"].get<bool>())
@@ -171,9 +173,9 @@ Json importScenario(const Json &s, const Json &doc, bool dryRun) {
   validate(candidate);
   auto out = response(dryRun ? "PREVIEW" : "IMPORTED");
   out["preview"] = {{"mode", doc["mode"]},
-                    {"scenarioIdBefore", s["id"]},
+                    {"scenarioIdBefore", initial ? Json(nullptr) : s["id"]},
                     {"scenarioIdAfter", candidate["id"]},
-                    {"employeesBefore", s["employees"].size()},
+                    {"employeesBefore", initial ? 0 : s["employees"].size()},
                     {"employeesAfter", candidate["employees"].size()},
                     {"scenario", candidate}};
   if (!dryRun)

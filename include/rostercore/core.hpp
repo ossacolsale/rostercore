@@ -8,7 +8,7 @@
 #include <vector>
 namespace rostercore {
 using Json = nlohmann::json;
-inline constexpr auto version = "0.5.0";
+inline constexpr auto version = "0.7.0";
 struct Error : std::runtime_error {
   std::string code, path;
   Error(std::string c, std::string p, std::string m)

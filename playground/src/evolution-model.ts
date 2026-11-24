@@ -1,4 +1,4 @@
-import type { Assignment, Scenario, Scope, Selector } from "./model";
+import type { Assignment, Scope, Selector } from "./model";
 export type Scalar = string | number | boolean;
 export type Effective = { validFrom: string; validTo?: string };
 export type Interval = {
@@ -186,24 +186,3 @@ export type WeekAssignment = {
   profileIds?: string[];
   origin: string;
 };
-export function initializeEvolution(s: Scenario) {
-  if (s.schemaVersion < 2) s.schemaVersion = 2;
-  s.attributeDefinitions ??= [];
-  s.workPatterns ??= [];
-  s.weekProfiles ??= [];
-  s.weekConfiguration ??= {
-    manual: [],
-    recurrences: [],
-    frequencies: [],
-    history: [],
-  };
-  s.dutyRequirements ??= [];
-  s.temporalRules ??= [];
-  s.calendar.closures ??= [];
-}
-export function isoMonday(value: string) {
-  const d = new Date(value + "T12:00:00Z");
-  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
-  return d.toISOString().slice(0, 10);
-}
-export const workingDays = [1, 2, 3, 4, 5];

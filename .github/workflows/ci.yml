@@ -4,6 +4,15 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Verify, build temporary packages, or publish a stable version tag
+        type: choice
+        options: [verify, package, release]
+        default: verify
+      reuse_run_id:
+        description: Optional successful CI run with identical application and packaging sources
+        type: string
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
@@ -11,6 +20,10 @@ permissions:
   contents: read
 jobs:
   core:
+    needs: release-source
+    if: >-
+      always() && (inputs.mode != 'release' ||
+      (needs.release-source.result == 'success' && inputs.reuse_run_id == ''))
     strategy:
       fail-fast: false
       matrix:
@@ -59,6 +72,8 @@ jobs:
           python scripts/create_ai_examples.py
           git diff --exit-code -- schemas AI_EXAMPLES AI_CAPABILITIES.json
       - name: Build playground
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: ${{ inputs.mode != 'package' && inputs.mode != 'release' && '1' || '' }}
         working-directory: playground
         run: |
           npm ci
@@ -80,14 +95,150 @@ jobs:
         run: |
           npm run test:server
           npm run test:e2e
+      - name: Package desktop for the native platform
+        if: >-
+          (inputs.mode == 'package' || inputs.mode == 'release') &&
+          (runner.os == 'Linux' || runner.os == 'Windows')
+        working-directory: playground
+        run: npm run package:desktop
+      - name: Smoke test AppImage and DEB
+        if: (inputs.mode == 'package' || inputs.mode == 'release') && runner.os == 'Linux'
+        working-directory: playground
+        shell: bash
+        run: |
+          smoke_dir=$(mktemp -d)
+          appimage=$(realpath ../build/desktop/*.AppImage)
+          (cd "$smoke_dir" && "$appimage" --appimage-extract >/dev/null)
+          dpkg-deb -x ../build/desktop/*.deb "$smoke_dir/deb"
+          ROSTERCORE_TEST_NO_SANDBOX=1 xvfb-run -a npm run test:desktop -- "$smoke_dir/squashfs-root/AppRun"
+          ROSTERCORE_TEST_NO_SANDBOX=1 xvfb-run -a npm run test:desktop -- "$smoke_dir/deb/opt/RosterCore/rostercore"
+      - name: Smoke test the Windows desktop payload
+        if: (inputs.mode == 'package' || inputs.mode == 'release') && runner.os == 'Windows'
+        working-directory: playground
+        run: npm run test:desktop -- ../build/desktop/win-unpacked/RosterCore.exe
+      - uses: actions/upload-artifact@v4
+        if: >-
+          (inputs.mode == 'package' || inputs.mode == 'release') &&
+          (runner.os == 'Linux' || runner.os == 'Windows')
+        with:
+          name: rostercore-desktop-${{ runner.os }}-x64
+          retention-days: 1
+          if-no-files-found: error
+          path: |
+            build/desktop/*.AppImage
+            build/desktop/*.deb
+            build/desktop/*.exe
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: ci-diagnostics-${{ runner.os }}
-          retention-days: 7
+          retention-days: 1
           path: |
             build/**/*.runtime-dependencies.txt
             build/Testing/Temporary/
             build/CMakeFiles/CMakeConfigureLog.yaml
             playground/test-results
           if-no-files-found: ignore
+  release-source:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'release'
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      run_id: ${{ steps.source.outputs.run_id }}
+      version: ${{ steps.source.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify release tag and package provenance
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REUSE_RUN_ID: ${{ inputs.reuse_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(cat VERSION)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$GITHUB_REF" == "refs/tags/v$version" ]]
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          node -e 'const p = require("./playground/package.json"); const l = require("./playground/package-lock.json"); if ([p.version, l.version, l.packages[""].version].some(v => v !== process.argv[1])) process.exit(1)' "$version"
+          run_id=$GITHUB_RUN_ID
+          if [[ -n "$REUSE_RUN_ID" ]]; then
+            [[ "$REUSE_RUN_ID" =~ ^[0-9]+$ ]]
+            run_id=$REUSE_RUN_ID
+            source_sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq 'select(.conclusion == "success" and .path == ".github/workflows/ci.yml") | .head_sha')
+            [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+            # None of these files is staged by CMake or electron-builder.
+            git diff --exit-code "$source_sha" "$GITHUB_SHA" -- . \
+              ':(exclude).github/workflows/ci.yml' ':(exclude)README.md' \
+              ':(exclude)AGENTS.md' ':(exclude)CHANGELOG.md'
+          fi
+          printf 'version=%s\nrun_id=%s\n' "$version" "$run_id" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: [core, release-source]
+    if: >-
+      always() && needs.release-source.result == 'success' &&
+      (needs.core.result == 'success' || (inputs.reuse_run_id != '' && needs.core.result == 'skipped'))
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.release-source.outputs.run_id }}
+          pattern: rostercore-desktop-*-x64
+          merge-multiple: true
+          path: release-assets
+      - name: Publish verified desktop packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.release-source.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          files=(
+            "RosterCore-$VERSION-Setup-x64.exe"
+            "RosterCore-$VERSION-Portable-x64.exe"
+            "rostercore_${VERSION}_amd64.deb"
+            "RosterCore-$VERSION-x86_64.AppImage"
+          )
+          cd release-assets
+          for file in "${files[@]}"; do test -s "$file"; done
+          sha256sum "${files[@]}" > SHA256SUMS
+          files+=(SHA256SUMS)
+
+          awk -v version="$VERSION" '
+            /^## / { if (section) exit; section = ($2 == version); next }
+            section { print }
+          ' ../CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          grep -q '[^[:space:]]' "$RUNNER_TEMP/release-notes.md"
+
+          if draft=$(gh release view "$tag" --json isDraft --jq .isDraft); then
+            test "$draft" = true
+          else
+            gh release create "$tag" --verify-tag --draft \
+              --title "RosterCore $VERSION — Desktop & AI-first" \
+              --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi
+          gh release upload "$tag" "${files[@]}" --clobber
+
+          release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
+            --jq ".[] | select(.draft and .tag_name == \"$tag\") | .id")
+          [[ "$release_id" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" > "$RUNNER_TEMP/release-assets.json"
+          test "$(jq 'length' "$RUNNER_TEMP/release-assets.json")" -eq "${#files[@]}"
+          for file in "${files[@]}"; do
+            checksum=$(sha256sum "$file" | cut -d ' ' -f1)
+            jq -e --arg file "$file" --arg digest "sha256:$checksum" \
+              '.[] | select(.name == $file and .state == "uploaded" and .digest == $digest)' \
+              "$RUNNER_TEMP/release-assets.json" >/dev/null
+          done
+          gh release edit "$tag" --draft=false --prerelease=false --latest
