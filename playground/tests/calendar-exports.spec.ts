@@ -31,7 +31,7 @@ test("ordinary user sees a quiet calendar and exports a matching paginated PDF, 
   await generate(page);
   const before = await archive(page);
   await expect(workspace(page).locator(".operational-status")).toHaveText(
-    "Calendar generated",
+    "Draft calendar",
   );
   await expect(workspace(page).locator(".stats,.fairness-chart")).toHaveCount(
     0,
@@ -352,6 +352,7 @@ test("PDF non-working dates and named print-profile variants survive reopening a
   await expect(
     dialog.locator(".pdf-preview text").filter({ hasText: /Mon,?\s+09\/11/ }),
   ).toHaveCount(1);
+  await dialog.getByText("Print profiles", { exact: true }).click();
   await dialog
     .getByLabel("Print profile name", { exact: true })
     .fill("Workdays");
@@ -406,6 +407,7 @@ test("PDF non-working dates and named print-profile variants survive reopening a
   await page.getByRole("navigation").getByRole("button", { name: "Archive", exact: true }).click();
   await page.locator(".archive-list").getByRole("button", { name: "Export calendar", exact: true }).click();
   dialog = page.getByRole("dialog", { name: "Export calendar", exact: true });
+  await dialog.getByText("Print profiles", { exact: true }).click();
   await dialog
     .getByLabel("Saved print profile", { exact: true })
     .selectOption({ label: "Full week A3" });

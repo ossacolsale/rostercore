@@ -13,32 +13,36 @@ export function CalendarGrid({
   view,
   mode = "COMPLETE",
   onCell,
+  dutyIds,
 }: {
   view: CalendarView;
   mode?: Presentation["mode"];
+  dutyIds?: Set<string>;
   onCell?: (cell: CalendarCell) => void;
 }) {
   const { t, locale } = useI18n();
   const cells = new Map(
     view.cells.map((c) => [c.employeeId + ":" + c.date, c]),
   );
+  const variedProfiles = new Set(view.days.map((day) => day.profileLabel)).size > 1;
+  const weekStart = (date: string) => new Date(date + "T12:00:00Z").getUTCDay() === 1;
   return (
     <>
-      <div className="calendar-grid-scroll table-scroll">
+      <div className="calendar-grid-scroll table-scroll" tabIndex={0} role="region" aria-label={t("Shift grid")}>
         <table className="roster filtered-calendar">
           <thead>
             <tr>
-              <th>{t("Employee")}</th>
+              <th scope="col">{t("People")}</th>
               {view.days.map((day) => (
-                <th key={day.date}>
+                <th scope="col" key={day.date} data-week-start={weekStart(day.date) || undefined}>
                   <small>
                     {new Date(day.date + "T12:00:00Z").toLocaleDateString(
                       locale,
                       { weekday: "short", timeZone: "UTC" },
                     )}
                   </small>
-                  {day.date.slice(8)}/{day.date.slice(5, 7)}
-                  <small>{day.profileLabel}</small>
+                  <span>{new Date(day.date + "T12:00:00Z").toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: "UTC" })}</span>
+                  {variedProfiles && <small>{day.profileLabel}</small>}
                   {day.holidays.length > 0 && (
                     <small title={day.holidays.map((h) => h.label).join(", ")}>
                       {t("Holiday")}
@@ -51,37 +55,21 @@ export function CalendarGrid({
           <tbody>
             {view.employees.map((employee) => (
               <tr key={employee.id}>
-                <th>{employee.label}</th>
+                <th scope="row">{employee.label}</th>
                 {view.days.map((day) => {
                   const cell = cells.get(employee.id + ":" + day.date)!;
-                  const content = (
-                    <>
-                      <span
-                        className={
-                          cell.state === "WORKING" || cell.state === "REST"
-                            ? "shift-cell"
-                            : undefined
-                        }
-                      >
-                        {cell.state === "WORKING"
-                          ? cell.shiftLabel
-                          : (stateSymbols[cell.state] ?? "?")}
-                      </span>
-                      {mode === "COMPLETE" && cell.state === "WORKING" && (
-                        <small>
-                          {cell.intervals
-                            .map(
-                              (i) =>
-                                `${i.start}-${i.end}${i.endDayOffset ? " +1" : ""}`,
-                            )
-                            .join(" / ")}
-                        </small>
-                      )}
-                    </>
-                  );
+                  const working = cell.state === "WORKING";
+                  const content = <span className={working ?
+                    (cell.shiftId && dutyIds?.has(cell.shiftId) ? "shift-block duty" : "shift-block") : "cell-state"}>
+                    <span>{working ? cell.shiftLabel : t(stateKeys[cell.state] ?? "Not planned")}</span>
+                    {mode === "COMPLETE" && working && <small>
+                      {cell.intervals.map((i) => `${i.start}–${i.end}${i.endDayOffset ? " +1" : ""}`).join(" / ")}
+                    </small>}
+                  </span>;
                   return (
                     <td
                       key={day.date}
+                      data-week-start={weekStart(day.date) || undefined}
                       className={"calendar-state-" + cell.state.toLowerCase()}
                     >
                       {onCell ? (
@@ -120,9 +108,7 @@ export function CalendarGrid({
           ))}
         </ul>
         <p>
-          {t(
-            "A hidden work marker means an assignment exists but is not shown by the current filter. It never means rest or unplanned work.",
-          )}
+          {t("Filtered assignments are hidden in this view.")}
         </p>
       </details>
     </>

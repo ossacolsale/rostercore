@@ -59,7 +59,7 @@ async function start() {
   session.defaultSession.setPermissionCheckHandler((_contents, permission, requestingOrigin) =>
     permission === "clipboard-sanitized-write" && requestingOrigin === origin);
   window = new BrowserWindow({
-    width: 1280, height: 850, minWidth: 480, minHeight: 540, show: false, title: "RosterCore",
+    width: 1280, height: 800, minWidth: 360, minHeight: 520, show: false, title: "RosterCore",
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(import.meta.dirname, "preload.cjs"),
@@ -72,8 +72,8 @@ async function start() {
   window.webContents.on("will-navigate", (event, url) => {
     if (!allowed(url)) event.preventDefault();
   });
-  ipcMain.handle("workspace:choose-file", async (event, operation) => {
-    if (event.sender !== window.webContents || !allowed(event.senderFrame.url) ||
+  ipcMain.handle("workspace:choose-file", async (event, operation, suggestedPath) => {
+    if (event.sender !== window.webContents || !allowed(event.senderFrame?.url) ||
         !["OPEN", "CREATE", "BACKUP"].includes(operation)) return undefined;
     const suggested = process.env.PORTABLE_EXECUTABLE_DIR ?? app.getPath("documents");
     const filters = [{ name: "RosterCore SQLite", extensions: ["sqlite", "sqlite3", "db"] }];
@@ -82,7 +82,7 @@ async function start() {
       return result.filePaths[0];
     }
     const name = operation === "BACKUP" ? "rostercore-backup.sqlite" : "workspace.sqlite";
-    const result = await dialog.showSaveDialog(window, { defaultPath: path.join(suggested, name), filters });
+    const result = await dialog.showSaveDialog(window, { defaultPath: !process.env.PORTABLE_EXECUTABLE_DIR && typeof suggestedPath === "string" && path.isAbsolute(suggestedPath) ? suggestedPath : path.join(suggested, name), filters });
     return result.filePath;
   });
   window.once("ready-to-show", () => window.show());

@@ -19,16 +19,22 @@ export function Text({
   value,
   onChange,
   type = "text",
+  min,
+  max,
 }: {
   label: string;
   value: string | number;
   onChange: (v: string) => void;
   type?: string;
+  min?: string;
+  max?: string;
 }) {
   return (
     <Field label={label}>
       <input
         type={type}
+        min={min}
+        max={max}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />

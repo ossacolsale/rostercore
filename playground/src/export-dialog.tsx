@@ -262,7 +262,7 @@ export function ExportDialog({
             {archive.period.end}
           </p>
         </div>
-        <button onClick={onClose} aria-label={t("Close export")}>
+        <button className="quiet icon-button" onClick={onClose} aria-label={t("Close export")}>
           ×
         </button>
       </header>

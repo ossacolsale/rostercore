@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { type Scenario, type Result, id } from "./model";
 import type { ScheduleArchive } from "./archives";
 import type { CalendarCell } from "./calendar-export-model";
@@ -17,6 +17,7 @@ import {
 } from "./change-review";
 import { summarizeChanges } from "./change-summary";
 import { notifyError, notifyResult } from "./notifications";
+import { Modal } from "./review-dialog";
 export function CalendarChanges({
   s,
   archive,
@@ -39,14 +40,13 @@ export function CalendarChanges({
   onClose: () => void;
 }) {
   const { t, diagnostic } = useI18n();
-  const ref = useRef<HTMLDialogElement>(null);
   const [action, setAction] = useState(initialAction),
     [person, setPerson] = useState(
       initialCell?.employeeId ?? initialPerson ?? s.employees[0]?.id ?? "",
     ),
     [from, setFrom] = useState(initialCell?.date ?? s.calendar.start),
     [end, setEnd] = useState(initialCell?.date ?? s.calendar.start),
-    [name, setName] = useState(""),
+    [name, setName] = useState(initialAction === "RENAME" ? s.employees.find((employee) => employee.id === initialPerson)?.label ?? "" : ""),
     [role, setRole] = useState(s.employeeTypes[0]?.id ?? ""),
     [shift, setShift] = useState(
       s.shifts.find((sh) => sh.kind === "WORKING")?.id ?? "",
@@ -68,13 +68,6 @@ export function CalendarChanges({
     [error, setError] = useState<Result>(),
     [working, setWorking] = useState(false),
     [regenerate, setRegenerate] = useState(true);
-  useEffect(() => {
-    const trigger = document.activeElement;
-    ref.current?.showModal();
-    return () => {
-      if (trigger instanceof HTMLElement) trigger.focus();
-    };
-  }, []);
   const earliest =
     !["RENAME", "REMOVE_ABSENCE"].includes(action) && s.history.through && s.history.through >= from
       ? s.history.through
@@ -309,17 +302,49 @@ export function CalendarChanges({
     { id: "PATTERN", label: t("Change a work pattern") },
     { id: "REGENERATE", label: t("Regenerate future dates") },
   ];
+  const title = peopleOnly
+    ? initialAction === "PERSON" ? "Add a colleague" : initialAction === "ABSENCE" ? "Record leave or absence" : "Edit person"
+    : "Modify planning";
   return (
-    <dialog
-      ref={ref}
-      className="calendar-change-dialog"
-      aria-label={t("Modify planning")}
-      onCancel={(e) => {
-        e.preventDefault();
-        if (!working) onClose();
-      }}
-    >
-      <h2>{t(review ? "Review planning change" : "Modify planning")}</h2>
+    <Modal title={t(review ? "Review planning change" : title)}
+      label={t(title)} onClose={onClose} dismissible={!working}
+      actions={<>
+        <button
+          disabled={working}
+          onClick={
+            review
+              ? () => {
+                  setReview(undefined);
+                  setDoc(undefined);
+                }
+              : onClose
+          }
+        >
+          {t(review ? "Back" : "Cancel")}
+        </button>
+        <button
+          className="primary"
+          disabled={
+            working ||
+            (!review &&
+              ((hard && !authorize) ||
+                (["PERSON", "RENAME"].includes(action) && !name.trim()) ||
+                (action === "PERSON" && !role) ||
+                (action === "REMOVE_ABSENCE" && !absence) ||
+                (action === "CONTRACT" && !value) ||
+                Boolean(earliest)))
+          }
+          onClick={() => (review ? apply() : preview())}
+        >
+          {t(
+            working
+              ? "Working..."
+              : review
+                ? "Apply planning change"
+                : "Preview planning change",
+          )}
+        </button>
+      </>}>
       {!review ? (
         <>
           <Select
@@ -328,6 +353,7 @@ export function CalendarChanges({
             options={options.filter(({ id }) => !peopleOnly || !["REGENERATE", "HOURS", "CLOSURE"].includes(id))}
             onChange={(v) => {
               setAction(v);
+              if (v === "RENAME") setName(s.employees.find((employee) => employee.id === person)?.label ?? "");
               setAbsence("");
               setDoc(undefined);
               setError(undefined);
@@ -340,6 +366,7 @@ export function CalendarChanges({
               options={s.employees}
               onChange={(v) => {
                 setPerson(v);
+                if (action === "RENAME") setName(s.employees.find((employee) => employee.id === v)?.label ?? "");
                 setAbsence("");
                 setDoc(undefined);
               }}
@@ -601,43 +628,6 @@ export function CalendarChanges({
           </details>
         </>
       )}
-      <div className="dialog-actions">
-        <button
-          disabled={working}
-          onClick={
-            review
-              ? () => {
-                  setReview(undefined);
-                  setDoc(undefined);
-                }
-              : onClose
-          }
-        >
-          {t(review ? "Back" : "Cancel")}
-        </button>
-        <button
-          className="primary"
-          disabled={
-            working ||
-            (!review &&
-              ((hard && !authorize) ||
-                (["PERSON", "RENAME"].includes(action) && !name.trim()) ||
-                (action === "PERSON" && !role) ||
-                (action === "REMOVE_ABSENCE" && !absence) ||
-                (action === "CONTRACT" && !value) ||
-                Boolean(earliest)))
-          }
-          onClick={() => (review ? apply() : preview())}
-        >
-          {t(
-            working
-              ? "Working..."
-              : review
-                ? "Apply planning change"
-                : "Preview planning change",
-          )}
-        </button>
-      </div>
-    </dialog>
+    </Modal>
   );
 }

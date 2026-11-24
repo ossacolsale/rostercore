@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0 — 2026-11-24
+
+- Choose a workspace and review its location before importing data or creating a configuration.
+- Use one reviewed import flow for configurations, change sets, backups and saved calendars. Restore operations return to the calendar.
+- Keep navigation and workspace information visible while scrolling. Improve typography, focus, calendar layout, dialogs and exports on smaller windows.
+
 ## 0.6.0 — 2026-11-24
 
 - Replace the dual-mode playground with four bilingual desktop sections and an isolated demo.

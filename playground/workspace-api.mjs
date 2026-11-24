@@ -92,6 +92,7 @@ export function createWorkspaceApi(run, { filename, settings, hostMode = false, 
   const fixedFile = Boolean(filename);
   const saved = !filename && settings && existsSync(settings);
   let warning;
+  let selectedByUser = Boolean(saved || fixedFile);
   let store;
   try {
     const selected = filename ?? (saved ? JSON.parse(readFileSync(settings, "utf8")).path :
@@ -111,6 +112,7 @@ export function createWorkspaceApi(run, { filename, settings, hostMode = false, 
     mode: connection ? "CLIENT" : hostMode ? "HOST" : "LOCAL",
     location: connection ? connection.endpoint.origin : store.filename,
     warning: connection ? undefined : warning,
+    selected: Boolean(connection || selectedByUser) && !warning,
   });
 
   async function shared(req, res, pathname, local = false) {
@@ -200,6 +202,7 @@ export function createWorkspaceApi(run, { filename, settings, hostMode = false, 
         }
         store.close();
         store = candidate;
+        selectedByUser = true;
         warning = undefined;
         session = randomUUID();
         return json(res, 200, { ...getLocation(), workspace: tagged(store.read()) });

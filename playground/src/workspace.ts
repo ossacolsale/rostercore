@@ -14,6 +14,7 @@ export type Location = {
   mode: "LOCAL" | "HOST" | "CLIENT";
   location: string;
   warning?: string;
+  selected?: boolean;
 };
 
 export type Revision = {
@@ -26,7 +27,7 @@ export type Revision = {
 declare global {
   interface Window {
     rosterCore?: {
-      chooseFile: (operation: "CREATE" | "OPEN" | "BACKUP") => Promise<string | undefined>;
+      chooseFile: (operation: "CREATE" | "OPEN" | "BACKUP", suggestedPath?: string) => Promise<string | undefined>;
     };
   }
 }

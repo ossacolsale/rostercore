@@ -37,7 +37,10 @@ export async function workspaceOperation(run, snapshot, body) {
   }
 
   if (action === "archives") {
-    const scenario = snapshot.scenario ?? (document?.operation === "RESTORE" ? document.backup?.scenario : null);
+    const scenario = snapshot.scenario ?? (
+      document?.operation === "RESTORE" ? document.backup?.scenario :
+      document?.operation === "IMPORT" && document.mode === "RESTORE_CONTEXT" ? document.archive?.scenario : null
+    );
     if (!scenario) throw new Error("Create or import a configuration first.");
     if (document.operation === "COMPLETE" || (document.operation === "IMPORT" && document.mode === "COMPLETE")) {
       const through = document.through ?? document.archive?.completedThrough;
@@ -49,7 +52,9 @@ export async function workspaceOperation(run, snapshot, body) {
       return discard(result);
     next.scenario = result.scenario ?? scenario;
     next.archives = result.archives;
-    if (["RESTORE", "IMPORT"].includes(document.operation)) next.activeArchiveId = null;
+    if (document.operation === "RESTORE") next.activeArchiveId = null;
+    if (document.operation === "IMPORT") next.activeArchiveId = result.archive?.id ?? null;
+    if (document.operation === "CREATE" && result.archive) next.activeArchiveId = result.archive.id;
     return finish(result);
   }
 

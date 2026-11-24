@@ -1,5 +1,5 @@
-import { WorkCompletion } from "./work-completion";
-import { useEffect, useRef, useState } from "react";
+import { WorkCompletion, calendarToday } from "./work-completion";
+import { useEffect, useState } from "react";
 import type { Scenario, Result } from "./model";
 import type { ScheduleArchive } from "./archives";
 import {
@@ -17,28 +17,21 @@ import { CalendarChanges } from "./calendar-changes";
 import { AIConfiguration } from "./ai-configuration";
 import { Text, Select, Multi } from "./editors";
 import { useI18n } from "./i18n";
+import { Icon } from "./icons";
+import { Modal } from "./review-dialog";
 import { coreAction } from "./api";
 import type { Run } from "./api";
 export function operationalState({
-  s,
   r,
   archive,
   stale,
   validated = false,
 }: {
-  s: Scenario;
   r?: Result;
   archive?: ScheduleArchive;
   stale: boolean;
   validated?: boolean;
 }) {
-  if (stale) return "Needs updating";
-  if (
-    r &&
-    ["VALIDATION_ERROR", "MODEL_INVALID", "INFEASIBLE"].includes(r.status)
-  )
-    return "Needs correction";
-  if (r?.status === "UNKNOWN") return "Calendar needs review";
   if (
     archive?.state === "PUBLISHED" ||
     (archive?.state === "COMPLETED" &&
@@ -47,49 +40,18 @@ export function operationalState({
       ))
   )
     return "Published";
-  if (r?.assignments)
-    return r.status === "FEASIBLE" ||
-      r.diagnostics.some((d) => d.severity === "WARNING")
-      ? "Calendar needs review"
-      : "Calendar generated";
+  if (archive?.state === "COMPLETED") return "Completed work";
+  if (archive?.state === "SUPERSEDED") return "Superseded calendar";
+  if (archive?.supersedesId) return "Revision proposal";
+  if (archive) return "Draft calendar";
+  if (stale) return "Needs updating";
+  if (
+    r &&
+    ["VALIDATION_ERROR", "MODEL_INVALID", "INFEASIBLE"].includes(r.status)
+  )
+    return "Needs correction";
+  if (r?.status === "UNKNOWN") return "Calendar needs review";
   return validated ? "Can generate" : "Needs setup";
-}
-function Dialog({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const trigger = document.activeElement;
-    ref.current?.showModal();
-    return () => {
-      if (trigger instanceof HTMLElement) trigger.focus();
-    };
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      className="calendar-context-dialog"
-      aria-label={title}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-    >
-      <div className="section-head">
-        <h2>{title}</h2>
-        <button onClick={onClose} aria-label={title + " - close"}>
-          ×
-        </button>
-      </div>
-      {children}
-    </dialog>
-  );
 }
 export function CalendarWorkspace({
   s,
@@ -118,7 +80,7 @@ export function CalendarWorkspace({
   validated?: boolean;
   onConfigure?: () => void;
 }) {
-  const { t, diagnostic } = useI18n();
+  const { t, locale, diagnostic } = useI18n();
   const [exporting, setExporting] = useState(false),
     [completing, setCompleting] = useState(false),
     [changing, setChanging] = useState(false),
@@ -266,7 +228,6 @@ export function CalendarWorkspace({
       return next;
     });
   const state = operationalState({
-    s: currentScenario,
     r,
     archive,
     stale,
@@ -315,25 +276,48 @@ export function CalendarWorkspace({
   );
   const labels = (shift: string | null) =>
     s.shifts.find((sh) => sh.id === shift)?.label ?? t("No assignment");
+  const period = archive?.period ?? s.calendar;
+  const dateFormat = new Intl.DateTimeFormat(locale, {
+    day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
+  });
+  const dateRange = (start: string, end: string) => dateFormat.formatRange(
+    new Date(start + "T12:00:00Z"), new Date(end + "T12:00:00Z"),
+  );
+  const shiftedFocus = (direction: number) => {
+    const date = new Date(focus + "T12:00:00Z");
+    if (mode === "month") date.setUTCMonth(date.getUTCMonth() + direction, 1);
+    else date.setUTCDate(date.getUTCDate() + direction * (mode === "week" ? 7 : 1));
+    const next = date.toISOString().slice(0, 10);
+    return next < period.start ? period.start : next > period.end ? period.end : next;
+  };
+  const displayed = view?.period;
   return (
     <section className="calendar-workspace">
-      <div className="calendar-heading">
+      <div className="page-heading calendar-heading">
         <div>
-          <h2>{t("Assignment calendar")}</h2>
-          <p>
-            {archive
-              ? archive.period.start + " - " + archive.period.end
-              : s.calendar.start + " - " + s.calendar.end}
-          </p>
+          <h1>{t("Assignment calendar")}</h1>
+          <div className="calendar-period"><span>{dateRange(period.start, period.end)}</span>
+            <span className={`operational-status status-tag ${archive?.state.toLowerCase() ?? ""}`} role="status">{t(state)}</span>
+          </div>
         </div>
-        <p className="operational-status" role="status">
-          {t(state)}
-        </p>
+        <div className="calendar-actions">
+          <button className="primary" disabled={busy} onClick={() => run("solve")}>
+            <Icon name="calendar" />{t(busy ? "Working…" : "Generate schedule")}
+          </button>
+          {archive && <>
+            <button disabled={!sameScenario || busy} onClick={() => {
+              setCell(undefined); setChangeAction("ABSENCE"); setChanging(true);
+            }}><Icon name="edit" />{t("Modify planning")}</button>
+            <button onClick={() => setExporting(true)}><Icon name="download" />{t("Export calendar")}</button>
+          </>}
+        </div>
       </div>
       {stale && (
         <p className="notice">
           {t(
-            "The displayed calendar uses an earlier configuration. Regenerate the affected future dates before publishing changes.",
+            sameScenario
+              ? "The displayed calendar uses an earlier configuration. Regenerate the affected future dates before publishing changes."
+              : "This calendar belongs to a different workspace configuration.",
           )}
         </p>
       )}
@@ -367,46 +351,37 @@ export function CalendarWorkspace({
             <button onClick={() => setDetail(true)}>{t("Details")}</button>
           </p>
         )}
-      <div className="calendar-actions">
-        <button
-          className="primary"
-          disabled={busy}
-          onClick={() => run("solve")}
-        >
-          {t(busy ? "Working…" : "Generate schedule")}
-        </button>
-        {archive && (
-          <>
-            <button onClick={() => setExporting(true)}>
-              {t("Export calendar")}
-            </button>
-            <button
-              disabled={
-                stale || !sameScenario || archive.state === "SUPERSEDED"
-              }
-              onClick={publish}
-            >
-              {t("Publish calendar")}
-            </button>
-            <button
-              disabled={!sameScenario || busy}
-              onClick={() => {
-                setCell(undefined);
-                setChangeAction("ABSENCE");
-                setChanging(true);
-              }}
-            >
-              {t("Modify planning")}
-            </button>
-          </>
-        )}
-        {!archive && onConfigure && (
-          <button onClick={onConfigure}>{t("Configure the team")}</button>
-        )}
-        <button onClick={() => setAi(true)}>{t("Ask AI for help")}</button>
-      </div>
+      {!archive && <div className="calendar-empty">
+        <div className="empty-mark"><Icon name="calendar" /></div>
+        <h2>{t("No schedule for this period yet")}</h2>
+        <p>{t("Generate a draft to review the shifts before publishing.")}</p>
+        <div className="row">
+          {onConfigure && <button onClick={onConfigure}>{t("Configure the team")}</button>}
+          <button className="quiet" onClick={() => setAi(true)}><Icon name="spark" />{t("Ask AI for help")}</button>
+        </div>
+      </div>}
       {archive && filters && (
         <>
+          <div className="calendar-secondary-bar">
+            <div className="row">
+              {archive.state === "DRAFT" && sameScenario && <button disabled={busy || stale} onClick={publish}>
+                <Icon name="check" />{t("Publish calendar")}
+              </button>}
+            </div>
+            <details className="calendar-secondary menu">
+              <summary>{t("More calendar actions")}</summary>
+              <div className="menu-items">
+                {sameScenario && archive.state !== "SUPERSEDED" && archive.period.start <= calendarToday(s.calendar.timezone) &&
+                  <button onClick={() => setCompleting(true)}>{t("Record work performed")}</button>}
+                <button onClick={() => {
+                  setCell(undefined); setChangeAction("REGENERATE"); setChanging(true);
+                }} disabled={!sameScenario}>{t("Regenerate future dates")}</button>
+                <button onClick={() => setDetail(true)}>{t("Diagnostics and verification")}</button>
+                <button onClick={() => setAi(true)}><Icon name="spark" />{t("Ask AI for help")}</button>
+              </div>
+            </details>
+          </div>
+          <div className="calendar-board">
           <div className="calendar-view-controls">
             <Select
               label={t("Calendar view")}
@@ -419,18 +394,17 @@ export function CalendarWorkspace({
               ]}
               onChange={setMode}
             />
-            {mode !== "horizon" && (
-              <Text
-                label={t("Focus date")}
-                type="date"
-                value={focus}
-                onChange={(v) => {
-                  if (v >= archive.period.start && v <= archive.period.end)
-                    setFocus(v);
-                }}
-              />
-            )}
-            <label>
+            {mode !== "horizon" && <div className="calendar-pager">
+              <button className="icon-button" aria-label={t("Previous period")} disabled={(displayed?.start ?? focus) <= period.start}
+                onClick={() => setFocus(shiftedFocus(-1))}><Icon name="back" /></button>
+              <Text label={t("Focus date")} type="date" value={focus} min={period.start} max={period.end} onChange={(value) => {
+                if (value >= period.start && value <= period.end) setFocus(value);
+              }} />
+              <button className="icon-button" aria-label={t("Next period")} disabled={(displayed?.end ?? focus) >= period.end}
+                onClick={() => setFocus(shiftedFocus(1))}><Icon name="arrow" /></button>
+            </div>}
+            <span className="view-period">{displayed && dateRange(displayed.start, displayed.end)}</span>
+            <label className="hours-option">
               <input
                 type="checkbox"
                 checked={complete}
@@ -438,7 +412,7 @@ export function CalendarWorkspace({
               />
               {t("Show actual hours")}
             </label>
-            <button
+            <button className="quiet"
               onClick={() =>
                 update((o) => {
                   o.shiftSelection.hideNormal = !o.shiftSelection.hideNormal;
@@ -455,6 +429,7 @@ export function CalendarWorkspace({
           </div>
           <details className="calendar-filters">
             <summary>{t("Filter people and shifts")}</summary>
+            <div className="filter-fields">
             <Text
               label={t("Search people, shifts or a week")}
               value={query}
@@ -652,6 +627,7 @@ export function CalendarWorkspace({
               />
               {t("Show closures and holidays")}
             </label>
+            </div>
           </details>
           {error && (
             <p role="alert" className="error">
@@ -663,9 +639,12 @@ export function CalendarWorkspace({
             <CalendarGrid
               view={view}
               mode={complete ? "COMPLETE" : "COMPACT"}
+              dutyIds={dutyIds}
               onCell={(c) => setCell(c)}
             />
           )}
+          </div>
+          <div className="calendar-insights">
           <details className="duty-counts">
             <summary>{t("View duty distribution")}</summary>
             <div className="table-scroll">
@@ -761,29 +740,11 @@ export function CalendarWorkspace({
               </div>
             </details>
           )}
-          <details className="calendar-secondary">
-            <summary>{t("More calendar actions")}</summary>
-            <button onClick={() => setCompleting(true)}>
-              {t("Record work performed")}
-            </button>
-            <button
-              onClick={() => {
-                setCell(undefined);
-                setChangeAction("REGENERATE");
-                setChanging(true);
-              }}
-              disabled={!sameScenario}
-            >
-              {t("Regenerate future dates")}
-            </button>
-            <button onClick={() => setDetail(true)}>
-              {t("Diagnostics and verification")}
-            </button>
-          </details>
+          </div>
         </>
       )}
       {cell && (
-        <Dialog
+        <Modal
           title={
             (s.employees.find((e) => e.id === cell.employeeId)?.label ?? "") +
             " - " +
@@ -831,7 +792,7 @@ export function CalendarWorkspace({
               {t("Ask AI about this assignment")}
             </button>
           </div>
-        </Dialog>
+        </Modal>
       )}
       {completing && archive && (
         <WorkCompletion
@@ -862,8 +823,9 @@ export function CalendarWorkspace({
         />
       )}
       {ai && (
-        <Dialog title={t("Ask AI for help")} onClose={() => setAi(false)}>
+        <Modal title={t("Ask AI for help")} onClose={() => setAi(false)}>
           <AIConfiguration
+            showHeading={false}
             s={sameScenario ? currentScenario : s}
             run={run}
             busy={busy}
@@ -876,26 +838,19 @@ export function CalendarWorkspace({
               diagnostics: [],
             }}
           />
-        </Dialog>
+        </Modal>
       )}
       {detail && (
-        <Dialog
+        <Modal
           title={t("Diagnostics and verification")}
           onClose={() => setDetail(false)}
         >
-          <p>
-            {t(
-              "Technical details are optional. They do not change the calendar or publish it.",
-            )}
-          </p>
-          <button onClick={() => run("verify", { scenario: s, result: r })}>
-            {t("Verify independently")}
-          </button>
-          <button
-            onClick={() => run("verify-quality", { scenario: s, result: r })}
-          >
-            {t("Independently check substitute minimum")}
-          </button>
+          {archive && <div className="row">
+            <button disabled={busy} onClick={() => run("verify", { scenario: s, result: r })}>{t("Verify independently")}</button>
+            <button disabled={busy} onClick={() => run("verify-quality", { scenario: s, result: r })}>
+              {t("Independently check substitute minimum")}
+            </button>
+          </div>}
           <pre>
             {JSON.stringify(
               {
@@ -909,7 +864,7 @@ export function CalendarWorkspace({
               2,
             )}
           </pre>
-        </Dialog>
+        </Modal>
       )}
     </section>
   );

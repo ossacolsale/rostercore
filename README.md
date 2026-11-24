@@ -6,7 +6,9 @@ RosterCore generates workforce schedules from declarative rules using a C++20 en
 
 Designed for integration into desktop applications and backend services, RosterCore aims to remain independent of any specific industry. Pharmacies are the initial reference use case, but the model is intended for healthcare, retail, hospitality, manufacturing, and other shift-based workplaces.
 
-**Version 0.6.0** opens to an empty workspace. Create an AI-assisted configuration, import scenario JSON, open a local or shared workspace, or try an isolated sample. The four sections are **Calendar**, **People**, **Configuration** and **Archive**. Switch between English and Italian from the header.
+**Version 0.7.0** asks where to work on first launch. Create a local workspace at the suggested path or choose another file, open an existing workspace, connect to a shared one, or try the isolated demo. RosterCore remembers the last local workspace. The persistent navigation provides **Calendar**, **People**, **Configuration** and **Archive** in English and Italian.
+
+Choose **Import a file** to review a configuration, a typed change, a saved calendar or a workspace backup. A successful import opens the calendar. Restoring a backup into a populated workspace requires confirmation because it replaces the current data.
 
 From **Configuration**, describe the planning rules, copy or download the AI package, and import the JSON reply. Review the native validation and proposed changes before saving. Use a complete scenario for a new workspace and a revisioned, typed change set for updates. AI assistance works with a provider of your choice, without an account or key in RosterCore. See the [scenario guide](AI_SCENARIO_AUTHORING_GUIDE.md), [update guide](AI_SCENARIO_UPDATE_GUIDE.md) and [examples](AI_EXAMPLES/).
 
@@ -119,9 +121,9 @@ HR software remains external to the optimization core. An adapter or host applic
 
 ## Install and use
 
-The CI packages target Windows 11 x64 and Ubuntu 24.04 LTS x64 or newer. Windows offers a portable `.exe` and an NSIS installer. On Linux, make the AppImage executable and launch it, or install the DEB with `sudo apt install ./rostercore_0.6.0_amd64.deb`. The AppImage requires FUSE or its extract-and-run mode. The desktop packages include the UI, Node/Electron and native engine. Package availability and checks are recorded with the CI artifacts.
+The CI packages target Windows 11 x64 and Ubuntu 24.04 LTS x64 or newer. Windows offers a portable `.exe` and an NSIS installer. On Linux, make the AppImage executable and launch it, or install the DEB with `sudo apt install ./rostercore_0.7.0_amd64.deb`. The AppImage requires FUSE or its extract-and-run mode. The desktop packages include the UI, Node/Electron and native engine. Package availability and checks are recorded with the CI artifacts.
 
-In **Archive**, create or open a workspace file on a local disk, make a SQLite backup, or restore a backup into a new file. The portable app's file picker starts next to its executable when available. The default workspace lives in the application data directory. An earlier browser workspace can be recovered explicitly from the original browser profile and origin, or moved using its JSON workspace backup. Print profiles and language remain preferences. The native 8 MiB JSON input limit also bounds combined archive operations and imports.
+Open **Workspace and backups** from Archive to change workspace, save a local database backup or restore it into a new file. The portable app's file picker starts next to its executable when available. The default workspace lives in the application data directory. An earlier browser workspace can be recovered explicitly from the original browser profile and origin, or moved using its JSON workspace backup. Print profiles and language remain preferences. The native 8 MiB JSON input limit also bounds combined archive operations and imports.
 
 ### Share a workspace on the LAN
 

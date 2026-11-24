@@ -18,17 +18,19 @@ try {
     timeout: 25000,
   });
   const window = await instance.firstWindow();
-  await window.getByRole("heading", { name: "Set up your workspace" }).waitFor();
+  await window.getByRole("heading", { name: "Where do you want to work?" }).waitFor();
   assert.equal(await window.evaluate(() => typeof globalThis.rosterCore?.chooseFile), "function");
   assert.equal(await window.evaluate(() => typeof globalThis.require), "undefined");
   const candidate = JSON.parse(await readFile(new URL("../../AI_EXAMPLES/01-create-scenario.json", import.meta.url)));
-  await window.getByRole("button", { name: "Import a JSON configuration" }).click();
+  await window.getByRole("button", { name: "New workspace", exact: true }).click();
+  await window.getByRole("button", { name: "Use suggested destination" }).click();
+  await window.getByRole("button", { name: "Import a file", exact: true }).click();
   await window.locator('input[type="file"]').setInputFiles({
     name: "configuration.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(candidate)),
   });
-  await window.getByRole("button", { name: "Validate and preview configuration" }).click();
+  await window.getByRole("button", { name: "Review import" }).click();
   const review = window.getByRole("dialog", { name: "Review configuration changes" });
-  await review.getByRole("button", { name: "Confirm changes" }).click();
+  await review.getByRole("button", { name: "Import and save" }).click();
   await window.getByRole("button", { name: "Generate schedule" }).click();
   await window.locator(".roster tbody tr").first().waitFor({ timeout: 35000 });
   const persisted = await window.request.get(new URL("/api/workspace", window.url()).href).then((r) => r.json());

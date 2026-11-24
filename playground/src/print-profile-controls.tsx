@@ -9,6 +9,7 @@ import {
   printProfileKey,
 } from "./print-profiles";
 import { Select, Text } from "./editors";
+import { ReviewDialog } from "./review-dialog";
 import { useI18n } from "./i18n";
 export function PrintProfileControls({
   archive,
@@ -41,6 +42,7 @@ export function PrintProfileControls({
       };
     }
   });
+  const [removing, setRemoving] = useState(false);
   const [selected, setSelected] = useState(""),
     [name, setName] = useState(""),
     [feedback, setFeedback] = useState(""),
@@ -72,8 +74,8 @@ export function PrintProfileControls({
     }
   };
   return (
-    <section className="print-profiles" aria-label={t("Print profiles")}>
-      <h3>{t("Print profiles")}</h3>
+    <details className="print-profiles">
+      <summary>{t("Print profiles")}</summary>
       {store.error && <p role="alert">{localizeError(store.error)}</p>}
       <Select
         label={t("Saved print profile")}
@@ -125,27 +127,9 @@ export function PrintProfileControls({
         >
           {t("Update selected print profile")}
         </button>
-        {selected && (
-          <button
-            disabled={Boolean(store.error)}
-            onClick={() => {
-              try {
-                persist(store.profiles.filter((p) => p.id !== selected));
-                setSelected("");
-                setName("");
-                setFeedback(
-                  t(
-                    "Print profile deleted. Current print settings are unchanged.",
-                  ),
-                );
-              } catch (e) {
-                setError((e as Error).message);
-              }
-            }}
-          >
-            {t("Delete print profile")}
-          </button>
-        )}
+        {selected && <button disabled={Boolean(store.error)} onClick={() => setRemoving(true)}>
+          {t("Delete print profile")}
+        </button>}
       </div>
       {store.legacy && (
         <button
@@ -163,13 +147,21 @@ export function PrintProfileControls({
           {t("Load previous export preferences")}
         </button>
       )}
-      <p className="hint">
-        {t(
-          "Profiles stay in this browser. Edit a loaded profile and save it under a different name to keep both variants. Saved dates are clipped to this calendar; a different period keeps the current dates. Missing people and shifts are removed. Absence-reason permission is never saved.",
-        )}
-      </p>
+      <p className="hint">{t("Print profiles are saved on this device.")}</p>
+      {removing && <ReviewDialog title={t("Delete print profile")} destructive confirmLabel={t("Delete profile")}
+        onCancel={() => setRemoving(false)} onConfirm={() => {
+          try {
+            persist(store.profiles.filter((profile) => profile.id !== selected));
+            setSelected("");
+            setName("");
+            setFeedback(t("Print profile deleted. Current print settings are unchanged."));
+          } catch (e) { setError((e as Error).message); }
+          finally { setRemoving(false); }
+        }}>
+        <p>{t("Delete the saved profile {name}?", { name: store.profiles.find((profile) => profile.id === selected)?.name ?? "" })}</p>
+      </ReviewDialog>}
       {feedback && <p role="status">{feedback}</p>}
       {error && <p role="alert">{localizeError(error)}</p>}
-    </section>
+    </details>
   );
 }

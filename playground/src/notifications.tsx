@@ -1,3 +1,4 @@
+import { Modal } from "./review-dialog";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Result } from "./model";
 import { useI18n } from "./i18n";
@@ -157,11 +158,7 @@ export function NotificationCenter() {
   );
   const [details, setDetails] = useState<Notice>(),
     [expanded, setExpanded] = useState(false);
-  const dialog = useRef<HTMLDialogElement>(null),
-    region = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (details) dialog.current?.showModal();
-  }, [details]);
+  const region = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const node = region.current;
     if (!node) return;
@@ -266,58 +263,21 @@ export function NotificationCenter() {
           </article>
         ))}
       </section>
-      <dialog
-        ref={dialog}
-        className="diagnostic-dialog"
-        onCancel={() => setDetails(undefined)}
-        onClose={() => setDetails(undefined)}
-        aria-label={t("Operation diagnostics")}
-      >
-        <h2>{t("Operation diagnostics")}</h2>
+      {details && <Modal title={t("Operation diagnostics")} onClose={() => setDetails(undefined)}
+        actions={<button onClick={() => setDetails(undefined)}>{t("Close diagnostics")}</button>}>
         {details?.result?.diagnostics.map((d, i) => (
           <section className="diagnostic" key={i}>
             <b>{d.code}</b> <code>{d.path}</code>
             <span className="badge">{t(d.severity ?? "ERROR")}</span>
             <p>{diagnostic(d)}</p>
             {d.suggestion && <p>{localizeError(d.suggestion)}</p>}
-            <button
-              onClick={() => {
-                window.dispatchEvent(
-                  new CustomEvent("rostercore:editor", {
-                    detail: d.path.includes("variants")
-                      ? "variants"
-                      : (d.section ??
-                        (d.path.startsWith("/week")
-                          ? "weeks"
-                          : d.path.startsWith("/workPattern")
-                            ? "contracts"
-                            : d.path.startsWith("/calendar")
-                              ? "calendar"
-                              : d.path.startsWith("/shifts")
-                                ? "shifts"
-                                : d.path.startsWith("/duty") ||
-                                    d.path.startsWith("/temporal")
-                                  ? "coverage"
-                                  : d.path.startsWith("/policies")
-                                    ? "policies"
-                                    : "people")),
-                  }),
-                );
-                dialog.current?.close();
-              }}
-            >
-              {t("Open related editor")}
-            </button>
             <details>
               <summary>{t("Original message")}</summary>
               <pre lang="en">{d.message}</pre>
             </details>
           </section>
         ))}
-        <button onClick={() => dialog.current?.close()}>
-          {t("Close diagnostics")}
-        </button>
-      </dialog>
+      </Modal>}
     </>
   );
 }

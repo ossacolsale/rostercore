@@ -5,7 +5,7 @@ import { type Scenario, type Result, download } from "./model";
 import { useI18n } from "./i18n";
 import { ReviewDialog } from "./review-dialog";
 import { notifyError } from "./notifications";
-import { Text, Select } from "./editors";
+import { Text } from "./editors";
 export type ScheduleArchive = {
   format: "rostercore.schedule-archive";
   schemaVersion: 1;
@@ -57,10 +57,7 @@ export function ScheduleLibrary({
   const [pending, setPending] = useState<{
       request: ArchiveRequest;
       preview: Record<string, unknown>;
-    }>(),
-    [incoming, setIncoming] = useState<unknown>(),
-    [mode, setMode] = useState("REFERENCE"),
-    [actualConfirmed, setActualConfirmed] = useState(false);
+    }>();
   const request = (data: ArchiveRequest, dryRun: boolean) => ({
     ...data,
     dryRun,
@@ -105,153 +102,21 @@ export function ScheduleLibrary({
         r.document,
       );
   };
-  const importFile = async (file?: File) => {
-    if (!file) return;
-    try {
-      if (file.size > 8 * 1024 * 1024) throw new Error("Input exceeds 8 MiB");
-      setIncoming(JSON.parse(await file.text()));
-    } catch (e) {
-      notifyError((e as Error).message);
-    }
-  };
-  const incomingFormat = (incoming as { format?: string })?.format;
   return (
     <section className="panel schedule-library">
-      <h2>{t("Saved calendars and backups")}</h2>
-      <p className="hint">
-        {t(
-          "A published plan is protected future work. Only work explicitly confirmed as completed enters the historical fairness ledger.",
-        )}
-      </p>
-      <div className="row">
-        <button onClick={() => backup()}>
-          {t("Export complete workspace backup")}
-        </button>
-        <button onClick={() => backup(true)}>
-          {t("Export consolidated history with context")}
-        </button>
-        <button
-          disabled={!s.history.assignments.length}
-          onClick={() =>
-            review({
-              operation: "REBUILD_HISTORY",
-              useCurrentCategoryMembership: true,
-            })
-          }
-        >
-          {t("Rebuild historical quotas from completed calendars")}
-        </button>
-        <label className="button">
-          {t("Import a calendar or backup")}
-          <input
-            type="file"
-            accept="application/json,.json"
-            onChange={(e) => {
-              importFile(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-        </label>
+      <div className="section-head">
+        <h2>{t("Saved calendars")}</h2>
+        <button onClick={() => backup()}>{t("Export complete workspace backup")}</button>
       </div>
-      {Boolean(incoming) && (
-        <div className="item-card">
-          <h3>{t("Review the imported document")}</h3>
-          {incomingFormat === "rostercore.workspace-backup" ? (
-            <p className="warning">
-              {t(
-                "Restoring this backup replaces the current workspace. Export your current workspace first if you need to retain it.",
-              )}
-            </p>
-          ) : incomingFormat === "rostercore.schedule-archive" ? (
-            <>
-              <Select
-                label={t("How should this calendar be imported?")}
-                value={mode}
-                options={[
-                  {
-                    id: "REFERENCE",
-                    label: t(
-                      "Keep a reference copy; do not apply locks or history",
-                    ),
-                  },
-                  {
-                    id: "PUBLISH",
-                    label: t("Continue a published plan"),
-                  },
-                  {
-                    id: "COMPLETE",
-                    label: t("Resume from work already completed"),
-                  },
-                  {
-                    id: "RESTORE_CONTEXT",
-                    label: t("Recover the original configuration"),
-                  },
-                ]}
-                onChange={(v) => {
-                  setMode(v);
-                  setActualConfirmed(false);
-                }}
-              />
-              <p className="hint">
-                {t(
-                  "The core checks the embedded context, integrity, stable identifiers, overlap and existing history before anything is applied.",
-                )}
-              </p>
-            </>
-          ) : incomingFormat === "rostercore.result" ? (
-            <p>
-              {t(
-                "This older result needs the exact original scenario currently loaded. It will be converted into a contextual draft archive.",
-              )}
-            </p>
-          ) : (
-            <p className="error">
-              {t(
-                "Choose a canonical schedule archive, workspace backup or a result with its original scenario.",
-              )}
-            </p>
-          )}
-          {mode === "COMPLETE" &&
-            incomingFormat === "rostercore.schedule-archive" && (
-              <label>
-                <input
-                  type="checkbox"
-                  checked={actualConfirmed}
-                  onChange={(e) => setActualConfirmed(e.target.checked)}
-                />
-                {t("I confirm these shifts were actually worked")}
-              </label>
-            )}
-          <div className="row">
-            <button
-              disabled={
-                incomingFormat === "rostercore.schedule-archive" &&
-                mode === "COMPLETE" &&
-                !actualConfirmed
-              }
-              onClick={() => {
-                if (incomingFormat === "rostercore.workspace-backup")
-                  review({ operation: "RESTORE", backup: incoming });
-                else if (incomingFormat === "rostercore.schedule-archive")
-                  review({ operation: "IMPORT", archive: incoming, mode });
-                else if (incomingFormat === "rostercore.result")
-                  review({
-                    operation: "CREATE",
-                    id: "schedule-" + crypto.randomUUID(),
-                    result: incoming,
-                    createdAt: new Date().toISOString(),
-                    source: "legacy-result-import",
-                  });
-              }}
-            >
-              {t("Validate and preview import")}
-            </button>
-            <button onClick={() => setIncoming(undefined)}>
-              {t("Cancel")}
-            </button>
-          </div>
+      {s.history.assignments.length > 0 && <details>
+        <summary>{t("Confirmed work and history")}</summary>
+        <div className="row">
+          <button onClick={() => backup(true)}>{t("Export consolidated history with context")}</button>
+          <button onClick={() => review({ operation: "REBUILD_HISTORY", useCurrentCategoryMembership: true })}>
+            {t("Rebuild historical quotas from completed calendars")}
+          </button>
         </div>
-      )}
+      </details>}
       {!archives.length && (
         <p className="hint">
           {t(
@@ -260,7 +125,7 @@ export function ScheduleLibrary({
         </p>
       )}
       <div className="archive-list">
-        {archives.map((a) => (
+        {[...archives].reverse().map((a) => (
           <ArchiveCard
             key={a.id}
             a={a}
@@ -286,7 +151,6 @@ export function ScheduleLibrary({
               !["VALIDATION_ERROR", "MODEL_INVALID"].includes(r.status)
             ) {
               setPending(undefined);
-              setIncoming(undefined);
             }
           }}
         >
@@ -370,7 +234,7 @@ function ArchiveCard({
   onCompare: () => void;
   canCompare: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [exporting, setExporting] = useState(false),
     [actualConfirmed, setActualConfirmed] = useState(false);
   const [through, setThrough] = useState(
@@ -384,13 +248,13 @@ function ArchiveCard({
     );
   return (
     <article className={`item-card ${active ? "selected-archive" : ""}`}>
-      <h3>{a.scenario.label}</h3>
-      <p>
-        {a.period.start} – {a.period.end} ·{" "}
-        <span className="badge">{t(a.state)}</span>
-        {a.completedThrough &&
-          ` · ${t("Completed through {date}", { date: a.completedThrough })}`}
-      </p>
+      <div className="archive-card-heading">
+        <div><h3>{a.scenario.label}</h3>
+          <p>{a.period.start} – {a.period.end} · {new Date(a.createdAt).toLocaleDateString(locale)}</p>
+          {a.completedThrough && <p>{t("Completed through {date}", { date: a.completedThrough })}</p>}
+        </div>
+        <span className={`status-tag ${a.state.toLowerCase()}`}>{t(a.state)}</span>
+      </div>
       <div className="row">
         <button onClick={() => onRead({ operation: "OPEN", id: a.id })}>
           {t("Open calendar")}

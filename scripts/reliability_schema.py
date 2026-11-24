@@ -1,7 +1,7 @@
 """Schema-4 reliability, archives and typed integration contracts."""
 def extend_reliability(defs,scenario,policy,hr,result,obj,arr,enum,ref,s,id_,integer,positive,date,ids,label):
     for root in [scenario,policy,hr,result]:root['properties']['schemaVersion']=enum(1,2,3,4)
-    policy['properties']['engineVersion']=enum('0.1.0','0.2.0','0.3.0','0.4.0','0.5.0','0.6.0')
+    policy['properties']['engineVersion']=enum('0.1.0','0.2.0','0.3.0','0.4.0','0.5.0','0.6.0','0.7.0')
     scenario['properties']['archiveState']=obj({'publishedIds':ids,'completedIds':ids},['publishedIds','completedIds'])
     scenario['properties']['proposal']=obj({'supersedesId':id_,'from':date},['supersedesId','from'])
     defs['archiveState']=enum('DRAFT','PUBLISHED','COMPLETED','SUPERSEDED')
