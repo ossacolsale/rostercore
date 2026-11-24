@@ -2,9 +2,11 @@
 
 ## 0.7.0 — 2026-11-24
 
-- Choose a workspace and review its location before importing data or creating a configuration.
-- Use one reviewed import flow for configurations, change sets, backups and saved calendars. Restore operations return to the calendar.
-- Keep navigation and workspace information visible while scrolling. Improve typography, focus, calendar layout, dialogs and exports on smaller windows.
+- Desktop app for Windows 11 x64 and Ubuntu 24.04 LTS x64 or newer. Use the Windows installer or portable executable. On Linux, install the DEB with `sudo apt install ./rostercore_0.7.0_amd64.deb`, or make the AppImage executable and launch it. The AppImage supports extract-and-run on systems without FUSE.
+- Create and review AI-assisted configurations with the assistant of your choice. A single import flow supports existing configurations, change sets, backups and saved calendars.
+- SQLite stores local workspaces, revisions and calendar history. Teams can share a host-owned workspace over authenticated HTTPS on a private LAN.
+- Redesigned bilingual workspace selection, persistent navigation, calendar, dialogs and print controls. Backup recovery returns directly to the calendar.
+- Leave and absences share the unavailability state in the calendar. Native archive operations retain the 8 MiB JSON input limit.
 
 ## 0.6.0 — 2026-11-24
 

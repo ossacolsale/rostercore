@@ -121,7 +121,9 @@ HR software remains external to the optimization core. An adapter or host applic
 
 ## Install and use
 
-The CI packages target Windows 11 x64 and Ubuntu 24.04 LTS x64 or newer. Windows offers a portable `.exe` and an NSIS installer. On Linux, make the AppImage executable and launch it, or install the DEB with `sudo apt install ./rostercore_0.7.0_amd64.deb`. The AppImage requires FUSE or its extract-and-run mode. The desktop packages include the UI, Node/Electron and native engine. Package availability and checks are recorded with the CI artifacts.
+Download the stable desktop installers, portable builds and SHA-256 checksums from [GitHub Releases](https://github.com/ossacolsale/rostercore/releases/latest).
+
+The official packages target Windows 11 x64 and Ubuntu 24.04 LTS x64 or newer. Windows offers a portable `.exe` and an NSIS installer. On Linux, make the AppImage executable and launch it, or install the DEB with `sudo apt install ./rostercore_0.7.0_amd64.deb`. The AppImage requires FUSE or its extract-and-run mode. The desktop packages include the UI, Node/Electron and native engine.
 
 Open **Workspace and backups** from Archive to change workspace, save a local database backup or restore it into a new file. The portable app's file picker starts next to its executable when available. The default workspace lives in the application data directory. An earlier browser workspace can be recovered explicitly from the original browser profile and origin, or moved using its JSON workspace backup. Print profiles and language remain preferences. The native 8 MiB JSON input limit also bounds combined archive operations and imports.
 

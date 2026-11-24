@@ -19,3 +19,5 @@ Adapted from [AgentForge Universal AGENTS.md](https://github.com/ossacolsale/Age
 - Keep the selected workspace authoritative in SQLite. Both local and LAN writes must check the workspace revision and commit scenario, archives and history together. Keep optimization outside write transactions.
 
 - For calendar exports and daily UX, follow `docs/EXPORT_USABILITY.md`: the quiet-interface addendum overrides dashboard/KPI suggestions. Use the shared native read-only view for filters and actual intervals; filtered files never replace canonical archives. Preserve separate publication/completion semantics and expose technical evidence on request.
+
+- Retain all temporary workflow artifacts and failure diagnostics for at most one day. Keep dependency caches. Build desktop packages only on explicit request and distribute stable installers with SHA256SUMS through GitHub Releases. Dispatch release mode explicitly on a version tag on main and reuse successful packaging only when the application and packaging inputs match. Avoid duplicate builds and tests.
