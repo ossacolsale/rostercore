@@ -3,7 +3,7 @@ import { calendarToday } from "./work-completion";
 import { useState } from "react";
 import { type Scenario, type Result, download } from "./model";
 import { useI18n } from "./i18n";
-import { ReviewDialog } from "./pattern-assignments";
+import { ReviewDialog } from "./review-dialog";
 import { notifyError } from "./notifications";
 import { Text, Select } from "./editors";
 export type ScheduleArchive = {
@@ -63,7 +63,6 @@ export function ScheduleLibrary({
     [actualConfirmed, setActualConfirmed] = useState(false);
   const request = (data: ArchiveRequest, dryRun: boolean) => ({
     ...data,
-    archives,
     dryRun,
     expectedRevision: s.revision,
     at: new Date().toISOString(),

@@ -1,6 +1,6 @@
 import type { Scenario, Result } from "./model";
 import type { ScheduleArchive } from "./archives";
-import type { Run } from "./results";
+import type { Run } from "./api";
 import { coreAction } from "./api";
 export type ChangeSet = {
   format: "rostercore.scenario-change-set";
@@ -77,33 +77,18 @@ export async function reviewChange(
 export async function applyReviewedChange(
   review: ChangeReview,
   current: Scenario,
-  archives: ScheduleArchive[],
   run: Run,
+  regeneration?: Record<string, unknown>,
 ) {
   if (review.signature !== JSON.stringify(current))
     throw new Error(
       "Configuration changed after preview. Review the change again.",
     );
-  let context = current;
-  if (review.proposal) {
-    const result = await run("archives", {
-      scenario: current,
-      document: {
-        operation: "REVISE",
-        id: review.proposal.archiveId,
-        from: review.proposal.from,
-        archives,
-        expectedRevision: current.revision,
-        dryRun: false,
-      },
-    });
-    if (!result?.scenario) return result;
-    context = result.scenario;
-  }
   return run("change-set", {
-    scenario: context,
-    document: { ...review.document, expectedRevision: context.revision },
+    document: review.document,
+    proposal: review.proposal,
     apply: true,
+    regeneration,
   });
 }
 export function proposedCalendar(

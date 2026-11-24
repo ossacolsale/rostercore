@@ -10,7 +10,7 @@ for (const production of [true, false])
     const server = spawn(
       process.execPath,
       ["server.mjs", ...(production ? ["--production"] : [])],
-      { env: { ...process.env, PORT: String(port) }, stdio: "pipe" },
+      { env: { ...process.env, PORT: String(port), ROSTERCORE_WORKSPACE: ":memory:" }, stdio: "pipe" },
     );
     try {
       let ready = false;

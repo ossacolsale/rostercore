@@ -3,11 +3,11 @@ import { type Scenario, type Result, id } from "./model";
 import type { ScheduleArchive } from "./archives";
 import type { CalendarCell } from "./calendar-export-model";
 import { Text, Select } from "./editors";
-import { IntervalEditor } from "./evolution";
+import { IntervalEditor } from "./interval-editor";
 import type { Interval } from "./evolution-model";
 import { useI18n } from "./i18n";
 import { coreAction } from "./api";
-import type { Run } from "./results";
+import type { Run } from "./api";
 import {
   type ChangeSet,
   type ChangeReview,
@@ -23,6 +23,8 @@ export function CalendarChanges({
   archives,
   run,
   initialCell,
+  initialPerson,
+  peopleOnly = false,
   initialAction = "ABSENCE",
   onClose,
 }: {
@@ -31,6 +33,8 @@ export function CalendarChanges({
   archives: ScheduleArchive[];
   run: Run;
   initialCell?: CalendarCell;
+  initialPerson?: string;
+  peopleOnly?: boolean;
   initialAction?: string;
   onClose: () => void;
 }) {
@@ -38,7 +42,7 @@ export function CalendarChanges({
   const ref = useRef<HTMLDialogElement>(null);
   const [action, setAction] = useState(initialAction),
     [person, setPerson] = useState(
-      initialCell?.employeeId ?? s.employees[0]?.id ?? "",
+      initialCell?.employeeId ?? initialPerson ?? s.employees[0]?.id ?? "",
     ),
     [from, setFrom] = useState(initialCell?.date ?? s.calendar.start),
     [end, setEnd] = useState(initialCell?.date ?? s.calendar.start),
@@ -72,7 +76,7 @@ export function CalendarChanges({
     };
   }, []);
   const earliest =
-    s.history.through && s.history.through >= from
+    !["RENAME", "REMOVE_ABSENCE"].includes(action) && s.history.through && s.history.through >= from
       ? s.history.through
       : undefined;
   const hard = action === "HOURS" || action === "CLOSURE";
@@ -106,6 +110,13 @@ export function CalendarChanges({
             }
           : { op: "CREATE_AVAILABILITY", value: entry },
       );
+    } else if (action === "REMOVE_ABSENCE") {
+      operations.push({ op: "DELETE_AVAILABILITY", id: absence,
+        expectedEntityHash: hashes.availability[absence] });
+    } else if (action === "RENAME") {
+      operations.push({ op: "RENAME_EMPLOYEE", employeeId: person, label: name.trim() });
+    } else if (action === "END") {
+      operations.push({ op: "END_EMPLOYMENT", employeeId: person, effectiveFrom: from });
     } else if (action === "CLOSURE") {
       const reopen = new Date(end + "T12:00:00Z");
       reopen.setUTCDate(reopen.getUTCDate() + 1);
@@ -129,7 +140,7 @@ export function CalendarChanges({
         op: "CREATE_EMPLOYEE",
         value: {
           id: id("person"),
-          label: name,
+          label: name.trim(),
           typeId: role,
           attributes: {},
           employment: { validFrom: from },
@@ -263,51 +274,17 @@ export function CalendarChanges({
     if (!review) return;
     setWorking(true);
     try {
-      let result: Result | undefined;
-      if (action === "REGENERATE") {
-        let context = s;
-        if (review.proposal) {
-          result = await run("archives", {
-            scenario: s,
-            document: {
-              operation: "REVISE",
-              id: review.proposal.archiveId,
-              from: review.proposal.from,
-              archives,
-              expectedRevision: s.revision,
-              dryRun: false,
-            },
-          });
-          if (!result?.scenario) return;
-          context = result.scenario;
-        }
-        if (archive)
-          result = await run("regenerate", {
-            scenario: context,
-            document: {
-              from: affectedFrom,
-              previousScenario: archive.scenario,
-              previousScenarioEncoding: archive.scenarioEncoding,
-              previousResult: archive.result,
-              stabilityPriority: "AFTER_FAIRNESS",
-            },
-          });
-        else result = await run("solve", { scenario: context });
-      } else {
-        result = await applyReviewedChange(review, s, archives, run);
-        if (result?.scenario && regenerate && archive) {
-          result = await run("regenerate", {
-            scenario: result.scenario,
-            document: {
-              from: affectedFrom,
-              previousScenario: archive.scenario,
-              previousScenarioEncoding: archive.scenarioEncoding,
-              previousResult: archive.result,
-              stabilityPriority: "AFTER_FAIRNESS",
-            },
-          });
-        }
-      }
+      const regeneration = archive && {
+        from: affectedFrom,
+        previousArchiveId: archive.id,
+        stabilityPriority: "AFTER_FAIRNESS",
+      };
+      const result = action === "REGENERATE"
+        ? await run(regeneration ? "regenerate" : "solve", {
+            proposal: review.proposal,
+            document: regeneration,
+          })
+        : await applyReviewedChange(review, s, run, regenerate && action !== "RENAME" ? regeneration : undefined);
       if (
         result &&
         !["VALIDATION_ERROR", "MODEL_INVALID"].includes(result.status)
@@ -322,6 +299,9 @@ export function CalendarChanges({
   };
   const options = [
     { id: "ABSENCE", label: t("Record or change unavailability") },
+    { id: "REMOVE_ABSENCE", label: t("Remove unavailability") },
+    { id: "RENAME", label: t("Change a colleague’s name") },
+    { id: "END", label: t("End employment") },
     { id: "CLOSURE", label: t("Add a business closure") },
     { id: "HOURS", label: t("Change standard working hours") },
     { id: "PERSON", label: t("Add a colleague") },
@@ -345,9 +325,10 @@ export function CalendarChanges({
           <Select
             label={t("What do you want to do?")}
             value={action}
-            options={options}
+            options={options.filter(({ id }) => !peopleOnly || !["REGENERATE", "HOURS", "CLOSURE"].includes(id))}
             onChange={(v) => {
               setAction(v);
+              setAbsence("");
               setDoc(undefined);
               setError(undefined);
             }}
@@ -359,22 +340,25 @@ export function CalendarChanges({
               options={s.employees}
               onChange={(v) => {
                 setPerson(v);
+                setAbsence("");
                 setDoc(undefined);
               }}
             />
           )}
-          {action === "ABSENCE" && (
+          {["ABSENCE", "REMOVE_ABSENCE"].includes(action) && (
             <>
               <Select
                 label={t("Unavailability entry")}
                 value={absence}
                 options={[
-                  { id: "", label: t("New unavailability") },
+                  { id: "", label: t(action === "ABSENCE" ? "New unavailability" : "Choose an item") },
                   ...s.availability
                     .filter(
                       (a) =>
                         a.selector.employeeIds?.length === 1 &&
-                        a.selector.employeeIds[0] === person,
+                        a.selector.employeeIds[0] === person &&
+                        Object.keys(a.selector).length === 1 &&
+                        Object.keys(a.scope).every((key) => ["start", "end"].includes(key)),
                     )
                     .map((a) => ({
                       id: a.id,
@@ -401,7 +385,7 @@ export function CalendarChanges({
               </p>
             </>
           )}
-          <div className="row">
+          {!["RENAME", "REMOVE_ABSENCE"].includes(action) && <div className="row">
             <Text
               label={t("Effective from")}
               type="date"
@@ -422,8 +406,8 @@ export function CalendarChanges({
                 }}
               />
             )}
-          </div>
-          {action === "PERSON" && (
+          </div>}
+          {["PERSON", "RENAME"].includes(action) && (
             <>
               <Text
                 label={t("Colleague name")}
@@ -433,7 +417,7 @@ export function CalendarChanges({
                   setDoc(undefined);
                 }}
               />
-              <Select
+              {action === "PERSON" && <Select
                 label={t("Role")}
                 value={role}
                 options={s.employeeTypes}
@@ -441,7 +425,7 @@ export function CalendarChanges({
                   setRole(v);
                   setDoc(undefined);
                 }}
-              />
+              />}
             </>
           )}
           {["PATTERN", "PERSON"].includes(action) && (
@@ -637,7 +621,9 @@ export function CalendarChanges({
             working ||
             (!review &&
               ((hard && !authorize) ||
-                (action === "PERSON" && !name.trim()) ||
+                (["PERSON", "RENAME"].includes(action) && !name.trim()) ||
+                (action === "PERSON" && !role) ||
+                (action === "REMOVE_ABSENCE" && !absence) ||
                 (action === "CONTRACT" && !value) ||
                 Boolean(earliest)))
           }

@@ -289,7 +289,7 @@ const adapterMessages: Record<string, string> = {
   "Cross-origin requests are not allowed":
     "Le richieste provenienti da altre origini non sono consentite",
   "Expected application/json": "È richiesto il formato application/json",
-  "Request exceeds 20 MiB": "La richiesta supera 20 MiB",
+  "Request exceeds 32 MiB": "La richiesta supera 32 MiB",
   "Unknown API endpoint": "Endpoint API sconosciuto",
   "Invalid path": "Percorso non valido",
 };
@@ -325,7 +325,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   });
   useEffect(() => {
     document.documentElement.lang = language;
-    document.title = translate(language, "RosterCore · Planning playground");
+    document.title = "RosterCore";
     try {
       localStorage.setItem(STORAGE, language);
     } catch {

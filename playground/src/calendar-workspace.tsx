@@ -18,7 +18,7 @@ import { AIConfiguration } from "./ai-configuration";
 import { Text, Select, Multi } from "./editors";
 import { useI18n } from "./i18n";
 import { coreAction } from "./api";
-import type { Run } from "./results";
+import type { Run } from "./api";
 export function operationalState({
   s,
   r,
@@ -102,7 +102,6 @@ export function CalendarWorkspace({
   busy,
   run,
   publish,
-  simple = false,
   validated = false,
   onConfigure,
 }: {
@@ -116,7 +115,6 @@ export function CalendarWorkspace({
   busy: boolean;
   run: Run;
   publish: () => void;
-  simple?: boolean;
   validated?: boolean;
   onConfigure?: () => void;
 }) {

@@ -101,6 +101,8 @@ export function summarizeChanges(
       return t("Add {person} to the team.", {
         person: String(v.label ?? t("New colleague")),
       });
+    if (kind === "RENAME_EMPLOYEE")
+      return t("Rename {person} to {name}.", { person: who, name: String(op.label) });
     if (kind === "END_EMPLOYMENT")
       return t("End employment for {person} from {date}.", {
         person: who,

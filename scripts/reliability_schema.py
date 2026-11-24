@@ -1,7 +1,7 @@
 """Schema-4 reliability, archives and typed integration contracts."""
 def extend_reliability(defs,scenario,policy,hr,result,obj,arr,enum,ref,s,id_,integer,positive,date,ids,label):
     for root in [scenario,policy,hr,result]:root['properties']['schemaVersion']=enum(1,2,3,4)
-    policy['properties']['engineVersion']=enum('0.1.0','0.2.0','0.3.0','0.4.0','0.5.0')
+    policy['properties']['engineVersion']=enum('0.1.0','0.2.0','0.3.0','0.4.0','0.5.0','0.6.0')
     scenario['properties']['archiveState']=obj({'publishedIds':ids,'completedIds':ids},['publishedIds','completedIds'])
     scenario['properties']['proposal']=obj({'supersedesId':id_,'from':date},['supersedesId','from'])
     defs['archiveState']=enum('DRAFT','PUBLISHED','COMPLETED','SUPERSEDED')
@@ -34,6 +34,6 @@ def extend_reliability(defs,scenario,policy,hr,result,obj,arr,enum,ref,s,id_,int
     operation('RESTORE',{'backup':ref('workspaceBackup')},['backup'])
     result['properties'].update({'archive':ref('scheduleArchive'),'archives':arr(ref('scheduleArchive')),'document':{'type':'object'},'restoredSchedule':{'type':'object'},'csv':{'type':'string'}})
     result['properties']['status']['enum']+=['ARCHIVED','PUBLISHED','OPENED','EXPORTED','RESTORED']
-    defs['scenarioImportRequest']=obj({'candidate':ref('scenarioContext'),'expectedRevision':positive,'mode':enum('NEW_SCENARIO','REPLACE_CURRENT'),'allowHardRuleChanges':{'type':'boolean'}},['candidate','expectedRevision','mode','allowHardRuleChanges'])
+    defs['scenarioImportRequest']=obj({'candidate':ref('scenarioContext'),'expectedRevision':{'type':'integer','minimum':0},'mode':enum('NEW_SCENARIO','REPLACE_CURRENT'),'allowHardRuleChanges':{'type':'boolean'}},['candidate','expectedRevision','mode','allowHardRuleChanges'])
     defs['improvementRequest']=obj({'previousScenarioEncoding':{'type':'string'},'previousScenario':ref('scenarioContext'),'previousResult':ref('archivedResult'),'maxTimeSeconds':{'type':'number','minimum':0,'maximum':600}},['previousScenario','previousResult','maxTimeSeconds'])
     return {'calendar-view-options':ref('calendarViewOptions'),'scenario-import-request':ref('scenarioImportRequest'),'improvement-request':ref('improvementRequest'),**changes,'schedule-archive':ref('scheduleArchive'),'workspace-backup':ref('workspaceBackup'),'archive-request':{'oneOf':variants}}

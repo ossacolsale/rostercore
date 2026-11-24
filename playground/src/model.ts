@@ -15,7 +15,6 @@ import type {
   WeekAssignment,
   Interval,
 } from "./evolution-model";
-import type { Translate } from "./i18n";
 export type Selector = {
   where?: Condition;
   employeeIds?: string[];
@@ -310,71 +309,8 @@ export type Result = {
   preview?: unknown;
   context?: unknown;
 };
-export const metrics = [
-  "MAX_ABSOLUTE_PREFIX_DEVIATION",
-  "SUM_ABSOLUTE_PREFIX_DEVIATIONS",
-  "FINAL_ABSOLUTE_DEVIATION",
-];
-export const metricNames: Record<string, string> = {
-  DESIRED_WEEK_FREQUENCY: "Desired week frequency",
-  SCHEDULE_CHANGES: "Schedule changes",
-  MAX_ABSOLUTE_PREFIX_DEVIATION: "Worst prefix debt",
-  SUM_ABSOLUTE_PREFIX_DEVIATIONS: "Total prefix debt",
-  FINAL_ABSOLUTE_DEVIATION: "Final residual debt",
-};
 export const id = (prefix = "item") =>
   `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
-export const rational = (r?: Rational) => (r ? r.numerator / r.denominator : 0);
-export const exact = (r?: Rational) =>
-  !r
-    ? "—"
-    : r.denominator === 1
-      ? String(r.numerator)
-      : `${r.numerator}/${r.denominator}`;
-export const newAtom = (s: Scenario): Expression => ({
-  op: "COUNT",
-  selector: {},
-  shiftId: s.shifts[0]?.id || "",
-  comparison: "EQ",
-  count: 1,
-});
-export const newConstraint = (
-  s: Scenario,
-  t: Translate = (text) => text,
-): Constraint => ({
-  id: id("rule"),
-  label: t("Staffing requirement"),
-  scope: {},
-  expression: newAtom(s),
-});
-export const newPolicy = (
-  s: Scenario,
-  t: Translate = (text) => text,
-): Policy => ({
-  id: id("policy"),
-  label: t("Balanced duty rotation"),
-  revision: 1,
-  active: true,
-  draft: false,
-  dependencies: [],
-  objective: {
-    id: id("objective"),
-    label: t("Duty fairness"),
-    type: "CUMULATIVE_FAIRNESS",
-    mode: "CONTINUOUS_BALANCED",
-    measure: "COUNT",
-    selector: {},
-    shiftIds: [
-      s.shifts.find((x) => x.kind === "WORKING")?.id || s.shifts[0]?.id || "",
-    ],
-    participation: "EQUAL",
-    metrics: [...metrics],
-    priority: s.policies.length,
-  },
-  constraints: [],
-  sharedConstraintIds: [],
-  constraintSetIds: [],
-});
 export function dates(start: string, end: string) {
   const out: string[] = [];
   const d = new Date(start + "T12:00:00Z"),

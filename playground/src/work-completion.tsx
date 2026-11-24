@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ScheduleArchive } from "./archives";
-import type { Run } from "./results";
+import type { Run } from "./api";
 import { useI18n } from "./i18n";
 export function calendarToday(zone = "UTC") {
   try {

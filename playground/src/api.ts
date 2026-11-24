@@ -32,3 +32,5 @@ export function coreAction(
   previews = job.catch(() => undefined);
   return job;
 }
+
+export type Run = (action: string, extra?: Record<string, unknown>) => Promise<Result | undefined>;

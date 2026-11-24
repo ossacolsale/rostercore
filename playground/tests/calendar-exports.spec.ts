@@ -2,11 +2,11 @@ import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { PDFDocument } from "pdf-lib";
 import { unzipSync, strFromU8 } from "fflate";
-const workspace = (page: Page) => page.locator(".simple-workspace");
-const archive = async (page: Page) =>
-  page.evaluate(() =>
-    JSON.parse(localStorage.getItem("rostercore.archives.v1")!).at(-1),
-  );
+import { example, openWorkspace, state } from "./workspace-fixture";
+
+test.beforeEach(async ({ request }, info) => openWorkspace(request, info, await example()));
+const workspace = (page: Page) => page.locator(".calendar-workspace");
+const archive = async (page: Page) => (await state(page.request)).archives.at(-1);
 async function generate(page: Page) {
   await workspace(page)
     .getByRole("button", { name: "Generate schedule", exact: true })
@@ -226,13 +226,7 @@ test("HR user reviews absence as a future proposal, regenerates differences and 
     ),
   ).toBeTruthy();
   expect(revised.scenario.history).toEqual(original.scenario.history);
-  const old = await page.evaluate(
-    (id) =>
-      JSON.parse(localStorage.getItem("rostercore.archives.v1")!).find(
-        (a: any) => a.id === id,
-      ),
-    original.id,
-  );
+  const old = (await state(page.request)).archives.find((a: any) => a.id === original.id);
   expect(old.state).toBe("PUBLISHED");
   await workspace(page)
     .getByRole("button", { name: "Publish calendar", exact: true })
@@ -244,14 +238,7 @@ test("HR user reviews absence as a future proposal, regenerates differences and 
   await expect(workspace(page).locator(".operational-status")).toHaveText(
     "Published",
   );
-  expect(
-    await page.evaluate(
-      (id) =>
-        JSON.parse(localStorage.getItem("rostercore.archives.v1")!).find(
-          (a: any) => a.id === id,
-        ).state,
-      original.id,
-    ),
+  expect((await state(page.request)).archives.find((a: any) => a.id === original.id).state
   ).toBe("SUPERSEDED");
 });
 test("expert finds complete native diagnostics without changing scenario or publishing", async ({
@@ -278,15 +265,6 @@ test("expert finds complete native diagnostics without changing scenario or publ
       exact: true,
     })
     .click();
-  await page
-    .getByLabel("Interface mode", { exact: true })
-    .selectOption("ADVANCED");
-  await expect(
-    page.getByRole("heading", { name: "Continuous fairness", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Search evidence", exact: true }),
-  ).toBeVisible();
   expect(await archive(page)).toEqual(before);
 });
 
@@ -331,29 +309,14 @@ test("recording actual work rejects future dates and requires explicit final con
   await expect(
     review.getByRole("button", { name: "Confirm changes", exact: true }),
   ).toBeDisabled();
-  expect(
-    await page.evaluate(
-      () =>
-        JSON.parse(localStorage.getItem("rostercore.scenario.v1")!).history
-          .assignments.length,
-    ),
-  ).toBe(0);
+  expect((await state(page.request)).scenario.history.assignments).toHaveLength(0);
   await review
     .getByLabel("I confirm these shifts were actually worked", { exact: true })
     .check();
   await review
     .getByRole("button", { name: "Confirm changes", exact: true })
     .click();
-  await expect
-    .poll(
-      async () =>
-        await page.evaluate(
-          () =>
-            JSON.parse(localStorage.getItem("rostercore.scenario.v1")!).history
-              .through,
-        ),
-    )
-    .toBe("2026-11-09");
+  await expect.poll(async () => (await state(page.request)).scenario.history.through).toBe("2026-11-09");
   const saved = await archive(page);
   expect(saved.completedThrough).toBe("2026-11-09");
   expect(saved.state).toBe("COMPLETED");
@@ -440,13 +403,8 @@ test("PDF non-working dates and named print-profile variants survive reopening a
     .getByRole("button", { name: "Close export", exact: true })
     .click();
   await page.reload();
-  await workspace(page)
-    .getByText("Saved calendars and recovery", { exact: true })
-    .click();
-  await workspace(page)
-    .locator(".archive-list")
-    .getByRole("button", { name: "Export calendar", exact: true })
-    .click();
+  await page.getByRole("navigation").getByRole("button", { name: "Archive", exact: true }).click();
+  await page.locator(".archive-list").getByRole("button", { name: "Export calendar", exact: true }).click();
   dialog = page.getByRole("dialog", { name: "Export calendar", exact: true });
   await dialog
     .getByLabel("Saved print profile", { exact: true })
