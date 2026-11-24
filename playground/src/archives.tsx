@@ -124,30 +124,6 @@ export function ScheduleLibrary({
         )}
       </p>
       <div className="row">
-        <button
-          onClick={() => {
-            try {
-              textDownload(
-                `${s.id}.browser-recovery.json`,
-                JSON.stringify(
-                  {
-                    scenario: s,
-                    rawArchiveStorage: localStorage.getItem(
-                      "rostercore.archives.v1",
-                    ),
-                  },
-                  null,
-                  2,
-                ),
-                "application/json",
-              );
-            } catch (e) {
-              notifyError((e as Error).message);
-            }
-          }}
-        >
-          {t("Export browser recovery data")}
-        </button>
         <button onClick={() => backup()}>
           {t("Export complete workspace backup")}
         </button>

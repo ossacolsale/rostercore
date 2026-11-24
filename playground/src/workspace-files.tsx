@@ -135,15 +135,27 @@ export function WorkspaceFiles({ workspace, location, busy, run, onLocation }: {
               }
             }} />
           </label>
-          {legacy && location.mode === "LOCAL" && <button onClick={() => {
-            try {
-              const scenario = JSON.parse(localStorage.getItem("rostercore.scenario.v1")!);
-              const archives = JSON.parse(localStorage.getItem("rostercore.archives.v1") ?? "[]");
-              void previewRestore("recover-browser", { scenario, archives });
-            } catch (error) {
-              notifyError((error as Error).message);
-            }
-          }}>{t("Recover an older browser workspace")}</button>}
+          {legacy && location.mode === "LOCAL" && <div className="row">
+            <button onClick={() => {
+              try {
+                const scenario = JSON.parse(localStorage.getItem("rostercore.scenario.v1")!);
+                const archives = JSON.parse(localStorage.getItem("rostercore.archives.v1") ?? "[]");
+                void previewRestore("recover-browser", { scenario, archives });
+              } catch (error) {
+                notifyError((error as Error).message);
+              }
+            }}>{t("Recover an older browser workspace")}</button>
+            <button onClick={() => {
+              try {
+                download("rostercore.browser-recovery.json", {
+                  rawScenarioStorage: localStorage.getItem("rostercore.scenario.v1"),
+                  rawArchiveStorage: localStorage.getItem("rostercore.archives.v1"),
+                });
+              } catch (error) {
+                notifyError((error as Error).message);
+              }
+            }}>{t("Export browser recovery data")}</button>
+          </div>}
         </>}
         {workspace.scenario && <details onToggle={(e) => {
           if (e.currentTarget.open) void loadRevisions();

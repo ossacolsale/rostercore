@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+package_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export ELECTRON_RUN_AS_NODE=1
+export ROSTERCORE_RESOURCES="$package_dir/resources/native"
+export ROSTERCORE_CLI="$ROSTERCORE_RESOURCES/bin/rostercore"
+exec "$package_dir/rostercore" "$package_dir/resources/app/server.mjs" --headless

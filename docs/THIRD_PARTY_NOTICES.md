@@ -7,6 +7,8 @@ Original RosterCore code is Apache-2.0; see the root LICENSE. Dependencies retai
 | Google OR-Tools | 9.15.6755 | Apache-2.0 and bundled dependency notices | CP-SAT backend |
 | nlohmann/json | 3.12.0 | MIT | Public JSON |
 | pboettch/json-schema-validator | 2.4.0 | MIT | JSON Schema draft-07 validation |
+| Electron, Chromium and bundled Node.js | 44.9.3 (Electron) | MIT and bundled third-party notices | Desktop runtime |
+| SQLite | Embedded in Node.js | Public domain | Workspace storage |
 | React / React DOM | 19.2.0 | MIT | Local UI |
 | Vite | 7.3.7 | MIT | UI tooling |
 | TypeScript | 5.9.3 | Apache-2.0 | UI compilation |

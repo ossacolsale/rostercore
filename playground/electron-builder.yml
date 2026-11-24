@@ -1,0 +1,43 @@
+appId: com.ossacolsale.rostercore
+productName: RosterCore
+copyright: Copyright © RosterCore contributors
+asar: false
+directories:
+  output: ../build/desktop
+files:
+  - desktop/main.mjs
+  - desktop/preload.cjs
+  - dist/**
+  - server.mjs
+  - workspace-*.mjs
+  - '!node_modules{,/**}'
+extraResources:
+  - from: ../build/desktop-runtime
+    to: native
+    filter: ['bin/**', 'lib/**', '!lib/**/*.a', '!lib/**/*.lib', 'share/**']
+  - from: ..
+    to: native
+    filter: ['schemas/**', 'data/**', 'examples/pharmacy.json', 'AI_EXAMPLES/**', 'AI_CAPABILITIES.json', 'AI_*_GUIDE.md']
+win:
+  executableName: RosterCore
+  target: [portable, nsis]
+  extraFiles:
+    - from: desktop/rostercore-host.cmd
+      to: rostercore-host.cmd
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: ${productName}-${version}-Setup-x64.${ext}
+portable:
+  artifactName: ${productName}-${version}-Portable-x64.${ext}
+linux:
+  executableName: rostercore
+  target: [AppImage, deb]
+  category: Office
+  synopsis: Workforce scheduling and calendar management
+  maintainer: RosterCore contributors <ossacolsale@users.noreply.github.com>
+  extraFiles:
+    - from: desktop/rostercore-host
+      to: rostercore-host
+appImage:
+  artifactName: ${productName}-${version}-x86_64.${ext}

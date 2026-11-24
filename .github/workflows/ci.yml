@@ -80,6 +80,35 @@ jobs:
         run: |
           npm run test:server
           npm run test:e2e
+      - name: Package desktop for the native platform
+        if: runner.os == 'Linux' || runner.os == 'Windows'
+        working-directory: playground
+        run: npm run package:desktop
+      - name: Smoke test AppImage and DEB
+        if: runner.os == 'Linux'
+        working-directory: playground
+        shell: bash
+        run: |
+          smoke_dir=$(mktemp -d)
+          appimage=$(realpath ../build/desktop/*.AppImage)
+          (cd "$smoke_dir" && "$appimage" --appimage-extract >/dev/null)
+          dpkg-deb -x ../build/desktop/*.deb "$smoke_dir/deb"
+          ROSTERCORE_TEST_NO_SANDBOX=1 xvfb-run -a npm run test:desktop -- "$smoke_dir/squashfs-root/AppRun"
+          ROSTERCORE_TEST_NO_SANDBOX=1 xvfb-run -a npm run test:desktop -- "$smoke_dir/deb/opt/RosterCore/rostercore"
+      - name: Smoke test the Windows desktop payload
+        if: runner.os == 'Windows'
+        working-directory: playground
+        run: npm run test:desktop -- ../build/desktop/win-unpacked/RosterCore.exe
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux' || runner.os == 'Windows'
+        with:
+          name: rostercore-desktop-${{ runner.os }}-x64
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            build/desktop/*.AppImage
+            build/desktop/*.deb
+            build/desktop/*.exe
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

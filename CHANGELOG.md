@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 — 2026-11-24
+
+- Replace the dual-mode playground with four bilingual desktop sections and an isolated demo.
+- Add reviewed initial AI/JSON configuration and compact AI packages for typed updates.
+- Save contextual archives, configuration revisions and actual history in SQLite. Support SQLite backups, older JSON backups and explicit browser recovery.
+- Share a host-owned workspace over authenticated HTTPS with optimistic concurrency and atomic saves.
+- Package the Electron desktop and native engine as Windows portable/NSIS and Linux AppImage/DEB targets.
+
 ## 0.3.0 — 2026-11-08
 
 - Centralize viewport-bottom operation notifications with translated outcomes, persistent errors, deduplication/queueing, keyboard-accessible full diagnostics and safe mobile spacing. Distinguish infeasible/unknown/invalid outcomes from successful HTTP transport.

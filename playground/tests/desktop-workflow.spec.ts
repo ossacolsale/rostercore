@@ -19,6 +19,17 @@ test("empty desktop workspace, isolated demo and reviewed AI creation with bilin
   await expect(page.locator(".roster tbody tr")).toHaveCount(5, { timeout: 30000 });
   expect((await state(request)).scenario).toBeNull();
   await page.getByRole("button", { name: "Exit demo" }).click();
+  await page.evaluate(() => {
+    localStorage.setItem("rostercore.scenario.v1", "damaged scenario");
+    localStorage.setItem("rostercore.archives.v1", "damaged archives");
+  });
+  await page.getByRole("button", { name: "Open a local or shared workspace" }).click();
+  const recovery = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export browser recovery data" }).click();
+  expect(JSON.parse(await readFile((await (await recovery).path())!, "utf8"))).toEqual({
+    rawScenarioStorage: "damaged scenario", rawArchiveStorage: "damaged archives",
+  });
+  await page.getByRole("button", { name: "Back", exact: true }).click();
   await page.getByRole("button", { name: "Create a configuration with AI" }).click();
   await page.getByLabel("What do you need to plan?").fill("Plan a five-person business.");
   const download = page.waitForEvent("download");
